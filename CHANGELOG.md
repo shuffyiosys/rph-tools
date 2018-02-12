@@ -4,10 +4,10 @@ RPH Tools (4.0.0)
 * General
   * UI elements were expanded to take advantage of the larger area
 * Chat Section
-  * Added a preview area for text color and pings due to the modal window nature of where things are. This is so you can test out things without actually being in the chat.
-  * Removed the "Chat History" in "Other Options" since this is provided natively
+  * Added a preview area for text color and pings due to the modal window nature of where things are. This is so things can be tested without being in a chat room.
+  * Removed the "Chat History" in "Other Options" since this is provided natively.
 * Random number generators
   * All modes are provided rather than using a ad-hoc tab system
 * Modding section
-  * You no longer have to enter the room as a mod name to get the "Room-Name Pair" field to populate. The script will see if one of your usernames is a mod or owner when you enter the room.
-  * "Auto kick" was removed. I don't think this feature was used all that much or was very useful (at least in its implementation)
+  * Users no longer have to enter the room as a mod name to get the "Room-Name Pair" field to populate. The script will see if one of account's usernames is a mod or owner when the user enters the room.
+  * "Auto kick" was removed. This feature may not have been used all that much or was very useful (at least in its implementation)

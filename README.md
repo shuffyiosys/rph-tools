@@ -24,7 +24,7 @@ RPH Tool features are broken up into modules. These modules use an encapsulation
 The files in the ```./src``` folder are main files that are used throughout the script. ```./src/core-modules``` contain the core modules that should live with the script at all times. The file ```./src/core-modules/rph-tools.js``` is the main module that **needs** to live with the script, otherwise it won't work.```./src/feature-modules``` are modules that add features and are considered optional to the script itself.
 ***
 # Building
-Since RPH Tools is a collection of JavaScript files, all you need to do is concatenate the files together. While order of concatenation largely doesn't matter, but the file ```./src/header.js``` **needs** to be first and ```./src/main.js``` **needs** to be last.
+Since RPH Tools is a collection of JavaScript files, all you need to do is concatenate the files together. While order of concatenation largely doesn't matter, the file ```./src/header.js``` **needs** to be first and ```./src/main.js``` **needs** to be last.
 
 For convenience, three build shell script files are provided with this repo. They are:
 - build.bat (Windows CMD)

@@ -1,18 +1,20 @@
 # RPH Tools Programming Notes
-***
 ## The Module Paradigm
 RPH tools is built off the idea that each component is built into self-contained modules. The paradigm is similar to classes in OOP. While it's understood that JavaScript as of ECMAScript 2015 has classes, this style provides the facility to encaspulate "private" members of the module and allows the developer to only expose what they want.
-
-**Note:** RPH Tools modules have no relation to any other use of the term in JavaScript based languages.
 
 The module template is as follows:
 ```Javascript
 var [ModuleName] = (function(){
   /* Declare module members here */
-  html = '';
+    var html = {
+    'tabId': [Module ID name],
+    'tabName': [Module title],
+    'tabContents': [Module HTML]
+  };
 
   /* Initializes the module */
   var init = function(){
+      
   };
 
   /* Exposes the following to the rest of the script. i.e, anything you want 
@@ -87,4 +89,4 @@ if (moddingModule !== null) {
   moddingModule.addModFeatures(thisRoom);
 }
 ```
-If the existance of the ```Modding``` module is true, then a feature can be used in conjunction with the ```Chat``` module. However this is not an essential function, so no default action is needed.
+If the existance of the ```Modding``` module (```moddingModule```) is true, then a feature can be used in conjunction with the ```Chat``` module. However this is not an essential function, so no default action is needed. Likewise, the feature that the ```Modding``` module that uses does not need the ```Chat``` module to exist or even call its function.
