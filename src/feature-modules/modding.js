@@ -39,6 +39,8 @@ var moddingModule = (function () {
       '<button style="margin-left: 6px;" type="button" id="unbanButton">Unban</button>' +
       '<button style="margin-left: 30px;" type="button" id="modButton">Mod</button>' +
       '<button style="margin-left: 6px;" type="button" id="unmodButton">Unmod</button>' +
+      '<button style="margin-left: 6px;" type="button" id="OwnButton">Owner</button>' +
+      '<button style="margin-left: 6px;" type="button" id="UnOwnButton">Unowner</button>' +
       '<br/><br/>' +
       '</div><div>' +
       '<h4>Word Alerter</h4><br />' +
@@ -57,7 +59,9 @@ var moddingModule = (function () {
     'ban': 'Banning: ',
     'unban': 'Unbanning: ',
     'add-mod': 'Adding mod: ',
-    'rmeove-mod': 'Removing mod: ',
+    'remove-mod': 'Removing mod: ',
+    'add-owner': 'Adding owner: ',
+    'remove-owner': 'Removing owner: ',
     'kick': 'Kicking: '
   };
 
@@ -108,6 +112,14 @@ var moddingModule = (function () {
     $('#unmodButton').click(function () {
       modAction('remove-mod');
     });
+    
+    $('#OwnButton').click(function() {
+      modAction('add-owner');
+    });
+       
+    $('#UnOwnButton').click(function() {
+      modAction('remove-owner');
+    });
 
     $('#modAlertWords').blur(function () {
       settings.alertWords = $('#modAlertWords').val().replace(/\r?\n|\r/, '');
@@ -149,7 +161,7 @@ var moddingModule = (function () {
       getUserByName($('input#modFromTextInput').val(), function (user) {
         var modMessage = $("input#modMessageTextInput").val();;
 
-        if (action === 'add-mod' || action === 'remove-mod') {
+        if (action === 'add-mod' || action === 'remove-mod' || action === 'add-owner' || action === 'remove-owner') {
           modMessage = '';
         }
         chatSocket.emit(action, {
