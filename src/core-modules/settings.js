@@ -1,6 +1,6 @@
-/******************************************************************************
- * This module handles the importing and exporting of settings in RPH Tools.
- *****************************************************************************/
+/**
+ * Handles importing, exporting, and deleting of settings.
+ */
 var settingsModule = (function () {
   var html = {
     'tabId': 'settings-module',
@@ -19,9 +19,9 @@ var settingsModule = (function () {
 
   var deleteTimer = null;
 
-  /****************************************************************************
-   * Initializes the modules and the HTML elements it handles.
-   ***************************************************************************/
+  /** 
+   * Initializes the GUI components of the module.
+  */
   var init = function () {
     $('#importButton').click(function () {
       importSettingsHanlder();
@@ -30,7 +30,6 @@ var settingsModule = (function () {
     $('#exportButton').click(function () {
       $('textarea#importExportTextarea').val(exportSettings());
     });
-
 
     $('#printSettingsButton').click(function () {
       printSettings();
@@ -41,34 +40,43 @@ var settingsModule = (function () {
     });
   }
 
-  /****************************************************************************
-   * @brief:    Prints out the settings into the main textbox for exporting.
-   ****************************************************************************/
-  var importSettingsHanlder = function(){
+  /**
+   * Handles the initial portion of importing settings. This checks the input
+   * to see if it's a valid JSON formatted string.
+   */
+  var importSettingsHanlder = function () {
     settings = $('textarea#importExportTextarea').val().split("|");
-      try {
-        for (var i = 0; i < settings.length - 1; i++) {
-          var settingsJson = JSON.parse(settings[i]);
-          console.log('RPHT [Setting Module]: Importing...', settingsJson);
-          importSettings(settingsJson);
-        }
-      } catch (err) {
-        console.log('RPH Tools[importSettings]: Error importing settings', err);
-        markProblem("importExportTextarea", true);
+    try {
+      for (var i = 0; i < settings.length - 1; i++) {
+        var settingsObj = JSON.parse(settings[i]);
+        console.log('RPHT [Setting Module]: Importing...', settingsObj);
+        importSettings(settingsObj);
       }
+    } catch (err) {
+      console.log('RPH Tools[importSettings]: Error importing settings', err);
+      markProblem("importExportTextarea", true);
+    }
   }
 
-  var importSettings = function (settingsJson) {
-    var module = rphToolsModule.getModule(settingsJson.name);
+  /**
+   * Takes the object from the JSON formatted string and imports it into the
+   * relevant modules
+   * @param {Object} settingsObj 
+   */
+  var importSettings = function (settingsObj) {
+    var module = rphToolsModule.getModule(settingsObj.name);
 
     if (!module) {
       return;
     } else if (!module.loadSettings) {
       return;
     }
-    module.loadSettings(settingsJson.settings);
+    module.loadSettings(settingsObj.settings);
   };
 
+  /**
+   * Exports settings into a JSON formatted string
+   */
   var exportSettings = function () {
     var settingsString = "";
     var modules = rphToolsModule.getSettings();
@@ -84,6 +92,10 @@ var settingsModule = (function () {
     return settingsString;
   };
 
+  /** 
+   * Logic to confirm deleting settings. The button needs to be pressed twice
+   * within 10 seconds for the settings to be deleted.
+  */
   var deleteSettingsHanlder = function () {
     if (confirmDelete === false) {
       $('#deleteSettingsButton').text('Press again to delete');
@@ -103,6 +115,9 @@ var settingsModule = (function () {
     }
   };
 
+  /** 
+   * Deletes all of the settings of the modules that have settings.
+  */
   var deleteAllSettings = function () {
     var modules = rphToolsModule.getSettings();
     for (var i = 0; i < modules.length; i++) {
@@ -112,19 +127,9 @@ var settingsModule = (function () {
     }
   };
 
-  var printSettings = function () {
-    var modules = rphToolsModule.getSettings();
-    for (var i = 0; i < modules.length; i++) {
-      if (modules[i].getSettings !== undefined) {
-        console.log(modules[i].getSettings());
-      }
-    }
-    return settingsString;
-  };
-
-  /****************************************************************************
+  /** 
    * Public members of the module
-   ***************************************************************************/
+   */
   return {
     init: init,
 

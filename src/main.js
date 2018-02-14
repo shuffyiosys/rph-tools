@@ -12,6 +12,7 @@ $(function () {
     settingsModule,
     aboutModule,
   ];
-  
+
   rphToolsModule.init(modules);
+  console.log('RPH Tools initialization complete');
 });

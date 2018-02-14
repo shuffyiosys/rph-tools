@@ -1,7 +1,7 @@
-/******************************************************************************
+/**
  * This module handles adding blocking of users. This is meant to supersede
  * RPH's blocking mechanisms since it isn't always reliable.
- *****************************************************************************/
+ */
 var blockingModule = (function () {
   var blockedUsers = [];
 
@@ -58,10 +58,10 @@ var blockingModule = (function () {
     setInterval(reblockList, 30 * 1000);
   };
 
-  /**************************************************************************
-   * Adds a user to the internal and dialog block list.
-   * @param:    user - User object for the username being blocked
-   *************************************************************************/
+  /**
+   * Adds a user to the native and RPHT block list.
+   * @param {object} User object for the username being blocked
+   */
   var addToBlockList = function (user) {
     var inList = false;
 
@@ -81,9 +81,9 @@ var blockingModule = (function () {
     }
   };
 
-  /************************************************************************
-   * @brief:   Blocks everyone on the list. Used to refresh blocking.
-   ************************************************************************/
+  /**
+   * Blocks everyone on the list. Used to refresh blocking.
+   */
   var reblockList = function () {
     blockedUsers.forEach(function(blockedUser, index){
       getUserById(blockedUser.id, function (user) {
@@ -93,16 +93,16 @@ var blockingModule = (function () {
     });
   };
 
-  /*************************************************************************
+  /** 
    * Saves settings into the browser's local storage
-   *************************************************************************/
+   */
   var saveSettings = function () {
     localStorage.setItem(localStorageName, JSON.stringify(blockedUsers));
   };
 
-  /*************************************************************************
+  /**
    * Loads settings from the browser's local storage
-   *************************************************************************/
+   */
   var loadSettings = function () {
     var storedSettings = JSON.parse(localStorage.getItem(localStorageName));
     if (storedSettings !== null) {
@@ -117,9 +117,9 @@ var blockingModule = (function () {
     reblockList();
   };
 
-  /*************************************************************************
+  /**
    * Deletes settings from the browser's local storage
-   *************************************************************************/
+   */
   var deleteSettings = function () {
     localStorage.removeItem(localStorageName);
     blockedUsers = [];

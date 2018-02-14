@@ -1,3 +1,12 @@
+RPH Tools (4.0.1)
+--------------
+* Most comments were updated to JSDoc style (still need to do the chat and utilities files)
+* Fixed chat tab resizing in the Chat module
+* Updated dice limits to up 100d1000 in the RNG module
+* Added "Owner" and "Unowner" buttons to the Modding module
+* Removed "printSettings" function in the Settings module
+* Added shameless plug to the repo in the About module :)
+
 RPH Tools (4.0.0)
 --------------
 * RPH Tools was overhauled to be compatible with RPH's changes in 2018. Almost all features of versions prior were kept. History older than 4.0.0 can be found at the old repo. Some changes were made though.

@@ -1,3 +1,9 @@
+/**
+ * @brief:    Gets 
+ * @param:    settingId - The full selector of which HTML to extract its value
+ *            from.
+ * @return:   The extracted HTML's value
+ */
 var getInput = function (settingId) {
   return $(settingId).val();
 };
@@ -91,14 +97,25 @@ var validateColorRange = function (TextColor) {
 
 /****************************************************************************
  * @brief Adds usernames to droplists.
- * @param user_id - ID of username
+ * @param userId - ID of username
  ****************************************************************************/
-var addUserToDroplist = function (user_id, droplist) {
-  getUserById(user_id, function (User) {
-    droplist.append('<option value="' + user_id + '">' + User.props.name +
-      '</option>');
-  });
+var addUserToDroplist = function (user, droplist) {
+  droplist.append('<option value="' + user.props.id + '">' + user.props.name +
+    '</option>');
 };
+
+var sortDropList = function (droplist) {
+  var dropListPairs = {};
+  droplist[0].childNodes.forEach(function (node) {
+    dropListPairs[node.innerHTML] = node.value;
+  })
+  dropListPairs = sortOnKeys(dropListPairs);
+  clearUsersDropLists('userColorDroplist');
+  for (var username in dropListPairs) {
+    droplist.append('<option value="' + dropListPairs[username] + '">' +
+      username + '</option>');
+  }
+}
 
 /****************************************************************************
  * @brief Clears droplists.
@@ -170,15 +187,14 @@ var isModOfRoom = function (room) {
   return false;
 };
 
-var sortByKeys = function (dict) {
+var sortOnKeys = function (dict) {
   var sorted = [];
-  var tempDict = {};
-
   for (var key in dict) {
     sorted[sorted.length] = key;
   }
   sorted.sort();
 
+  var tempDict = {};
   for (var i = 0; i < sorted.length; i++) {
     tempDict[sorted[i]] = dict[sorted[i]];
   }

@@ -8,10 +8,5 @@
 // @grant      none
 // @license    MIT
 // ==/UserScript==
-/*jshint multistr: true */
-/*jshint bitwise: false*/
-/*global $:false */
 
-var VERSION_STRING = '4.0.0';
-
-var settingsDialog = {};
+var VERSION_STRING = '4.0.1';

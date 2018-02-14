@@ -1,3 +1,6 @@
+/**
+ * This module handles features for the PM system.
+ */
 var pmModule = (function () {
   var pmSettings = {
     'audioUrl': 'http://chat.rphaven.com/sounds/imsound.mp3',
@@ -13,18 +16,19 @@ var pmModule = (function () {
       '<div><h4>PM Away System</h4>' +
       '</p>' +
       '<p>Username</p>' +
-      '<select style="width: 800px;" id="pmNamesDroplist" size="10"></select><br><br>' +
+      '<select style="width: 800px;" id="pmNamesDroplist" size="10"></select>' +
+      '<br><br>' +
       '<label class="rpht_labels">Away Message: </label><input type="text" id="awayMessageTextbox" name="awayMessageTextbox" maxlength="300" placeholder="Away message...">' +
       '<br /><br />' +
       '<button style="margin-left: 358px; "type="button" id="setAwayButton">Enable</button> <button type="button" id="removeAwayButton">Disable</button>' +
-      '</div><div>' + 
+      '</div><div>' +
       '<h4>Other Settings</h4>' +
       '</p>' +
       '<label class="rpht_labels">PM Sound: </label><input type="text" id="pmPingURL" name="pmPingURL">' +
       '<br /><br />' +
       '<label class="rpht_labels">Mute PMs: </label><input style="width: 40px;" type="checkbox" id="pmMute" name="pmMute">' +
       '<br /><br />' +
-      '<label class="rpht_labels">No Image Icons: </label><input style="width: 40px;" type="checkbox" id="pmIconsDisable" name="pmIconsDisable">' 
+      '<label class="rpht_labels">No Image Icons: </label><input style="width: 40px;" type="checkbox" id="pmIconsDisable" name="pmIconsDisable">'
   };
 
   var awayMessages = {};
@@ -80,11 +84,11 @@ var pmModule = (function () {
     });
   }
 
-  /****************************************************************************
-   * Handles incoming PMs.
-   * @param data - Data containing the PM.
-   ****************************************************************************/
-  function handleIncomingPm(data) {
+  /**
+   * Handler for PMs that are incoming
+   * @param {object } data Data containing the PM.
+   */
+  var handleIncomingPm = function (data) {
     getUserById(data.to, function (fromUser) {
       if (!awayMessages[data.from]) {
         return;
@@ -102,11 +106,11 @@ var pmModule = (function () {
     });
   }
 
-  /****************************************************************************
-   * Handles outgoing PMs.
-   * @param data - Data containing the PM.
-   ****************************************************************************/
-  function handleOutgoingPm(data) {
+  /**
+   * Handler for PMs that are outgoing
+   * @param {object } data Data containing the PM.
+   */
+  var handleOutgoingPm = function (data) {
     getUserById(data.from, function (fromUser) {
       if (!awayMessages[data.from]) {
         return;
@@ -122,9 +126,9 @@ var pmModule = (function () {
     });
   }
 
-  /****************************************************************************
-   * Sets up PM Away Messages
-   ****************************************************************************/
+  /**
+   * Adds an away status to a character
+   */
   var setPmAway = function () {
     var userId = $('#pmNamesDroplist option:selected').val();
     var name = $("#pmNamesDroplist option:selected").html();
@@ -135,8 +139,8 @@ var pmModule = (function () {
         "enabled": false
       };
       awayMessages[userId] = awayMsgObj;
-    } 
-    
+    }
+
     if (!awayMessages[userId].enabled) {
       $("#pmNamesDroplist option:selected").html("[Away]" + name);
     }
@@ -149,9 +153,9 @@ var pmModule = (function () {
       name, 'with message', awayMessages[userId].message);
   };
 
-  /****************************************************************************
-   * Removes PM away message
-   ****************************************************************************/
+  /**
+   * Removes an away status for a character
+   */
   var removePmAway = function () {
     var userId = $('#pmNamesDroplist option:selected').val();
 
@@ -169,16 +173,17 @@ var pmModule = (function () {
     }
   };
 
-  /****************************************************************************
-   * Saves settings into the browser's local storage.
-   ****************************************************************************/
+  /**
+   * Save current settings
+   */
   var saveSettings = function () {
     localStorage.setItem(localStorageName, JSON.stringify(pmSettings));
   };
 
-  /****************************************************************************
-   * Load settings from the browser's local storage.
-   ****************************************************************************/
+  /**
+   * Loads settings from local storage
+   * @param {object} storedSettings Object containing the settings
+   */
   var loadSettings = function (storedSettings) {
     if (storedSettings !== null) {
       pmSettings = storedSettings;
@@ -186,9 +191,9 @@ var pmModule = (function () {
     populateSettings();
   };
 
-  /****************************************************************************
-   * Deletes the local storage settings
-   ****************************************************************************/
+  /**
+   * Deletes the current settings and resets them to defaults.
+   */
   var deleteSettings = function () {
     localStorage.removeItem(localStorageName);
     pmSettings = {
@@ -198,28 +203,38 @@ var pmModule = (function () {
     populateSettings();
   };
 
-  /****************************************************************************
+  /**
    * Populate the GUI with settings from the browser's local storage
-   ****************************************************************************/
+   */
   var populateSettings = function () {
     $('#pmPingURL').val(pmSettings.audioUrl);
     $('input#pmIconsDisable').prop("checked", pmSettings.noIcons);
   };
 
+  /**
+   * Gets the current settings.
+   * @returns Object containing the current settings.
+   */
   var getSettings = function () {
     return pmSettings;
   };
 
-  /**************************************************************************
+  /**
    * Processes account events.
-   * @param account - Data blob countaining the user's account.
-   **************************************************************************/
+   * @param {object} account Data blob countaining the user's account.
+   */
   var processAccountEvt = function (account) {
     var users = account.users;
     clearUsersDropLists('pmNamesDroplist');
     for (i = 0; i < users.length; i++) {
-      addUserToDroplist(users[i], $('#pmNamesDroplist'));
+      appendDropLists(users[i]);
     }
+  };
+
+  var appendDropLists = function(userId){
+    getUserById(userId, function(user){
+      addUserToDroplist(user,  $('#pmNamesDroplist'));
+    });
   };
 
   return {
@@ -240,3 +255,4 @@ var pmModule = (function () {
     processAccountEvt: processAccountEvt,
   };
 }());
+

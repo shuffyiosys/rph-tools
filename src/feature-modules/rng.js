@@ -1,13 +1,14 @@
-/*****************************************************************************
- * This module handles random number generation.
- *****************************************************************************/
+/** 
+ * Random number generator module. This is mostly used for chance games that
+ * can happen in the chat
+ */
 var rngModule = (function () {
-  const DIE_MIN = 1;
-  const DIE_MAX = 10;
-  const DIE_SIDE_MIN = 2;
-  const DIE_SIDE_MAX = 100;
-  const RNG_NUM_MIN = -4294967296;
-  const RNG_NUM_MAX = 4294967296;
+  var DIE_MIN = 1;
+  var DIE_MAX = 100;
+  var DIE_SIDE_MIN = 2;
+  var DIE_SIDE_MAX = 1000;
+  var RNG_NUM_MIN = -4294967296;
+  var RNG_NUM_MAX = 4294967296;
 
   var html = {
     'tabId': 'rng-module',
@@ -19,9 +20,9 @@ var rngModule = (function () {
       '</div>' +
       '<div id="diceOptions">' +
       '<h4>Dice roll</h4><br />' +
-      '<label class="rpht_labels">Number of die </label><input style="width: 300px;" type="number" id="diceNum" name="diceNum" max="10" min="1" value="2">' +
+      '<label class="rpht_labels">Number of die </label><input style="width: 300px;" type="number" id="diceNum" name="diceNum" max="100" min="1" value="2">' +
       '<br /><br />' +
-      '<label  class="rpht_labels">Sides </label><input style="width: 300px;" type="number" id="diceSides" name="diceSides" max="100" min="2" value="6">' +
+      '<label  class="rpht_labels">Sides </label><input style="width: 300px;" type="number" id="diceSides" name="diceSides" max="1000" min="2" value="6">' +
       '<br /><br />' +
       '<label class="rpht_labels">Show Totals:</label><input style="width: 20px;" type="checkbox" id="showRollTotals" name="showRollTotals">' +
       '<br /><br />' +
@@ -37,6 +38,9 @@ var rngModule = (function () {
       '</div>'
   };
 
+  /** 
+   * Initializes the GUI components of the module.
+   */
   var init = function () {
     $('#diceNum').blur(function () {
       var dieNum = parseInt($('#diceNum').val());
@@ -92,9 +96,10 @@ var rngModule = (function () {
     });
   }
 
-  /****************************************************************************
-   * Generates a coin toss
-   ****************************************************************************/
+  /** 
+   * Generates a coin flip
+   * @returns String contaning the coin flip results.
+  */
   var genCoinFlip = function () {
     var coinMsg = '(( Coin toss: ';
     if (Math.ceil(Math.random() * 2) == 2) {
@@ -106,9 +111,13 @@ var rngModule = (function () {
     return coinMsg;
   };
 
-  /**************************************************************************
-   * Generates a dice roll.
-   **************************************************************************/
+  /**
+   * Genreates a dice roll
+   * @param {number} dieNum Number of die to use
+   * @param {number} dieSides Number of sides per die
+   * @param {boolean} showTotals Flag to show the total value of the roll
+   * @returns String containing the dice roll result
+   */
   var getDiceRoll = function (dieNum, dieSides, showTotals) {
     var totals = 0;
     var dieMsg = '/me rolled ' + dieNum + 'd' + dieSides + ':';
@@ -126,15 +135,24 @@ var rngModule = (function () {
     return dieMsg;
   };
 
-  /**************************************************************************
-   * Generates a random number
-   **************************************************************************/
+  /**
+   * Generates a random number between a min and max
+   * @param {number} minNum Minimum end of the range
+   * @param {number} maxNum Maximum end of the range
+   * @returns String containing the random number result.
+   */
   var genRandomNum = function (minNum, maxNum) {
-    var ranNumMsg = '(( Random number generated (' + minNum + ' to ' + maxNum + '): **';
-    ranNumMsg += Math.floor((Math.random() * (maxNum - minNum) + minNum)) + '** ))';
+    var ranNumMsg = '(( Random number generated (' + minNum + ' to ' +
+      maxNum + '): **';
+    ranNumMsg += Math.floor((Math.random() * (maxNum - minNum) + minNum)) +
+      '** ))';
     return ranNumMsg;
   };
 
+  /**
+   * Sends the result of a random number generated to the server
+   * @param {string} outcomeMsg A built string to show up on the chat.
+   */
   var sendResult = function (outcomeMsg) {
     var class_name = $('li.active')[0].className.split(" ");
     var room_name = "";
@@ -157,35 +175,11 @@ var rngModule = (function () {
     this_room = getRoom(room_name);
     outcomeMsg += '\u200b';
     this_room.sendMessage(outcomeMsg, userID);
-    disableRngButtons();
   };
 
-  /**************************************************************************
-   * Disables the RNG buttons for three seconds.
-   **************************************************************************/
-  var disableRngButtons = function () {
-    $('#coinRngButton').text('Wait...');
-    $('#coinRngButton')[0].disabled = true;
-    $('#diceRngButton').text('Wait...');
-    $('#diceRngButton')[0].disabled = true;
-    $('#randomRngButton').text('Wait...');
-    $('#randomRngButton')[0].disabled = true;
-
-    setTimeout(function () {
-      $('#coinRngButton').text('Flip a coin!');
-      $('#coinRngButton')[0].disabled = false;
-      $('#diceRngButton').text('Let\'s Roll!');
-      $('#diceRngButton')[0].disabled = false;
-      $('#randomRngButton').text('Randomize!');
-      $('#randomRngButton')[0].disabled = false;
-    }, 3000);
-  };
-
-  /**********************
-
-  /****************************************************************************
-   * Public members of the module
-   ***************************************************************************/
+  /**
+   * Public members of the module exposed to others.
+   */
   return {
     init: init,
 
@@ -194,3 +188,4 @@ var rngModule = (function () {
     },
   };
 }());
+

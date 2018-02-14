@@ -230,6 +230,8 @@ var chatModule = (function () {
       saveSettings();
     });
 
+    $(window).resize(resizeChatTabs);
+
     loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
 
     chatSocket.on('confirm-room-join', function (data) {
@@ -242,8 +244,6 @@ var chatModule = (function () {
       waitForDialog = chatSettings.canCancel;
       autoJoinTimer = setInterval(autoJoiningHandler, 2 * 1000);
     }
-
-    console.log('RPH Tools: Chat module settings -', chatSettings);
   }
 
   /**************************************************************************
@@ -275,10 +275,6 @@ var chatModule = (function () {
     }
 
     resizeChatTabs();
-
-    if (jQuery._data(window, "events").resize === undefined) {
-      $(window).resize(resizeChatTabs);
-    }
 
     if (chatSettings.session === true) {
       if (arrayObjectIndexOf(chatSettings.roomSession, 'roomname', room.room) === -1 ||
@@ -557,23 +553,13 @@ var chatModule = (function () {
    ****************************************************************************/
   var resizeChatTabs = function () {
     $('#chat-tabs').addClass('rpht_chat_tab');
-
     if ($('#chat-tabs')[0].clientWidth < $('#chat-tabs')[0].scrollWidth ||
       $('#chat-tabs')[0].clientWidth + 200 > $('#chat-bottom')[0].clientWidth) {
-      $('#chat-top .inner').css('height', 'calc(100% - 20px)');
-      $('#chat-bottom').css({
-        'margin-top': '-160px',
-        'height': '120px'
-      });
-      $('#chat-tabs').addClass('rpht_chat_tab_scroll');
-      $('#chat-tabs').css('width', $('#chat-bottom')[0].clientWidth - 200);
+      $('#chat-top').css('padding-bottom', '146px');
+      $('#chat-bottom').css('margin-top', '-144px');
     } else {
-      $('#chat-top .inner').removeAttr('style');
-      $('#chat-bottom').css({
-        'margin-top': '-140px'
-      });
-      $('#chat-tabs').removeClass('rpht_chat_tab_scroll');
-      $('#chat-tabs').css('width', 'auto');
+      $('#chat-top').css('padding-bottom', '130px');
+      $('#chat-bottom').css('margin-top', '-128px');
     }
   };
 
@@ -814,14 +800,19 @@ var chatModule = (function () {
    * @param account - Data blob countaining the user's account.
    **************************************************************************/
   var processAccountEvt = function (account) {
-    console.log('Adding users to drop lists');
     var users = account.users;
     clearUsersDropLists('userColorDroplist');
     clearUsersDropLists('favUserDropList');
     for (i = 0; i < users.length; i++) {
-      addUserToDroplist(users[i], userColorDroplist);
-      addUserToDroplist(users[i], favUserDropList);
+      appendDropLists(users[i]);
     }
+  };
+
+  var appendDropLists = function(userId){
+    getUserById(userId, function(user){
+      addUserToDroplist(user, userColorDroplist);
+      addUserToDroplist(user, favUserDropList);
+    });
   };
 
   var getSettings = function () {

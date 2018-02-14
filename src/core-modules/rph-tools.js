@@ -1,6 +1,6 @@
-/*****************************************************************************
+/**
  * Main RPH Tools module
- ****************************************************************************/
+ */
 var rphToolsModule = (function () {
   var modules = [];
 
@@ -9,18 +9,18 @@ var rphToolsModule = (function () {
     '.rpht_labels{display: inline-block; width: 300px; text-align: right; margin-right: 10px;}' +
     '.rpht_textarea{border: 1px solid black; width: 611px;}' +
     '.rpht_chat_tab {' +
-      'position: absolute;' +
-      'height: 60px;' +
-      'overflow-x: auto;' +
-      'overflow-y: hidden;' +
-      'white-space: nowrap;' +
+    'position: absolute;' +
+    'height: 60px;' +
+    'overflow-x: auto;' +
+    'overflow-y: hidden;' +
+    'white-space: nowrap;' +
     '}' +
     '</style>';
 
-  /****************************************************************************
+  /**
    * Initializes the modules and the HTML elements it handles.
-   * @param addonModules - Modules to add into the system.
-   ***************************************************************************/
+   * @param {Array} addonModules Modules to add into the system.
+   */
   var init = function (addonModules) {
     var i;
     var $settingsDialog = $('#settings-dialog')
@@ -38,32 +38,31 @@ var rphToolsModule = (function () {
         $('#settings-dialog .inner div.content div.inner')
           .append('<div id="' + html.tabId + '" style="display: none;">' +
             html.tabContents + '</div>')
-      }
-    });
 
-    $settingsDialog.find('.tabs a').on('click', function (ev) {
-      $settingsDialog.find('.content .inner > div').hide();
-      $settingsDialog.find($(this).attr('href')).show();
-      if ($(this).attr('href') === '#mining-settings') {
-        socket.emit('current-points'); //not used right now but whatever
+        $settingsDialog.find('.tabs a[href="#' + html.tabId + '"]').click(
+          function (ev) {
+            $settingsDialog.find('.content .inner > div').hide();
+            $settingsDialog.find($(this).attr('href')).show();
+            ev.preventDefault();
+          });
       }
-      ev.preventDefault();
     });
 
     for (i = 0; i < modules.length; i++) {
       modules[i].init();
     }
 
-    socket.on('accounts', function() {
+    socket.on('accounts', function () {
       var users = account.users;
       processAccountEvt(account);
       console.log('RPH Tools[_on.accounts]: Account data blob received', users);
     });
   }
 
-  /****************************************************************************
+  /**
    * Handler for processing the event when account data comes in.
-   ***************************************************************************/
+   * @param {Dict} account Account data blob
+   */
   var processAccountEvt = function (account) {
     for (var i = 0; i < modules.length; i++) {
       if (modules[i].processAccountEvt !== undefined) {
@@ -72,7 +71,12 @@ var rphToolsModule = (function () {
     }
   };
 
-  var getModule = function(name) {
+  /**
+   * Returns a module based on a name passed in.
+   * @param {string} name Name of the module to get the data
+   * @returns Returns the module, if found. Otherwise returns null.
+   */
+  var getModule = function (name) {
     var module = null;
     for (var i = 0; i < modules.length; i++) {
       if (modules[i].toString() === name) {
@@ -82,22 +86,27 @@ var rphToolsModule = (function () {
     }
     return module;
   };
-  
-  var getSettings = function() {
+
+  /**
+   * Returns all modules that RPH Tools has loaded
+   * @returns A list of all modules that have been loaded into the script.
+   */
+  var getModules = function () {
     return modules;
   };
-  
+
   return {
     init: init,
-    getHtml: function() {
+    getHtml: function () {
       return html;
     },
-  
-    toString: function() {
+
+    toString: function () {
       return 'RPH Tools Module';
     },
-  
+
     getModule: getModule,
-    getSettings: getSettings,
+    getModules: getModules,
   };
 }());
+

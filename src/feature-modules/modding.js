@@ -1,8 +1,8 @@
-/******************************************************************************
+/**
  * This module handles chat modding features. These include an easier way to
  * issue kicks, bans, promotions and demotions. It also can set up monitoring
- * of certain words and kick the person automatically.
- *****************************************************************************/
+ * of certain words and alert the mod.
+ */
 var moddingModule = (function () {
   var settings = {
     'alertWords': [],
@@ -39,7 +39,7 @@ var moddingModule = (function () {
       '<button style="margin-left: 6px;" type="button" id="unbanButton">Unban</button>' +
       '<button style="margin-left: 30px;" type="button" id="modButton">Mod</button>' +
       '<button style="margin-left: 6px;" type="button" id="unmodButton">Unmod</button>' +
-      '<button style="margin-left: 6px;" type="button" id="OwnButton">Owner</button>' +
+      '<button style="margin-left: 30px;" type="button" id="OwnButton">Owner</button>' +
       '<button style="margin-left: 6px;" type="button" id="UnOwnButton">Unowner</button>' +
       '<br/><br/>' +
       '</div><div>' +
@@ -112,12 +112,12 @@ var moddingModule = (function () {
     $('#unmodButton').click(function () {
       modAction('remove-mod');
     });
-    
-    $('#OwnButton').click(function() {
+
+    $('#OwnButton').click(function () {
       modAction('add-owner');
     });
-       
-    $('#UnOwnButton').click(function() {
+
+    $('#UnOwnButton').click(function () {
       modAction('remove-owner');
     });
 
@@ -137,10 +137,11 @@ var moddingModule = (function () {
     loadSettings();
     populateSettings();
   };
-  /****************************************************************************
+
+  /**
    * Performs a modding action
-   * @param:    action - string command that has the action.
-   ****************************************************************************/
+   * @param {string} action Name of the action being performed
+   */
   var modAction = function (action) {
     var targets = $('#modTargetTextInput').val().replace(/\r?\n|\r/, '');
     targets = targets.split(';');
@@ -151,18 +152,18 @@ var moddingModule = (function () {
     });
   };
 
-  /****************************************************************************
-   * Sends off the mod action
-   * @param:    action - string command that has the action.
-   * @param:    targetName - user name that the action is meant for.
-   ****************************************************************************/
+  /**
+   * Sends off the mod action to the chat socket
+   * @param {string} action Name of the action being performed
+   * @param {string} targetName User name of the recipient of the action
+   */
   var emitModAction = function (action, targetName) {
     getUserByName(targetName, function (target) {
       getUserByName($('input#modFromTextInput').val(), function (user) {
-        var modMessage = $("input#modMessageTextInput").val();;
+        var modMessage = '';
 
-        if (action === 'add-mod' || action === 'remove-mod' || action === 'add-owner' || action === 'remove-owner') {
-          modMessage = '';
+        if (action === 'kick' || action === 'ban' || action === 'unban') {
+            modMessage = $("input#modMessageTextInput").val();
         }
         chatSocket.emit(action, {
           room: $('input#modRoomTextInput').val(),
@@ -174,21 +175,27 @@ var moddingModule = (function () {
     });
   };
 
-  /****************************************************************************
-   * Initializes extra features if user is a mod of the room.
-   * @param:  thisRoom - Room that was entered
-   * @param:  userId - ID of the user that entered
-   ****************************************************************************/
+  /**
+   * Initializes extra features if user is a mod of the room. This looks for
+   * the room's mod array and sees if any of the IDs match what's in the 
+   * account.users array
+   * @param {object} thisRoom - Room that was entered
+   */
   var addModFeatures = function (thisRoom) {
     for (var user in account.users) {
       var userId = account.users[user];
       if (thisRoom.props.mods.indexOf(userId) > -1 ||
-          thisRoom.props.owners.indexOf(userId) > -1) {
+        thisRoom.props.owners.indexOf(userId) > -1) {
         addModRoomPair(userId, thisRoom);
       }
     }
   };
 
+  /**
+   * Adds a key/value pair option to the Room-Name Pair droplist.
+   * @param {number} userId User ID of the mod
+   * @param {object} thisRoom Object containing the room data.
+   */
   var addModRoomPair = function (userId, thisRoom) {
     getUserById(userId, function (user) {
       var roomNamePair = thisRoom.props.name + ': ' + user.props.name;
@@ -203,30 +210,29 @@ var moddingModule = (function () {
         roomNamePairs[roomNameValue] = roomNameObj;
         $('#roomModSelect').append('<option value="' + roomNameValue + '">' +
           roomNamePair + '</option>');
-        console.log("RPH Tools[addModFeatures]: Added room mod pair", roomNamePairs);
       }
     });
   }
 
-  /****************************************************************************
+  /**
    * Plays the alert sound
-   ****************************************************************************/
+   */
   var playAlert = function () {
     if (alertSound !== null) {
       alertSound.play();
     }
   };
 
-  /****************************************************************************
+  /**
    * Saves settings to local storage
-   ****************************************************************************/
+   */
   var saveSettings = function () {
     localStorage.setItem(localStorageName, JSON.stringify(settings));
   };
 
-  /****************************************************************************
-   * Loads settings, if they exist.
-   ****************************************************************************/
+  /** 
+   * Loads saved settings if they exist
+   */
   var loadSettings = function () {
     var storedSettings = JSON.parse(localStorage.getItem(localStorageName));
 
@@ -236,9 +242,9 @@ var moddingModule = (function () {
     }
   };
 
-  /****************************************************************************
-   * Deleting settings.
-   ****************************************************************************/
+  /**
+   * Deleting saved settings.
+   */
   var deleteSettings = function () {
     localStorage.removeItem(localStorageName);
     settings = {
@@ -248,9 +254,9 @@ var moddingModule = (function () {
     populateSettings();
   };
 
-  /****************************************************************************
-   * Populates the GUI
-   ****************************************************************************/
+  /**
+   * Populates the GUI with the saved settings
+   */
   var populateSettings = function () {
     $('#modAlertWords').val(settings.alertWords);
     $('#modAlertUrl').val(settings.alertUrl);
