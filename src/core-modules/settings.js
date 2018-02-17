@@ -10,9 +10,9 @@ var settingsModule = (function () {
       '<p>To import settings, paste them into the text box and press "Import".</p><br />' +
       '<textarea name="importExportText" id="importExportTextarea" rows=10 class="rpht_textarea" ></textarea>' +
       '<br /><br />' +
-      '<button type="button" style="margin-right: 144px;" id="exportButton">Export</button>' +
-      '<button type="button" style="margin-right: 134px;" id="importButton">Import</button>' +
-      '<button type="button" id="deleteSettingsButton">Delete settings</button>'
+      '<button type="button" style="width: 60px;" id="exportButton">Export</button>' +
+      '<button type="button" style="margin-left: 10px; width: 60px;" id="importButton">Import</button>' +
+      '<button type="button" style="margin-left: 394px; "id="deleteSettingsButton">Delete settings</button>'
   };
 
   var confirmDelete = false;

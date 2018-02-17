@@ -33,14 +33,15 @@ var moddingModule = (function () {
       '<p>Perform action on these users (semicolon separated with no space between): </p>' +
       '<textarea name="modTargetTextInput" id="modTargetTextInput" rows=6 class="rpht_textarea"></textarea>' +
       '<br/><br/>' +
-      '<button type="button" id="resetPassword">Reset PW</button>' +
-      '<button style="margin-left: 30px;" type="button" id="kickButton">Kick</button>' +
-      '<button style="margin-left: 30px;" type="button" id="banButton">Ban</button>' +
-      '<button style="margin-left: 6px;" type="button" id="unbanButton">Unban</button>' +
-      '<button style="margin-left: 30px;" type="button" id="modButton">Mod</button>' +
-      '<button style="margin-left: 6px;" type="button" id="unmodButton">Unmod</button>' +
-      '<button style="margin-left: 30px;" type="button" id="OwnButton">Owner</button>' +
-      '<button style="margin-left: 6px;" type="button" id="UnOwnButton">Unowner</button>' +
+      '<button style="width: 60px;" type="button" id="kickButton">Kick</button>' +
+      '<button style="margin-left: 30px; width: 60px;" type="button" id="banButton">Ban</button>' +
+      '<button style="margin-left: 6px;  width: 60px;" type="button" id="unbanButton">Unban</button>' +
+      '<button style="margin-left: 30px; width: 60px;" type="button" id="modButton">Mod</button>' +
+      '<button style="margin-left: 6px;  width: 60px;" type="button" id="unmodButton">Unmod</button>' +
+      '<button style="margin-left: 30px; width: 60px;" type="button" id="OwnButton">Owner</button>' +
+      '<button style="margin-left: 6px;  width: 60px;" type="button" id="UnownButton">Unowner</button>' +
+      '<br/><br/>' +
+      '<button type="button" id="resetPwButton">Reset PW</button>' +
       '<br/><br/>' +
       '</div><div>' +
       '<h4>Word Alerter</h4><br />' +
@@ -78,7 +79,7 @@ var moddingModule = (function () {
       }
     });
 
-    $('#resetPassword').click(function () {
+    $('#resetPwButton').click(function () {
       var room = $('input#modRoomTextInput').val();
       var user = $('input#modFromTextInput').val();
       getUserByName($('input#modFromTextInput').val(), function (user) {

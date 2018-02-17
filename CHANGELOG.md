@@ -1,3 +1,24 @@
+RPH Tools (4.0.2)
+--------------
+* Some code was copied, pasted, and modified. So they got moved into their own source file (src/custom.js)
+* All build scripts were updated to include src/custom.js
+* The rest of the commenting has been updated to JSDoc style
+* utilities
+  * Removed "clearUsersDroplist" due to redundancy. All calls to it were redone.
+* Chat Module
+  * Updated room highlighting to use new "Room.isActive()" API
+  * Updated populating drop lists for new sorted name to ID array
+* PM Module
+  * Fixed the layout so it's cleaner
+  * Updated populating drop lists for new sorted name to ID array
+* Modding Module
+  * Cleaned up the mod action button positions
+  * Renamed "resetPassword" to "resetPwButton"
+* Settings Module
+  * Cleaned up the button positions
+* RPH Tools module
+  * Added "namesToIds" dictionary. This maps the account's usernames to their ID values.
+
 RPH Tools (4.0.1)
 --------------
 * Most comments were updated to JSDoc style (still need to do the chat and utilities files)

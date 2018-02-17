@@ -109,7 +109,7 @@ var blockingModule = (function () {
       blockedUsers = storedSettings;
     }
 
-    clearUsersDropLists('blockedDropList');
+     $('#blockedDropList').empty();
     blockedUsers.forEach(function(blockedUser, index){
       $('#blockedDropList').append('<option value="' + blockedUser.id + '">' +
       blockedUser.name + '</option>');
@@ -123,7 +123,7 @@ var blockingModule = (function () {
   var deleteSettings = function () {
     localStorage.removeItem(localStorageName);
     blockedUsers = [];
-    clearUsersDropLists('blockedDropList');
+     $('#blockedDropList').empty();
   };
 
   return {

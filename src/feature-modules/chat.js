@@ -1,6 +1,6 @@
-/****************************************************************************
+/****
  * This module handles the chat functions of the script.
- ****************************************************************************/
+ ****/
 var chatModule = (function () {
   var pingSettings = {
     'triggers': [],
@@ -36,6 +36,8 @@ var chatModule = (function () {
   var userColorDroplist = null;
 
   var favUserDropList = null;
+
+  var MAX_ROOMS = 30;
 
   var html = {
     'tabId': 'chat-module',
@@ -82,7 +84,7 @@ var chatModule = (function () {
       '<br /><br />' +
       '<label class="rpht_labels">Username: </label><select style="width: 300px;" id="favUserDropList"></select>' +
       '<br /><br />' +
-      '<label class="rpht_labels">Room:     </label><input  type="text" id="favRoom" name="favRoom">' +
+      '<label class="rpht_labels">Room {}  </label><input  type="text" id="favRoom" name="favRoom">' +
       '<br /><br />' +
       '<label class="rpht_labels">Password: </label><input  type="text" id="favRoomPw" name="favRoomPw">' +
       '<br /><br />' +
@@ -183,8 +185,7 @@ var chatModule = (function () {
           pingSound.play();
         }
         $('#pingPreviewText')[0].innerHTML = msg;
-      }
-      else {
+      } else {
         $('#pingPreviewText')[0].innerHTML = "No match";
       }
     });
@@ -246,13 +247,13 @@ var chatModule = (function () {
     }
   }
 
-  /**************************************************************************
-   * @brief:    When user joins a room, do the following:
-   *            - Set up the .onMessage function for pinging
-   *            - Add the user's name to the chat tab and textarea
-   *            - Create a room-pair name for the Modding section
-   * @param:    room - Room that the user has joined
-   **************************************************************************/
+  /**
+   * When user joins a room, do the following:
+   * - Set up the .onMessage function for pinging
+   * - Add the user's name to the chat tab and textarea
+   * - Create a room-pair name for the Modding section
+   * @param {object} room Room that the user has joined
+   */
   var roomSetup = function (room) {
     var thisRoom = getRoom(room.room);
     var userId = getIdFromChatTab(thisRoom);
@@ -288,12 +289,12 @@ var chatModule = (function () {
     }
   };
 
-  /****************************************************************************
-   * @brief:    Takes a message received in the chat and modifies it if it has
-   *            a match for pinging
-   * @param:    thisRoom - The room that the message is for.
-   * @param:    data - The message for the room
-   ****************************************************************************/
+  /**
+   * Takes a message received in the chat and processes it for pinging or 
+   * otherwise
+   * @param {object} thisRoom The room that the message is for.
+   * @param {object} data The message for the room
+   */
   var postMessage = function (thisRoom, data) {
     getUserById(data.userid, function (User) {
       var moddingModule = rphToolsModule.getModule('Modding Module');
@@ -371,11 +372,12 @@ var chatModule = (function () {
     });
   };
 
-  /****************************************************************************
-   * @brief:    Gets the user name's classes that are applicable to it
-   * @param:    User - User of the message
-   * @param:    thisRoom - Room that the message is being sent to
-   ****************************************************************************/
+  /**
+   * Gets the user name's classes that are applicable to it
+   * @param {object} User - User of the message
+   * @param {object} thisRoom - Room that the message is being sent to
+   * @returns All the classes found
+   */
   var getClasses = function (User, thisRoom) {
     var classes = '';
     if (User.friendOf) {
@@ -396,12 +398,11 @@ var chatModule = (function () {
     return classes;
   };
 
-  /****************************************************************************
-   * @brief:    Checks if the message has any ping terms
-   * @param:    msg - The message for the chat as a string.
-   *
-   * @return:   Returns the match or null
-   ****************************************************************************/
+  /**
+   * Checks if the message has any ping terms
+   * @param {string} msg - The message for the chat
+   * @returns Returns the match or null
+   */
   var matchPing = function (msg, triggers, caseSensitive, exactMatch) {
     if (!triggers) {
       return null;
@@ -435,13 +436,12 @@ var chatModule = (function () {
     return null;
   };
 
-  /****************************************************************************
-   * @brief:    Adds highlights to the ping term
-   * @param:    msg - Message to be sent to the chat.
-   * @param:    testRegex - Regular expression to use to match the term.
-   *
-   * @param:    Modified msg.
-   ****************************************************************************/
+  /**
+   * Adds highlights to the ping term
+   * @param {string} msg - Message to be sent to the chat.
+   * @param {regex} testRegex - Regular expression to use to match the term.
+   * @returns Modified message
+   */
   var highlightPing = function (msg, testRegex, color, highlight, bold, italicize) {
     var boldEnabled = "";
     var italicsEnabled = "";
@@ -460,16 +460,12 @@ var chatModule = (function () {
     return msg;
   };
 
-  /****************************************************************************
-   * @brief:  Adds a highlight to the room's tab
-   * @param:  thisRoom - Room where the ping happened.
-   ****************************************************************************/
+  /**
+   * Adds a highlight to the room's tab
+   * @param {object} thisRoom - Room where the ping happened.
+   */
   var highlightRoom = function (thisRoom, color, highlight) {
-    //Don't highlight chat tab if the chat is marked as active.
-    var testRegex = new RegExp('active', 'im');
-    var className = thisRoom.$tabs[0][0].className;
-
-    if (className.search(testRegex) == -1) {
+    if (!thisRoom.thisRoom()) {
       thisRoom.$tabs[0].css('background-color', highlight);
       thisRoom.$tabs[0].css('color', color);
 
@@ -488,11 +484,11 @@ var chatModule = (function () {
     }
   };
 
-  /****************************************************************************
-   * @brief:  Adds user name to chat tab and chat textarea
-   * @param:  thisRoom - Room that was entered
-   * @param:  userId - ID of the user that entered
-   ****************************************************************************/
+  /**
+   * Adds user name to chat tab and chat textarea
+   * @param {object} thisRoom - Room that was entered
+   * @param {number} userId - ID of the user that entered
+   **/
   var addNameToUI = function (thisRoom, userId) {
     getUserById(userId, function (User) {
       var tabsLen = thisRoom.$tabs.length;
@@ -511,10 +507,10 @@ var chatModule = (function () {
     });
   };
 
-  /****************************************************************************
-   * @brief:    Gets the user's ID from the chat tab (it's in the class)
-   * @param:    thisRoom - Room to get the ID from
-   ****************************************************************************/
+  /**
+   * Gets the user's ID from the chat tab (it's in the class)
+   * @param {} thisRoom - Room to get the ID from
+   **/
   var getIdFromChatTab = function (thisRoom) {
     var tabsLen = thisRoom.$tabs.length;
     var className = thisRoom.$tabs[tabsLen - 1][0].className;
@@ -523,34 +519,9 @@ var chatModule = (function () {
     return parseInt(charID);
   };
 
-  /****************************************************************************
-   * @brief     Appends message to a room without adding an image icon
-   * @param     html - HTML to add to the room.
-   * @param     thisRoom - Object to the room receiving the message.
-   *
-   * @note      This was modified from RPH's original code, which is not covered
-   *            by this license.
-   ****************************************************************************/
-  var appendMessageTextOnly = function (html, thisRoom) {
-    var $el = $('<div>\n' + html + '\n</div>').appendTo(thisRoom.$el);
-    var extra = 5; //add more if near the bottom
-    if (thisRoom.$el[0].scrollHeight - thisRoom.$el.scrollTop() < 50) {
-      extra = 60;
-    }
-    thisRoom.$el.animate({
-      scrollTop: '+=' + ($el.outerHeight() + extra)
-    }, 180);
-
-    if (thisRoom.$el.children('div').length > account.settings.maxHistory) {
-      thisRoom.$el.children('div:not(.sys):lt(3)').remove();
-    }
-
-    return $el;
-  };
-
-  /****************************************************************************
-   * @brief:   Resizes chat tabs accordingly
-   ****************************************************************************/
+  /**
+   * Resizes chat tabs based on the width of the tabs vs. the screen size.
+   */
   var resizeChatTabs = function () {
     $('#chat-tabs').addClass('rpht_chat_tab');
     if ($('#chat-tabs')[0].clientWidth < $('#chat-tabs')[0].scrollWidth ||
@@ -561,11 +532,18 @@ var chatModule = (function () {
       $('#chat-top').css('padding-bottom', '130px');
       $('#chat-bottom').css('margin-top', '-128px');
     }
+    // Debouce the function.
+    $(window).off("resize", resizeChatTabs);
+    setTimeout(enableResizing, (100));
   };
 
-  /****************************************************************************
-   * @brief:   Handler for the auto-joining mechanism
-   ****************************************************************************/
+  var enableResizing = function () {
+    $(window).resize(resizeChatTabs);
+  };
+
+  /**
+   * Handler for the auto-joining mechanism
+   **/
   var autoJoiningHandler = function () {
     if (roomnames.length > 0) {
       if (waitForDialog === true) {
@@ -618,6 +596,9 @@ var chatModule = (function () {
     }
   };
 
+  /** 
+   * Joins all the rooms in the favorite rooms list
+   */
   var JoinFavoriteRooms = function () {
     console.log('Joining favorite rooms');
     for (var i = 0; i < chatSettings.favRooms.length; i++) {
@@ -631,6 +612,9 @@ var chatModule = (function () {
     }
   };
 
+  /**
+   * Updates the chat session (which rooms the user is in at the time)
+   */
   var updateSession = function () {
     var tempSession = [];
     for (var i = 0; i < rph.roomsJoined.length; i++) {
@@ -643,6 +627,9 @@ var chatModule = (function () {
     saveSettings();
   };
 
+  /** 
+   * Adds an entry to the Favorite Chat Rooms list
+   */
   var addFavoriteRoom = function () {
     var room = getRoom($('#favRoom').val());
 
@@ -651,7 +638,7 @@ var chatModule = (function () {
       return;
     }
 
-    if (chatSettings.favRooms.length < 10) {
+    if (chatSettings.favRooms.length < MAX_ROOMS) {
       var favExists = false;
       var hashStr = $('#favRoom').val() + $('#favUserDropList option:selected').html();
       var favRoomObj = {
@@ -679,6 +666,9 @@ var chatModule = (function () {
     }
   };
 
+  /** 
+   * Removes an entry to the Favorite Chat Rooms list
+   */
   var removeFavoriteRoom = function () {
     var favItem = document.getElementById("favRoomsList");
     var favItemId = $('#favRoomsList option:selected').val();
@@ -716,12 +706,19 @@ var chatModule = (function () {
 
   /*
    * Handlers for saving, loading, and populating data for the module.
-   * */
+   **/
 
+  /**
+   * Save current settings
+   */
   var saveSettings = function () {
     localStorage.setItem(localStorageName, JSON.stringify(getSettings()));
   };
 
+  /**
+   * Loads settings from local storage
+   * @param {object} storedSettings Object containing the settings
+   */
   var loadSettings = function (storedSettings) {
     if (storedSettings !== null) {
       chatSettings = storedSettings.chatSettings;
@@ -730,6 +727,9 @@ var chatModule = (function () {
     populateSettings();
   };
 
+  /**
+   * Deletes the current settings and resets them to defaults.
+   */
   var deleteSettings = function () {
     localStorage.removeItem(localStorageName);
     pingSettings = {
@@ -752,11 +752,15 @@ var chatModule = (function () {
       'favRooms': [],
       'RoomSession': [],
     };
+
     populateSettings();
   };
 
+  /**
+   * Populate the GUI with settings from the browser's local storage
+   */
   var populateSettings = function () {
-    clearUsersDropLists('favUserDropList');
+    $('#favUserDropList').empty();
 
     $('#pingNames').val(pingSettings.triggers);
     $('#pingURL').val(pingSettings.audioUrl);
@@ -794,25 +798,19 @@ var chatModule = (function () {
     }
   };
 
-  /**************************************************************************
+  /**
    * @brief Processes account events.
    *
    * @param account - Data blob countaining the user's account.
-   **************************************************************************/
+   **/
   var processAccountEvt = function (account) {
-    var users = account.users;
-    clearUsersDropLists('userColorDroplist');
-    clearUsersDropLists('favUserDropList');
-    for (i = 0; i < users.length; i++) {
-      appendDropLists(users[i]);
+    var namesToIds = rphToolsModule.getNamesToIds();
+    $('#userColorDroplist').empty();
+    $('#favUserDropList').empty();
+    for (var name in namesToIds) {
+      addToDroplist(namesToIds[name], name, userColorDroplist);
+      addToDroplist(namesToIds[name], name, favUserDropList);
     }
-  };
-
-  var appendDropLists = function(userId){
-    getUserById(userId, function(user){
-      addUserToDroplist(user, userColorDroplist);
-      addUserToDroplist(user, favUserDropList);
-    });
   };
 
   var getSettings = function () {

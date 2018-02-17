@@ -2,6 +2,8 @@
  * Main RPH Tools module
  */
 var rphToolsModule = (function () {
+  var namesToIds = {};
+
   var modules = [];
 
   var rpht_css =
@@ -48,14 +50,30 @@ var rphToolsModule = (function () {
       }
     });
 
-    for (i = 0; i < modules.length; i++) {
-      modules[i].init();
-    }
-
     socket.on('accounts', function () {
       var users = account.users;
-      processAccountEvt(account);
       console.log('RPH Tools[_on.accounts]: Account data blob received', users);
+      setTimeout(function(){
+        for (i = 0; i < modules.length; i++) {
+          modules[i].init();
+        }
+        mapNamesToIds(account);
+      },1000);
+      setTimeout(function(){
+        processAccountEvt(account);
+      },2000);
+    });
+  }
+
+  /**
+   * Maps user names to IDs into a dictionary
+   * @param {object} account Account data blob
+   */
+  var mapNamesToIds = function(account){
+    account.users.forEach(function(userId){
+      getUserById(userId, function(user){
+        namesToIds[user.props.name] = userId;
+      });
     });
   }
 
@@ -64,11 +82,13 @@ var rphToolsModule = (function () {
    * @param {Dict} account Account data blob
    */
   var processAccountEvt = function (account) {
-    for (var i = 0; i < modules.length; i++) {
-      if (modules[i].processAccountEvt !== undefined) {
-        modules[i].processAccountEvt(account);
+    namesToIds = sortOnKeys(namesToIds);
+      for (var i = 0; i < modules.length; i++) {
+        if (modules[i].processAccountEvt !== undefined) {
+          modules[i].processAccountEvt(account);
+        }
       }
-    }
+    
   };
 
   /**
@@ -103,6 +123,10 @@ var rphToolsModule = (function () {
 
     toString: function () {
       return 'RPH Tools Module';
+    },
+
+    getNamesToIds: function(){
+      return namesToIds;
     },
 
     getModule: getModule,
