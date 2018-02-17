@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.0.0
+// @version    4.0.2
 // @description Adds extended settings to RPH
 // @match      http://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,20 +9,30 @@
 // @license    MIT
 // ==/UserScript==
 
-var VERSION_STRING = '4.0.1';/**
- * @brief:    Gets 
- * @param:    settingId - The full selector of which HTML to extract its value
- *            from.
- * @return:   The extracted HTML's value
+var VERSION_STRING = '4.0.2';
+/**
+ * Gets the value from an input element.
+ * @param {string} settingId Full selector of the input to get its value
+ * @return The extracted HTML's value
  */
 var getInput = function (settingId) {
   return $(settingId).val();
 };
 
+/**
+ * Gets the value of a checkbox
+ * @param {string} settingId Full selector of the checkbox to get the value
+ * @return The extracted HTML's value
+ */
 var getCheckBox = function (settingId) {
   return $(settingId).is(':checked');
 };
 
+/**
+ * Marks an HTML element with red or white if there's a problem
+ * @param {string} element Full selector of the HTML element to mark
+ * @param {boolean} mark If the mark is for good or bad
+ */
 var markProblem = function (element, mark) {
   if (mark === true) {
     $(element).css('background', '#FF7F7F');
@@ -31,6 +41,12 @@ var markProblem = function (element, mark) {
   }
 };
 
+/**
+ * Checks to see if an input is valid or not and marks it accordingly
+ * @param {string} settingId Full selector of the HTML element to check
+ * @param {string} setting What kind of setting is being checked
+ * @return If the input is valid or not
+ */
 var validateSetting = function (settingId, setting) {
   var validInput = false;
   var input = $(settingId).val();
@@ -49,11 +65,21 @@ var validateSetting = function (settingId, setting) {
   return validInput;
 };
 
+/**
+ * Makes sure the color input is a valid hex color input
+ * @param {string} color Color input
+ * @returns If the color input is valid
+ */
 var validateColor = function (color) {
   var pattern = new RegExp(/(^#[0-9A-Fa-f]{6}$)|(^#[0-9A-Fa-f]{3}$)/i);
   return pattern.test(color);
 };
 
+/**
+ * Makes sure the URL input is valid
+ * @param {string} url URL input
+ * @returns If the URL input is valid
+ */
 var validateUrl = function (url) {
   var match = false;
   var regexp = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/;
@@ -69,12 +95,12 @@ var validateUrl = function (url) {
   return match;
 };
 
-/****************************************************************************
- * @brief:    Tests the color range of the color to ensure its valid
- * @param:    TextColor - String representation of the color.
- *
- * @return:   True if the color is within range, false otherwise.
- ****************************************************************************/
+/**
+ * Makes sure the color is less than #D2D2D2 or #DDD depending on how many 
+ * digits were entered.
+ * @param {string} TextColor String representation of the color.
+ * @return True if the color is within range, false otherwise.
+ */
 var validateColorRange = function (TextColor) {
   var rawHex = TextColor.substring(1, TextColor.length);
   var red = 255;
@@ -106,45 +132,28 @@ var validateColorRange = function (TextColor) {
   return false;
 };
 
-/****************************************************************************
- * @brief Adds usernames to droplists.
- * @param userId - ID of username
- ****************************************************************************/
-var addUserToDroplist = function (user, droplist) {
-  droplist.append('<option value="' + user.props.id + '">' + user.props.name +
-    '</option>');
+/**
+ * Adds an option to a select element with a value and its label
+ * @param {string} value Value of the option element
+ * @param {string} label Label of the option element
+ * @param {object} droplist Which select element to add option to
+ */
+var addToDroplist = function (value, label, droplist) {
+  droplist.append($('<option>', {
+    value: value,
+    text: label
+  }));
 };
 
-var sortDropList = function (droplist) {
-  var dropListPairs = {};
-  droplist[0].childNodes.forEach(function (node) {
-    dropListPairs[node.innerHTML] = node.value;
-  })
-  dropListPairs = sortOnKeys(dropListPairs);
-  clearUsersDropLists('userColorDroplist');
-  for (var username in dropListPairs) {
-    droplist.append('<option value="' + dropListPairs[username] + '">' +
-      username + '</option>');
-  }
-}
-
-/****************************************************************************
- * @brief Clears droplists.
- ****************************************************************************/
-var clearUsersDropLists = function (droplist) {
-  $('#' + droplist).empty();
-};
-
-/****************************************************************************
- * @brief      In an array of object, return the first instance where a key
- *             matches a value.
- *
- * @param      objArray - Array of objects
- * @param      key - Key to look for
- * @param      value - Value of the key to match
- * @return     Index of the first instance where the key matches the value, -1
- *             otherwise.
- ****************************************************************************/
+/**
+ * Un an array of objects, return the first instance where a key matches the
+ * value being searched.
+ * @param {array} objArray Array of objects
+ * @param {*} key Key to look for
+ * @param {*} value Value of the key to match
+ * @return Index of the first instance where the key matches the value, -1 
+ *         otherwise.
+ */
 var arrayObjectIndexOf = function (objArray, key, value) {
   for (var i = 0; i < objArray.length; i++) {
     if (objArray[i][key] === value) {
@@ -154,40 +163,21 @@ var arrayObjectIndexOf = function (objArray, key, value) {
   return -1;
 };
 
-/****************************************************************************
- * @brief:    Checks if a search term is in an <a href=...> tag.
- * @param:    searchTerm - String to look for
- * @param:    msg - msg being searched.
- *
- * @return:   True or false if there's a match.
- ****************************************************************************/
+/**
+ * Checks if a search term is in an <a href=...> tag.
+ * @param {string} searchTerm Search term to look for
+ * @param {string} msg The string being looked at
+ * @returns True or false if there's a match.
+ */
 var isInLink = function (searchTerm, msg) {
   var regexp = new RegExp('href=".*?' + searchTerm + '.*?"', '');
   return regexp.test(msg);
 };
 
-/****************************************************************************
- * @brief     Generates a hash value for a string
- *
- * @note      This was modified from https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
- ****************************************************************************/
-String.prototype.hashCode = function () {
-  var hash = 0,
-    i, chr, len;
-  if (this.length === 0) return hash;
-  for (i = 0, len = this.length; i < len; i++) {
-    chr = this.charCodeAt(i);
-    hash = ((hash << 31) - hash) + chr;
-    hash |= 0; // Convert to 32bit integer
-  }
-  return hash;
-};
-
-/****************************************************************************
- * @brief:    Checks if the current account is a mod of the room.
- *
- * @param:    roomName: Name of the room.
- ****************************************************************************/
+/**
+ * Checks if the current account is a mod of the room.
+ * @param {object} room Object containing room data
+ */
 var isModOfRoom = function (room) {
   for (var idx = 0; idx < account.users.length; idx++) {
     if (room.props.mods.indexOf(account.users[idx]) > -1 ||
@@ -198,6 +188,11 @@ var isModOfRoom = function (room) {
   return false;
 };
 
+/**
+ * Takes a dictionary and creates a sorted version of it based on its keys
+ * @param {object} dict Dictionary to be sorted
+ * @returns Sorted dictionary
+ */
 var sortOnKeys = function (dict) {
   var sorted = [];
   for (var key in dict) {
@@ -211,9 +206,50 @@ var sortOnKeys = function (dict) {
   }
 
   return tempDict;
-}/****************************************************************************
+}/**
+ * Generates a hash value for a string
+ * This was modified from https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
+ */
+String.prototype.hashCode = function () {
+  var hash = 0,
+    i, chr, len;
+  if (this.length === 0) return hash;
+  for (i = 0, len = this.length; i < len; i++) {
+    chr = this.charCodeAt(i);
+    hash = ((hash << 31) - hash) + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
+};
+
+/**
+   * Appends message to a room without adding an image icon
+   * @param {string} html - HTML to add to the room.
+   * @param {object} thisRoom - Object to the room receiving the message.
+   *
+   * This was modified from RPH's original code, which is not covered by the
+   * license.
+   */
+  var appendMessageTextOnly = function (html, thisRoom) {
+    var $el = $('<div>\n' + html + '\n</div>').appendTo(thisRoom.$el);
+    var extra = 5; //add more if near the bottom
+    if (thisRoom.$el[0].scrollHeight - thisRoom.$el.scrollTop() < 50) {
+      extra = 60;
+    }
+    thisRoom.$el.animate({
+      scrollTop: '+=' + ($el.outerHeight() + extra)
+    }, 180);
+
+    if (thisRoom.$el.children('div').length > account.settings.maxHistory) {
+      thisRoom.$el.children('div:not(.sys):lt(3)').remove();
+    }
+
+    return $el;
+  };
+
+/****
  * This module handles the chat functions of the script.
- ****************************************************************************/
+ ****/
 var chatModule = (function () {
   var pingSettings = {
     'triggers': [],
@@ -249,6 +285,8 @@ var chatModule = (function () {
   var userColorDroplist = null;
 
   var favUserDropList = null;
+
+  var MAX_ROOMS = 30;
 
   var html = {
     'tabId': 'chat-module',
@@ -295,7 +333,7 @@ var chatModule = (function () {
       '<br /><br />' +
       '<label class="rpht_labels">Username: </label><select style="width: 300px;" id="favUserDropList"></select>' +
       '<br /><br />' +
-      '<label class="rpht_labels">Room:     </label><input  type="text" id="favRoom" name="favRoom">' +
+      '<label class="rpht_labels">Room {}  </label><input  type="text" id="favRoom" name="favRoom">' +
       '<br /><br />' +
       '<label class="rpht_labels">Password: </label><input  type="text" id="favRoomPw" name="favRoomPw">' +
       '<br /><br />' +
@@ -396,8 +434,7 @@ var chatModule = (function () {
           pingSound.play();
         }
         $('#pingPreviewText')[0].innerHTML = msg;
-      }
-      else {
+      } else {
         $('#pingPreviewText')[0].innerHTML = "No match";
       }
     });
@@ -459,13 +496,13 @@ var chatModule = (function () {
     }
   }
 
-  /**************************************************************************
-   * @brief:    When user joins a room, do the following:
-   *            - Set up the .onMessage function for pinging
-   *            - Add the user's name to the chat tab and textarea
-   *            - Create a room-pair name for the Modding section
-   * @param:    room - Room that the user has joined
-   **************************************************************************/
+  /**
+   * When user joins a room, do the following:
+   * - Set up the .onMessage function for pinging
+   * - Add the user's name to the chat tab and textarea
+   * - Create a room-pair name for the Modding section
+   * @param {object} room Room that the user has joined
+   */
   var roomSetup = function (room) {
     var thisRoom = getRoom(room.room);
     var userId = getIdFromChatTab(thisRoom);
@@ -501,12 +538,12 @@ var chatModule = (function () {
     }
   };
 
-  /****************************************************************************
-   * @brief:    Takes a message received in the chat and modifies it if it has
-   *            a match for pinging
-   * @param:    thisRoom - The room that the message is for.
-   * @param:    data - The message for the room
-   ****************************************************************************/
+  /**
+   * Takes a message received in the chat and processes it for pinging or 
+   * otherwise
+   * @param {object} thisRoom The room that the message is for.
+   * @param {object} data The message for the room
+   */
   var postMessage = function (thisRoom, data) {
     getUserById(data.userid, function (User) {
       var moddingModule = rphToolsModule.getModule('Modding Module');
@@ -584,11 +621,12 @@ var chatModule = (function () {
     });
   };
 
-  /****************************************************************************
-   * @brief:    Gets the user name's classes that are applicable to it
-   * @param:    User - User of the message
-   * @param:    thisRoom - Room that the message is being sent to
-   ****************************************************************************/
+  /**
+   * Gets the user name's classes that are applicable to it
+   * @param {object} User - User of the message
+   * @param {object} thisRoom - Room that the message is being sent to
+   * @returns All the classes found
+   */
   var getClasses = function (User, thisRoom) {
     var classes = '';
     if (User.friendOf) {
@@ -609,12 +647,11 @@ var chatModule = (function () {
     return classes;
   };
 
-  /****************************************************************************
-   * @brief:    Checks if the message has any ping terms
-   * @param:    msg - The message for the chat as a string.
-   *
-   * @return:   Returns the match or null
-   ****************************************************************************/
+  /**
+   * Checks if the message has any ping terms
+   * @param {string} msg - The message for the chat
+   * @returns Returns the match or null
+   */
   var matchPing = function (msg, triggers, caseSensitive, exactMatch) {
     if (!triggers) {
       return null;
@@ -648,13 +685,12 @@ var chatModule = (function () {
     return null;
   };
 
-  /****************************************************************************
-   * @brief:    Adds highlights to the ping term
-   * @param:    msg - Message to be sent to the chat.
-   * @param:    testRegex - Regular expression to use to match the term.
-   *
-   * @param:    Modified msg.
-   ****************************************************************************/
+  /**
+   * Adds highlights to the ping term
+   * @param {string} msg - Message to be sent to the chat.
+   * @param {regex} testRegex - Regular expression to use to match the term.
+   * @returns Modified message
+   */
   var highlightPing = function (msg, testRegex, color, highlight, bold, italicize) {
     var boldEnabled = "";
     var italicsEnabled = "";
@@ -673,16 +709,12 @@ var chatModule = (function () {
     return msg;
   };
 
-  /****************************************************************************
-   * @brief:  Adds a highlight to the room's tab
-   * @param:  thisRoom - Room where the ping happened.
-   ****************************************************************************/
+  /**
+   * Adds a highlight to the room's tab
+   * @param {object} thisRoom - Room where the ping happened.
+   */
   var highlightRoom = function (thisRoom, color, highlight) {
-    //Don't highlight chat tab if the chat is marked as active.
-    var testRegex = new RegExp('active', 'im');
-    var className = thisRoom.$tabs[0][0].className;
-
-    if (className.search(testRegex) == -1) {
+    if (!thisRoom.thisRoom()) {
       thisRoom.$tabs[0].css('background-color', highlight);
       thisRoom.$tabs[0].css('color', color);
 
@@ -701,11 +733,11 @@ var chatModule = (function () {
     }
   };
 
-  /****************************************************************************
-   * @brief:  Adds user name to chat tab and chat textarea
-   * @param:  thisRoom - Room that was entered
-   * @param:  userId - ID of the user that entered
-   ****************************************************************************/
+  /**
+   * Adds user name to chat tab and chat textarea
+   * @param {object} thisRoom - Room that was entered
+   * @param {number} userId - ID of the user that entered
+   **/
   var addNameToUI = function (thisRoom, userId) {
     getUserById(userId, function (User) {
       var tabsLen = thisRoom.$tabs.length;
@@ -724,10 +756,10 @@ var chatModule = (function () {
     });
   };
 
-  /****************************************************************************
-   * @brief:    Gets the user's ID from the chat tab (it's in the class)
-   * @param:    thisRoom - Room to get the ID from
-   ****************************************************************************/
+  /**
+   * Gets the user's ID from the chat tab (it's in the class)
+   * @param {} thisRoom - Room to get the ID from
+   **/
   var getIdFromChatTab = function (thisRoom) {
     var tabsLen = thisRoom.$tabs.length;
     var className = thisRoom.$tabs[tabsLen - 1][0].className;
@@ -736,34 +768,9 @@ var chatModule = (function () {
     return parseInt(charID);
   };
 
-  /****************************************************************************
-   * @brief     Appends message to a room without adding an image icon
-   * @param     html - HTML to add to the room.
-   * @param     thisRoom - Object to the room receiving the message.
-   *
-   * @note      This was modified from RPH's original code, which is not covered
-   *            by this license.
-   ****************************************************************************/
-  var appendMessageTextOnly = function (html, thisRoom) {
-    var $el = $('<div>\n' + html + '\n</div>').appendTo(thisRoom.$el);
-    var extra = 5; //add more if near the bottom
-    if (thisRoom.$el[0].scrollHeight - thisRoom.$el.scrollTop() < 50) {
-      extra = 60;
-    }
-    thisRoom.$el.animate({
-      scrollTop: '+=' + ($el.outerHeight() + extra)
-    }, 180);
-
-    if (thisRoom.$el.children('div').length > account.settings.maxHistory) {
-      thisRoom.$el.children('div:not(.sys):lt(3)').remove();
-    }
-
-    return $el;
-  };
-
-  /****************************************************************************
-   * @brief:   Resizes chat tabs accordingly
-   ****************************************************************************/
+  /**
+   * Resizes chat tabs based on the width of the tabs vs. the screen size.
+   */
   var resizeChatTabs = function () {
     $('#chat-tabs').addClass('rpht_chat_tab');
     if ($('#chat-tabs')[0].clientWidth < $('#chat-tabs')[0].scrollWidth ||
@@ -774,11 +781,18 @@ var chatModule = (function () {
       $('#chat-top').css('padding-bottom', '130px');
       $('#chat-bottom').css('margin-top', '-128px');
     }
+    // Debouce the function.
+    $(window).off("resize", resizeChatTabs);
+    setTimeout(enableResizing, (100));
   };
 
-  /****************************************************************************
-   * @brief:   Handler for the auto-joining mechanism
-   ****************************************************************************/
+  var enableResizing = function () {
+    $(window).resize(resizeChatTabs);
+  };
+
+  /**
+   * Handler for the auto-joining mechanism
+   **/
   var autoJoiningHandler = function () {
     if (roomnames.length > 0) {
       if (waitForDialog === true) {
@@ -831,6 +845,9 @@ var chatModule = (function () {
     }
   };
 
+  /** 
+   * Joins all the rooms in the favorite rooms list
+   */
   var JoinFavoriteRooms = function () {
     console.log('Joining favorite rooms');
     for (var i = 0; i < chatSettings.favRooms.length; i++) {
@@ -844,6 +861,9 @@ var chatModule = (function () {
     }
   };
 
+  /**
+   * Updates the chat session (which rooms the user is in at the time)
+   */
   var updateSession = function () {
     var tempSession = [];
     for (var i = 0; i < rph.roomsJoined.length; i++) {
@@ -856,6 +876,9 @@ var chatModule = (function () {
     saveSettings();
   };
 
+  /** 
+   * Adds an entry to the Favorite Chat Rooms list
+   */
   var addFavoriteRoom = function () {
     var room = getRoom($('#favRoom').val());
 
@@ -864,7 +887,7 @@ var chatModule = (function () {
       return;
     }
 
-    if (chatSettings.favRooms.length < 10) {
+    if (chatSettings.favRooms.length < MAX_ROOMS) {
       var favExists = false;
       var hashStr = $('#favRoom').val() + $('#favUserDropList option:selected').html();
       var favRoomObj = {
@@ -892,6 +915,9 @@ var chatModule = (function () {
     }
   };
 
+  /** 
+   * Removes an entry to the Favorite Chat Rooms list
+   */
   var removeFavoriteRoom = function () {
     var favItem = document.getElementById("favRoomsList");
     var favItemId = $('#favRoomsList option:selected').val();
@@ -929,12 +955,19 @@ var chatModule = (function () {
 
   /*
    * Handlers for saving, loading, and populating data for the module.
-   * */
+   **/
 
+  /**
+   * Save current settings
+   */
   var saveSettings = function () {
     localStorage.setItem(localStorageName, JSON.stringify(getSettings()));
   };
 
+  /**
+   * Loads settings from local storage
+   * @param {object} storedSettings Object containing the settings
+   */
   var loadSettings = function (storedSettings) {
     if (storedSettings !== null) {
       chatSettings = storedSettings.chatSettings;
@@ -943,6 +976,9 @@ var chatModule = (function () {
     populateSettings();
   };
 
+  /**
+   * Deletes the current settings and resets them to defaults.
+   */
   var deleteSettings = function () {
     localStorage.removeItem(localStorageName);
     pingSettings = {
@@ -965,11 +1001,15 @@ var chatModule = (function () {
       'favRooms': [],
       'RoomSession': [],
     };
+
     populateSettings();
   };
 
+  /**
+   * Populate the GUI with settings from the browser's local storage
+   */
   var populateSettings = function () {
-    clearUsersDropLists('favUserDropList');
+    $('#favUserDropList').empty();
 
     $('#pingNames').val(pingSettings.triggers);
     $('#pingURL').val(pingSettings.audioUrl);
@@ -1007,25 +1047,19 @@ var chatModule = (function () {
     }
   };
 
-  /**************************************************************************
+  /**
    * @brief Processes account events.
    *
    * @param account - Data blob countaining the user's account.
-   **************************************************************************/
+   **/
   var processAccountEvt = function (account) {
-    var users = account.users;
-    clearUsersDropLists('userColorDroplist');
-    clearUsersDropLists('favUserDropList');
-    for (i = 0; i < users.length; i++) {
-      appendDropLists(users[i]);
+    var namesToIds = rphToolsModule.getNamesToIds();
+    $('#userColorDroplist').empty();
+    $('#favUserDropList').empty();
+    for (var name in namesToIds) {
+      addToDroplist(namesToIds[name], name, userColorDroplist);
+      addToDroplist(namesToIds[name], name, favUserDropList);
     }
-  };
-
-  var appendDropLists = function(userId){
-    getUserById(userId, function(user){
-      addUserToDroplist(user, userColorDroplist);
-      addUserToDroplist(user, favUserDropList);
-    });
   };
 
   var getSettings = function () {
@@ -1052,8 +1086,7 @@ var chatModule = (function () {
     deleteSettings: deleteSettings,
     processAccountEvt: processAccountEvt,
   };
-}());
-/**
+}());/**
  * This module handles features for the PM system.
  */
 var pmModule = (function () {
@@ -1071,11 +1104,11 @@ var pmModule = (function () {
       '<div><h4>PM Away System</h4>' +
       '</p>' +
       '<p>Username</p>' +
-      '<select style="width: 800px;" id="pmNamesDroplist" size="10"></select>' +
+      '<select style="width: 613px;" id="pmNamesDroplist" size="10"></select>' +
       '<br><br>' +
       '<label class="rpht_labels">Away Message: </label><input type="text" id="awayMessageTextbox" name="awayMessageTextbox" maxlength="300" placeholder="Away message...">' +
       '<br /><br />' +
-      '<button style="margin-left: 358px; "type="button" id="setAwayButton">Enable</button> <button type="button" id="removeAwayButton">Disable</button>' +
+      '<button style="margin-left: 483px; width:60px" "type="button" id="setAwayButton">Enable</button> <button type="button" style="margin-left: 6px; width:60px" id="removeAwayButton">Disable</button>' +
       '</div><div>' +
       '<h4>Other Settings</h4>' +
       '</p>' +
@@ -1279,17 +1312,11 @@ var pmModule = (function () {
    * @param {object} account Data blob countaining the user's account.
    */
   var processAccountEvt = function (account) {
-    var users = account.users;
-    clearUsersDropLists('pmNamesDroplist');
-    for (i = 0; i < users.length; i++) {
-      appendDropLists(users[i]);
+    var namesToIds = rphToolsModule.getNamesToIds();
+    $('#pmNamesDroplist').empty();
+    for (var name in namesToIds){
+      addToDroplist(namesToIds[name], name, $('#pmNamesDroplist'));
     }
-  };
-
-  var appendDropLists = function(userId){
-    getUserById(userId, function(user){
-      addUserToDroplist(user,  $('#pmNamesDroplist'));
-    });
   };
 
   return {
@@ -1613,7 +1640,7 @@ var blockingModule = (function () {
       blockedUsers = storedSettings;
     }
 
-    clearUsersDropLists('blockedDropList');
+     $('#blockedDropList').empty();
     blockedUsers.forEach(function(blockedUser, index){
       $('#blockedDropList').append('<option value="' + blockedUser.id + '">' +
       blockedUser.name + '</option>');
@@ -1627,7 +1654,7 @@ var blockingModule = (function () {
   var deleteSettings = function () {
     localStorage.removeItem(localStorageName);
     blockedUsers = [];
-    clearUsersDropLists('blockedDropList');
+     $('#blockedDropList').empty();
   };
 
   return {
@@ -1681,14 +1708,15 @@ var moddingModule = (function () {
       '<p>Perform action on these users (semicolon separated with no space between): </p>' +
       '<textarea name="modTargetTextInput" id="modTargetTextInput" rows=6 class="rpht_textarea"></textarea>' +
       '<br/><br/>' +
-      '<button type="button" id="resetPassword">Reset PW</button>' +
-      '<button style="margin-left: 30px;" type="button" id="kickButton">Kick</button>' +
-      '<button style="margin-left: 30px;" type="button" id="banButton">Ban</button>' +
-      '<button style="margin-left: 6px;" type="button" id="unbanButton">Unban</button>' +
-      '<button style="margin-left: 30px;" type="button" id="modButton">Mod</button>' +
-      '<button style="margin-left: 6px;" type="button" id="unmodButton">Unmod</button>' +
-      '<button style="margin-left: 30px;" type="button" id="OwnButton">Owner</button>' +
-      '<button style="margin-left: 6px;" type="button" id="UnOwnButton">Unowner</button>' +
+      '<button style="width: 60px;" type="button" id="kickButton">Kick</button>' +
+      '<button style="margin-left: 30px; width: 60px;" type="button" id="banButton">Ban</button>' +
+      '<button style="margin-left: 6px;  width: 60px;" type="button" id="unbanButton">Unban</button>' +
+      '<button style="margin-left: 30px; width: 60px;" type="button" id="modButton">Mod</button>' +
+      '<button style="margin-left: 6px;  width: 60px;" type="button" id="unmodButton">Unmod</button>' +
+      '<button style="margin-left: 30px; width: 60px;" type="button" id="OwnButton">Owner</button>' +
+      '<button style="margin-left: 6px;  width: 60px;" type="button" id="UnownButton">Unowner</button>' +
+      '<br/><br/>' +
+      '<button type="button" id="resetPwButton">Reset PW</button>' +
       '<br/><br/>' +
       '</div><div>' +
       '<h4>Word Alerter</h4><br />' +
@@ -1726,7 +1754,7 @@ var moddingModule = (function () {
       }
     });
 
-    $('#resetPassword').click(function () {
+    $('#resetPwButton').click(function () {
       var room = $('input#modRoomTextInput').val();
       var user = $('input#modFromTextInput').val();
       getUserByName($('input#modFromTextInput').val(), function (user) {
@@ -1942,9 +1970,9 @@ var settingsModule = (function () {
       '<p>To import settings, paste them into the text box and press "Import".</p><br />' +
       '<textarea name="importExportText" id="importExportTextarea" rows=10 class="rpht_textarea" ></textarea>' +
       '<br /><br />' +
-      '<button type="button" style="margin-right: 144px;" id="exportButton">Export</button>' +
-      '<button type="button" style="margin-right: 134px;" id="importButton">Import</button>' +
-      '<button type="button" id="deleteSettingsButton">Delete settings</button>'
+      '<button type="button" style="width: 60px;" id="exportButton">Export</button>' +
+      '<button type="button" style="margin-left: 10px; width: 60px;" id="importButton">Import</button>' +
+      '<button type="button" style="margin-left: 394px; "id="deleteSettingsButton">Delete settings</button>'
   };
 
   var confirmDelete = false;
@@ -2107,6 +2135,8 @@ var aboutModule = (function () {
  * Main RPH Tools module
  */
 var rphToolsModule = (function () {
+  var namesToIds = {};
+
   var modules = [];
 
   var rpht_css =
@@ -2153,14 +2183,30 @@ var rphToolsModule = (function () {
       }
     });
 
-    for (i = 0; i < modules.length; i++) {
-      modules[i].init();
-    }
-
     socket.on('accounts', function () {
       var users = account.users;
-      processAccountEvt(account);
       console.log('RPH Tools[_on.accounts]: Account data blob received', users);
+      setTimeout(function(){
+        for (i = 0; i < modules.length; i++) {
+          modules[i].init();
+        }
+        mapNamesToIds(account);
+      },1000);
+      setTimeout(function(){
+        processAccountEvt(account);
+      },2000);
+    });
+  }
+
+  /**
+   * Maps user names to IDs into a dictionary
+   * @param {object} account Account data blob
+   */
+  var mapNamesToIds = function(account){
+    account.users.forEach(function(userId){
+      getUserById(userId, function(user){
+        namesToIds[user.props.name] = userId;
+      });
     });
   }
 
@@ -2169,11 +2215,13 @@ var rphToolsModule = (function () {
    * @param {Dict} account Account data blob
    */
   var processAccountEvt = function (account) {
-    for (var i = 0; i < modules.length; i++) {
-      if (modules[i].processAccountEvt !== undefined) {
-        modules[i].processAccountEvt(account);
+    namesToIds = sortOnKeys(namesToIds);
+      for (var i = 0; i < modules.length; i++) {
+        if (modules[i].processAccountEvt !== undefined) {
+          modules[i].processAccountEvt(account);
+        }
       }
-    }
+    
   };
 
   /**
@@ -2208,6 +2256,10 @@ var rphToolsModule = (function () {
 
     toString: function () {
       return 'RPH Tools Module';
+    },
+
+    getNamesToIds: function(){
+      return namesToIds;
     },
 
     getModule: getModule,

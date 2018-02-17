@@ -1,17 +1,26 @@
 /**
- * @brief:    Gets 
- * @param:    settingId - The full selector of which HTML to extract its value
- *            from.
- * @return:   The extracted HTML's value
+ * Gets the value from an input element.
+ * @param {string} settingId Full selector of the input to get its value
+ * @return The extracted HTML's value
  */
 var getInput = function (settingId) {
   return $(settingId).val();
 };
 
+/**
+ * Gets the value of a checkbox
+ * @param {string} settingId Full selector of the checkbox to get the value
+ * @return The extracted HTML's value
+ */
 var getCheckBox = function (settingId) {
   return $(settingId).is(':checked');
 };
 
+/**
+ * Marks an HTML element with red or white if there's a problem
+ * @param {string} element Full selector of the HTML element to mark
+ * @param {boolean} mark If the mark is for good or bad
+ */
 var markProblem = function (element, mark) {
   if (mark === true) {
     $(element).css('background', '#FF7F7F');
@@ -20,6 +29,12 @@ var markProblem = function (element, mark) {
   }
 };
 
+/**
+ * Checks to see if an input is valid or not and marks it accordingly
+ * @param {string} settingId Full selector of the HTML element to check
+ * @param {string} setting What kind of setting is being checked
+ * @return If the input is valid or not
+ */
 var validateSetting = function (settingId, setting) {
   var validInput = false;
   var input = $(settingId).val();
@@ -38,11 +53,21 @@ var validateSetting = function (settingId, setting) {
   return validInput;
 };
 
+/**
+ * Makes sure the color input is a valid hex color input
+ * @param {string} color Color input
+ * @returns If the color input is valid
+ */
 var validateColor = function (color) {
   var pattern = new RegExp(/(^#[0-9A-Fa-f]{6}$)|(^#[0-9A-Fa-f]{3}$)/i);
   return pattern.test(color);
 };
 
+/**
+ * Makes sure the URL input is valid
+ * @param {string} url URL input
+ * @returns If the URL input is valid
+ */
 var validateUrl = function (url) {
   var match = false;
   var regexp = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/;
@@ -58,12 +83,12 @@ var validateUrl = function (url) {
   return match;
 };
 
-/****************************************************************************
- * @brief:    Tests the color range of the color to ensure its valid
- * @param:    TextColor - String representation of the color.
- *
- * @return:   True if the color is within range, false otherwise.
- ****************************************************************************/
+/**
+ * Makes sure the color is less than #D2D2D2 or #DDD depending on how many 
+ * digits were entered.
+ * @param {string} TextColor String representation of the color.
+ * @return True if the color is within range, false otherwise.
+ */
 var validateColorRange = function (TextColor) {
   var rawHex = TextColor.substring(1, TextColor.length);
   var red = 255;
@@ -95,45 +120,28 @@ var validateColorRange = function (TextColor) {
   return false;
 };
 
-/****************************************************************************
- * @brief Adds usernames to droplists.
- * @param userId - ID of username
- ****************************************************************************/
-var addUserToDroplist = function (user, droplist) {
-  droplist.append('<option value="' + user.props.id + '">' + user.props.name +
-    '</option>');
+/**
+ * Adds an option to a select element with a value and its label
+ * @param {string} value Value of the option element
+ * @param {string} label Label of the option element
+ * @param {object} droplist Which select element to add option to
+ */
+var addToDroplist = function (value, label, droplist) {
+  droplist.append($('<option>', {
+    value: value,
+    text: label
+  }));
 };
 
-var sortDropList = function (droplist) {
-  var dropListPairs = {};
-  droplist[0].childNodes.forEach(function (node) {
-    dropListPairs[node.innerHTML] = node.value;
-  })
-  dropListPairs = sortOnKeys(dropListPairs);
-  clearUsersDropLists('userColorDroplist');
-  for (var username in dropListPairs) {
-    droplist.append('<option value="' + dropListPairs[username] + '">' +
-      username + '</option>');
-  }
-}
-
-/****************************************************************************
- * @brief Clears droplists.
- ****************************************************************************/
-var clearUsersDropLists = function (droplist) {
-  $('#' + droplist).empty();
-};
-
-/****************************************************************************
- * @brief      In an array of object, return the first instance where a key
- *             matches a value.
- *
- * @param      objArray - Array of objects
- * @param      key - Key to look for
- * @param      value - Value of the key to match
- * @return     Index of the first instance where the key matches the value, -1
- *             otherwise.
- ****************************************************************************/
+/**
+ * Un an array of objects, return the first instance where a key matches the
+ * value being searched.
+ * @param {array} objArray Array of objects
+ * @param {*} key Key to look for
+ * @param {*} value Value of the key to match
+ * @return Index of the first instance where the key matches the value, -1 
+ *         otherwise.
+ */
 var arrayObjectIndexOf = function (objArray, key, value) {
   for (var i = 0; i < objArray.length; i++) {
     if (objArray[i][key] === value) {
@@ -143,40 +151,21 @@ var arrayObjectIndexOf = function (objArray, key, value) {
   return -1;
 };
 
-/****************************************************************************
- * @brief:    Checks if a search term is in an <a href=...> tag.
- * @param:    searchTerm - String to look for
- * @param:    msg - msg being searched.
- *
- * @return:   True or false if there's a match.
- ****************************************************************************/
+/**
+ * Checks if a search term is in an <a href=...> tag.
+ * @param {string} searchTerm Search term to look for
+ * @param {string} msg The string being looked at
+ * @returns True or false if there's a match.
+ */
 var isInLink = function (searchTerm, msg) {
   var regexp = new RegExp('href=".*?' + searchTerm + '.*?"', '');
   return regexp.test(msg);
 };
 
-/****************************************************************************
- * @brief     Generates a hash value for a string
- *
- * @note      This was modified from https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
- ****************************************************************************/
-String.prototype.hashCode = function () {
-  var hash = 0,
-    i, chr, len;
-  if (this.length === 0) return hash;
-  for (i = 0, len = this.length; i < len; i++) {
-    chr = this.charCodeAt(i);
-    hash = ((hash << 31) - hash) + chr;
-    hash |= 0; // Convert to 32bit integer
-  }
-  return hash;
-};
-
-/****************************************************************************
- * @brief:    Checks if the current account is a mod of the room.
- *
- * @param:    roomName: Name of the room.
- ****************************************************************************/
+/**
+ * Checks if the current account is a mod of the room.
+ * @param {object} room Object containing room data
+ */
 var isModOfRoom = function (room) {
   for (var idx = 0; idx < account.users.length; idx++) {
     if (room.props.mods.indexOf(account.users[idx]) > -1 ||
@@ -187,6 +176,11 @@ var isModOfRoom = function (room) {
   return false;
 };
 
+/**
+ * Takes a dictionary and creates a sorted version of it based on its keys
+ * @param {object} dict Dictionary to be sorted
+ * @returns Sorted dictionary
+ */
 var sortOnKeys = function (dict) {
   var sorted = [];
   for (var key in dict) {

@@ -16,11 +16,11 @@ var pmModule = (function () {
       '<div><h4>PM Away System</h4>' +
       '</p>' +
       '<p>Username</p>' +
-      '<select style="width: 800px;" id="pmNamesDroplist" size="10"></select>' +
+      '<select style="width: 613px;" id="pmNamesDroplist" size="10"></select>' +
       '<br><br>' +
       '<label class="rpht_labels">Away Message: </label><input type="text" id="awayMessageTextbox" name="awayMessageTextbox" maxlength="300" placeholder="Away message...">' +
       '<br /><br />' +
-      '<button style="margin-left: 358px; "type="button" id="setAwayButton">Enable</button> <button type="button" id="removeAwayButton">Disable</button>' +
+      '<button style="margin-left: 483px; width:60px" "type="button" id="setAwayButton">Enable</button> <button type="button" style="margin-left: 6px; width:60px" id="removeAwayButton">Disable</button>' +
       '</div><div>' +
       '<h4>Other Settings</h4>' +
       '</p>' +
@@ -224,17 +224,11 @@ var pmModule = (function () {
    * @param {object} account Data blob countaining the user's account.
    */
   var processAccountEvt = function (account) {
-    var users = account.users;
-    clearUsersDropLists('pmNamesDroplist');
-    for (i = 0; i < users.length; i++) {
-      appendDropLists(users[i]);
+    var namesToIds = rphToolsModule.getNamesToIds();
+    $('#pmNamesDroplist').empty();
+    for (var name in namesToIds){
+      addToDroplist(namesToIds[name], name, $('#pmNamesDroplist'));
     }
-  };
-
-  var appendDropLists = function(userId){
-    getUserById(userId, function(user){
-      addUserToDroplist(user,  $('#pmNamesDroplist'));
-    });
   };
 
   return {
