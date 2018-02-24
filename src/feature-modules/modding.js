@@ -21,7 +21,7 @@ var moddingModule = (function () {
       '<br />' +
       '<label class="rpht_labels">Room-Name pair</label>' +
       '<select style="width: 300px;" id="roomModSelect">' +
-      '<option value=""></option>' +
+      '<option value="">&lt;Blank out fields&gt;</option>' +
       '</select>' +
       '<br/><br/>' +
       '<label class="rpht_labels">Room:</label><input style="width: 300px;" type="text" id="modRoomTextInput" placeholder="Room">' +
@@ -30,7 +30,7 @@ var moddingModule = (function () {
       '<br/><br/>' +
       '<label class="rpht_labels">Message:</label><input style="width: 300px;" type="text" id="modMessageTextInput" placeholder="Message">' +
       '<br/><br/>' +
-      '<p>Perform action on these users (semicolon separated with no space between): </p>' +
+      '<p>Perform action on these users (comma separated): </p>' +
       '<textarea name="modTargetTextInput" id="modTargetTextInput" rows=6 class="rpht_textarea"></textarea>' +
       '<br/><br/>' +
       '<button style="width: 60px;" type="button" id="kickButton">Kick</button>' +
@@ -145,11 +145,13 @@ var moddingModule = (function () {
    */
   var modAction = function (action) {
     var targets = $('#modTargetTextInput').val().replace(/\r?\n|\r/, '');
-    targets = targets.split(';');
+    targets = targets.split(',');
     console.log('RPH Tools[modAction]: Performing', action, 'on', targets);
 
     targets.forEach(function (target, index) {
-      emitModAction(action, target);
+      emitModAction(action, target, $('input#modFromTextInput').val(),
+        $('input#modRoomTextInput').val(),
+        $("input#modMessageTextInput").val());
     });
   };
 
@@ -158,16 +160,15 @@ var moddingModule = (function () {
    * @param {string} action Name of the action being performed
    * @param {string} targetName User name of the recipient of the action
    */
-  var emitModAction = function (action, targetName) {
+  var emitModAction = function (action, targetName, modName, roomName, reasonMsg) {
     getUserByName(targetName, function (target) {
-      getUserByName($('input#modFromTextInput').val(), function (user) {
+      getUserByName(modName, function (user) {
         var modMessage = '';
-
         if (action === 'kick' || action === 'ban' || action === 'unban') {
-            modMessage = $("input#modMessageTextInput").val();
+          modMessage = reasonMsg;
         }
         chatSocket.emit(action, {
-          room: $('input#modRoomTextInput').val(),
+          room: roomName,
           userid: user.props.id,
           targetid: target.props.id,
           msg: modMessage
@@ -206,7 +207,6 @@ var moddingModule = (function () {
         'modName': user.props.name,
         'modId': userId
       };
-      console.log(roomNameObj);
       if (roomNamePairs[roomNameValue] === undefined) {
         roomNamePairs[roomNameValue] = roomNameObj;
         $('#roomModSelect').append('<option value="' + roomNameValue + '">' +
@@ -279,6 +279,7 @@ var moddingModule = (function () {
       return settings;
     },
 
+    emitModAction: emitModAction,
     addModFeatures: addModFeatures,
     saveSettings: saveSettings,
     playAlert: playAlert,

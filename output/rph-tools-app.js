@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name       RPH Tools
+// @name       RPH Tools TEST
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.0.2
+// @version    4.0.3
 // @description Adds extended settings to RPH
 // @match      http://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-var VERSION_STRING = '4.0.2';
+var VERSION_STRING = '4.0.3';
 /**
  * Gets the value from an input element.
  * @param {string} settingId Full selector of the input to get its value
@@ -206,7 +206,8 @@ var sortOnKeys = function (dict) {
   }
 
   return tempDict;
-}/**
+}
+/**
  * Generates a hash value for a string
  * This was modified from https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
  */
@@ -247,7 +248,69 @@ String.prototype.hashCode = function () {
     return $el;
   };
 
-/****
+/**
+ * Modified handler for keyup events from the chat textbox
+ * @param {object} ev - Event
+ * @param {object} User - User the textbox is attached to
+ * @param {oject} Room - Room the textbox is attached to
+ */
+function intputChatText(ev, User, Room){
+  var inputTextBox = null;
+  Room.$tabs.forEach(function(roomTab){
+    var classesLen = roomTab[0].classList.length;
+    if(roomTab[0].classList[classesLen-1] === 'active'){
+      inputTextBox = $('textarea.'+User.props.id+'_'+makeSafeForCss(Room.props.name));
+    }
+  });
+  if (ev.keyCode === 13 && ev.ctrlKey === false && ev.shiftKey === false && inputTextBox.val() !== '' && inputTextBox.val().trim() !== ''){
+    var newMessage = inputTextBox.val();
+    if( newMessage.length > 4000 ){
+      Room.appendMessage(
+            '<span class="first">&nbsp;</span>\n\
+            <span title="'+makeTimestamp(false, true)+'">Message too long</span>'
+          ).addClass('sys');
+      return;
+    }
+    if (newMessage[0] === '/' && newMessage.substring(0,2) !== '//'){
+      chatModule.parseSlashCommand(inputTextBox, Room, User);
+    }
+    else {
+      sendChatMessage(inputTextBox, Room, User);
+    }
+  }
+}
+
+function sendChatMessage(inputTextBox, Room, User){
+  var newMessage = inputTextBox.val();
+  var thisTab = rph.tabs[User.props.id];
+  var newLength = newMessage.length;
+  Room.sendMessage(newMessage, User.props.id);
+  inputTextBox.val('');
+
+  if( newMessage.match(/\n/gi) ){
+    newLength = newLength + (newMessage.match(/\n/gi).length * 250);
+  }
+  var curTime = Math.round(new Date().getTime() / 1000);
+  thisTab.bufferLength = (thisTab.bufferLength / (curTime - thisTab.lastTime + 1)) + ((newLength+thisTab.bufferLength)/3) + 250;
+  thisTab.lastTime = curTime;
+  if( thisTab.bufferLength > 1750 ){
+    thisTab.offenses += 1;
+    if( thisTab.offenses > 2 ){
+      Room.sendMessage( 'Flood kick', User.props.id);
+      chatSocket.disconnect();
+      return;
+    } else {
+      Room.appendMessage(
+            '<span class="first">&nbsp;</span>\n\
+            <span title="'+makeTimestamp(false, true)+'">You are flooding. Be careful or you\'ll be kicked</span>'
+          ).addClass('sys');
+      setTimeout(function(){
+        thisTab.offenses = 0;
+      }, 15000);
+      return;
+    }
+  }
+}/****
  * This module handles the chat functions of the script.
  ****/
 var chatModule = (function () {
@@ -287,6 +350,8 @@ var chatModule = (function () {
   var favUserDropList = null;
 
   var MAX_ROOMS = 30;
+
+  var AUTOJOIN_TIMEOUT_SECS = 5;
 
   var html = {
     'tabId': 'chat-module',
@@ -333,7 +398,7 @@ var chatModule = (function () {
       '<br /><br />' +
       '<label class="rpht_labels">Username: </label><select style="width: 300px;" id="favUserDropList"></select>' +
       '<br /><br />' +
-      '<label class="rpht_labels">Room {}  </label><input  type="text" id="favRoom" name="favRoom">' +
+      '<label class="rpht_labels">Room:  </label><input  type="text" id="favRoom" name="favRoom">' +
       '<br /><br />' +
       '<label class="rpht_labels">Password: </label><input  type="text" id="favRoomPw" name="favRoomPw">' +
       '<br /><br />' +
@@ -524,8 +589,6 @@ var chatModule = (function () {
       moddingModule.addModFeatures(thisRoom);
     }
 
-    resizeChatTabs();
-
     if (chatSettings.session === true) {
       if (arrayObjectIndexOf(chatSettings.roomSession, 'roomname', room.room) === -1 ||
         arrayObjectIndexOf(chatSettings.roomSession, 'user', room.userid) === -1) {
@@ -536,6 +599,15 @@ var chatModule = (function () {
         chatSettings.roomSession.push(tempData);
       }
     }
+
+    resizeChatTabs();
+    getUserById(userId, function (User) {
+      var chatTextArea = $('textarea.'+User.props.id+'_'+makeSafeForCss(thisRoom.props.name));
+      chatTextArea.unbind('keyup');
+      chatTextArea.bind('keyup', function (ev) {
+        intputChatText(ev, User, thisRoom);
+      });
+    });
   };
 
   /**
@@ -620,6 +692,123 @@ var chatModule = (function () {
       $el.find('br:gt(7)').remove();
     });
   };
+
+  /**
+   * Parses a slash command from an input source.
+   * @param {object} inputTextBox HTML element that holds the input textbox
+   * @param {object} Room Room data
+   * @param {object} User User data
+   */
+  function parseSlashCommand(inputTextBox, Room, User) {
+    var newMessage = inputTextBox.val();
+    var thisTab = rph.tabs[User.props.id];
+    var error = false;
+    var cmdArgs = newMessage.split(/ (.+)/);
+    var outMsg = -1;
+
+    switch (cmdArgs[0]) {
+      case '/me':
+        sendChatMessage(inputTextBox, Room, User);
+        break;
+      case '/coinflip':
+        var rngModule = rphToolsModule.getModule('RNG Module');
+        if (rngModule) {
+          inputTextBox.val(rngModule.genCoinFlip() + '\u200b');
+          sendChatMessage(inputTextBox, Room, User);
+        }
+        break;
+      case '/status':
+      case '/away':
+        if (cmdArgs.length < 2){
+          error = true;
+        }
+        else {
+          var type = 0;
+          if (cmdArgs[0] === '/away'){
+            type = 1;
+          }
+          console.log('Status msg', cmdArgs[1], type);
+          socket.emit('modify', {userid:User.props.id, statusMsg:cmdArgs[1], statusType:type});
+          inputTextBox.val('');
+        }
+        break;
+      case '/color':
+        if (cmdArgs.length < 2){
+          error = true;
+        }
+        else if (validateColor(cmdArgs[1]) && validateColorRange(cmdArgs[1])){
+          socket.emit('modify', {userid: User.props.id, color: cmdArgs[1] });
+          inputTextBox.css('color', cmdArgs[1]);
+        }
+        else {
+          error = true;
+        }
+        break;
+      case '/roll':
+        var rngModule = rphToolsModule.getModule('RNG Module');
+        if (rngModule) {
+          var die = 1;
+          var sides = 1000;
+
+          if (cmdArgs.length > 1) {
+            die = parseInt(cmdArgs[1].split('d')[0]);
+            sides = parseInt(cmdArgs[1].split('d')[1]);
+          }
+          if (isNaN(die) || isNaN(sides)) {
+            error = true;
+          } else {
+            inputTextBox.val(rngModule.getDiceRoll(die, sides, true) + '\u200b');
+            sendChatMessage(inputTextBox, Room, User);
+          }
+        }
+        break;
+      case '/kick':
+      case '/ban':
+      case '/unban':
+        var moddingModule = rphToolsModule.getModule('Modding Module');
+        if (cmdArgs.length < 2){
+          error = true;
+        }
+        else if (moddingModule) {
+          var action = cmdArgs[0].substring(1, cmdArgs[0].length);
+          var commaIdx = cmdArgs[1].indexOf(',');
+          var targetName = cmdArgs[1];
+          var reason = '';
+          if (commaIdx > -1) {
+            targetName = cmdArgs[1].substring(0, commaIdx);
+            reason = cmdArgs[1].substring(commaIdx + 1, cmdArgs[1].length);
+          }
+          moddingModule.emitModAction(action, targetName, User.props.name,
+            Room.props.name, reason);
+          inputTextBox.val('');
+        }
+        break;
+      case '/russian':
+        if (Math.floor(Math.random() * 6 + 1) == 1) {
+          inputTextBox.val('/me played Russian Roulette and... *BLAM* ...lost D:')
+          sendChatMessage(inputTextBox, Room, User);
+          chatSocket.disconnect();
+        } else {
+          inputTextBox.val('/me played Russian Roulette and... *click* ...won :D')
+          sendChatMessage(inputTextBox, Room, User);
+        }
+        break;
+      default:
+        Room.appendMessage(
+          '<span class="first">&nbsp;</span>\n\
+        <span title="' + makeTimestamp(false, true) + '">Command ' +
+          cmdArgs[0].substring(1, cmdArgs[0].length) + ' is not supported</span>'
+        ).addClass('sys');
+        break;
+    }
+
+    if (error) {
+      Room.appendMessage(
+        '<span class="first">&nbsp;</span>\n\
+      <span title="' + makeTimestamp(false, true) + '">Error in command input</span>'
+      ).addClass('sys');
+    }
+  }
 
   /**
    * Gets the user name's classes that are applicable to it
@@ -714,7 +903,7 @@ var chatModule = (function () {
    * @param {object} thisRoom - Room where the ping happened.
    */
   var highlightRoom = function (thisRoom, color, highlight) {
-    if (!thisRoom.thisRoom()) {
+    if (!thisRoom.isActive()) {
       thisRoom.$tabs[0].css('background-color', highlight);
       thisRoom.$tabs[0].css('color', color);
 
@@ -803,7 +992,7 @@ var chatModule = (function () {
           open: function (event, ui) {
             setTimeout(function () {
               $('#rpht-autojoin').dialog('close');
-            }, 10 * 1000);
+            }, AUTOJOIN_TIMEOUT_SECS * 1000);
           },
           buttons: {
             Cancel: function () {
@@ -815,7 +1004,7 @@ var chatModule = (function () {
 
         waitForDialog = false;
         clearTimeout(autoJoinTimer);
-        autoJoinTimer = setTimeout(autoJoiningHandler, 10 * 1000);
+        autoJoinTimer = setTimeout(autoJoiningHandler, AUTOJOIN_TIMEOUT_SECS * 1000);
       } else {
         if (chatSettings.autoJoin === true) {
           JoinFavoriteRooms();
@@ -1080,6 +1269,7 @@ var chatModule = (function () {
       return 'Chat Module';
     },
 
+    parseSlashCommand: parseSlashCommand,
     getSettings: getSettings,
     saveSettings: saveSettings,
     loadSettings: loadSettings,
@@ -1459,8 +1649,15 @@ var rngModule = (function () {
    * @returns String containing the dice roll result
    */
   var getDiceRoll = function (dieNum, dieSides, showTotals) {
+    //Cap the values, just in case.
+    dieNum = (dieNum > DIE_MAX) ? DIE_MAX : dieNum;
+    dieNum = (dieNum < DIE_MIN) ? DIE_MIN : dieNum;
+    dieSides = (dieSides > DIE_SIDE_MAX) ? DIE_SIDE_MAX : dieSides;
+    dieSides = (dieSides < DIE_SIDE_MIN) ? DIE_SIDE_MIN : dieSides;
+
     var totals = 0;
     var dieMsg = '/me rolled ' + dieNum + 'd' + dieSides + ':';
+
     for (i = 0; i < dieNum; i++) {
       var result = Math.ceil(Math.random() * dieSides);
       if (showTotals) {
@@ -1522,9 +1719,15 @@ var rngModule = (function () {
    */
   return {
     init: init,
+    genCoinFlip: genCoinFlip,
+    getDiceRoll: getDiceRoll,
 
     getHtml: function () {
       return html;
+    },
+
+    toString: function () {
+      return 'RNG Module';
     },
   };
 }());
@@ -1696,7 +1899,7 @@ var moddingModule = (function () {
       '<br />' +
       '<label class="rpht_labels">Room-Name pair</label>' +
       '<select style="width: 300px;" id="roomModSelect">' +
-      '<option value=""></option>' +
+      '<option value="">&lt;Blank out fields&gt;</option>' +
       '</select>' +
       '<br/><br/>' +
       '<label class="rpht_labels">Room:</label><input style="width: 300px;" type="text" id="modRoomTextInput" placeholder="Room">' +
@@ -1705,7 +1908,7 @@ var moddingModule = (function () {
       '<br/><br/>' +
       '<label class="rpht_labels">Message:</label><input style="width: 300px;" type="text" id="modMessageTextInput" placeholder="Message">' +
       '<br/><br/>' +
-      '<p>Perform action on these users (semicolon separated with no space between): </p>' +
+      '<p>Perform action on these users (comma separated): </p>' +
       '<textarea name="modTargetTextInput" id="modTargetTextInput" rows=6 class="rpht_textarea"></textarea>' +
       '<br/><br/>' +
       '<button style="width: 60px;" type="button" id="kickButton">Kick</button>' +
@@ -1820,11 +2023,13 @@ var moddingModule = (function () {
    */
   var modAction = function (action) {
     var targets = $('#modTargetTextInput').val().replace(/\r?\n|\r/, '');
-    targets = targets.split(';');
+    targets = targets.split(',');
     console.log('RPH Tools[modAction]: Performing', action, 'on', targets);
 
     targets.forEach(function (target, index) {
-      emitModAction(action, target);
+      emitModAction(action, target, $('input#modFromTextInput').val(),
+        $('input#modRoomTextInput').val(),
+        $("input#modMessageTextInput").val());
     });
   };
 
@@ -1833,16 +2038,15 @@ var moddingModule = (function () {
    * @param {string} action Name of the action being performed
    * @param {string} targetName User name of the recipient of the action
    */
-  var emitModAction = function (action, targetName) {
+  var emitModAction = function (action, targetName, modName, roomName, reasonMsg) {
     getUserByName(targetName, function (target) {
-      getUserByName($('input#modFromTextInput').val(), function (user) {
+      getUserByName(modName, function (user) {
         var modMessage = '';
-
         if (action === 'kick' || action === 'ban' || action === 'unban') {
-            modMessage = $("input#modMessageTextInput").val();
+          modMessage = reasonMsg;
         }
         chatSocket.emit(action, {
-          room: $('input#modRoomTextInput').val(),
+          room: roomName,
           userid: user.props.id,
           targetid: target.props.id,
           msg: modMessage
@@ -1881,7 +2085,6 @@ var moddingModule = (function () {
         'modName': user.props.name,
         'modId': userId
       };
-      console.log(roomNameObj);
       if (roomNamePairs[roomNameValue] === undefined) {
         roomNamePairs[roomNameValue] = roomNameObj;
         $('#roomModSelect').append('<option value="' + roomNameValue + '">' +
@@ -1954,6 +2157,7 @@ var moddingModule = (function () {
       return settings;
     },
 
+    emitModAction: emitModAction,
     addModFeatures: addModFeatures,
     saveSettings: saveSettings,
     playAlert: playAlert,
@@ -2039,7 +2243,7 @@ var settingsModule = (function () {
    */
   var exportSettings = function () {
     var settingsString = "";
-    var modules = rphToolsModule.getSettings();
+    var modules = rphToolsModule.getModules();
     for (var i = 0; i < modules.length; i++) {
       if (modules[i].getSettings !== undefined) {
         var modSettings = {

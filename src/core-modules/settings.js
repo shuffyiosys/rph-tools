@@ -79,7 +79,7 @@ var settingsModule = (function () {
    */
   var exportSettings = function () {
     var settingsString = "";
-    var modules = rphToolsModule.getSettings();
+    var modules = rphToolsModule.getModules();
     for (var i = 0; i < modules.length; i++) {
       if (modules[i].getSettings !== undefined) {
         var modSettings = {

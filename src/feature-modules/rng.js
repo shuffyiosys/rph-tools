@@ -119,8 +119,15 @@ var rngModule = (function () {
    * @returns String containing the dice roll result
    */
   var getDiceRoll = function (dieNum, dieSides, showTotals) {
+    //Cap the values, just in case.
+    dieNum = (dieNum > DIE_MAX) ? DIE_MAX : dieNum;
+    dieNum = (dieNum < DIE_MIN) ? DIE_MIN : dieNum;
+    dieSides = (dieSides > DIE_SIDE_MAX) ? DIE_SIDE_MAX : dieSides;
+    dieSides = (dieSides < DIE_SIDE_MIN) ? DIE_SIDE_MIN : dieSides;
+
     var totals = 0;
     var dieMsg = '/me rolled ' + dieNum + 'd' + dieSides + ':';
+
     for (i = 0; i < dieNum; i++) {
       var result = Math.ceil(Math.random() * dieSides);
       if (showTotals) {
@@ -182,9 +189,15 @@ var rngModule = (function () {
    */
   return {
     init: init,
+    genCoinFlip: genCoinFlip,
+    getDiceRoll: getDiceRoll,
 
     getHtml: function () {
       return html;
+    },
+
+    toString: function () {
+      return 'RNG Module';
     },
   };
 }());

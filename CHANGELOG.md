@@ -1,3 +1,17 @@
+RPH Tools (4.0.3)
+--------------
+* Implemented / commands. The following commands have been implemented
+  * /coinflip - Does a coin toss
+  * /roll [num]d[num] - Dice roll. If no argument is given, it rolls 1d1000 by default
+  * /kick [username],[reason] - Kicks a person from the chat room with the reason. This must be done with the mod's chat tab selected.
+  * /ban [username],[reason] - Bans a person from the chat room with the reason (optional). This must be done with the mod's chat tab selected.
+  * /unban [username],[reason] - Unbans a person from the chat room with the reason (optional). This must be done with the mod's chat tab selected.
+  * /color [HTML color] - Changes the text color of the current username
+  * /status [message] - Sets the current username's status
+  * /away [message] - Sets the current username's status and sets it as "Away"
+* Modding Module
+  * Changed the delimiter for names from semicolon to comma, since commas are not valid usernames and can be used.
+
 RPH Tools (4.0.2)
 --------------
 * Some code was copied, pasted, and modified. So they got moved into their own source file (src/custom.js)
