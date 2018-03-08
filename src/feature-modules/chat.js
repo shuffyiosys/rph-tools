@@ -619,7 +619,7 @@ var chatModule = (function () {
     getUserById(userId, function (User) {
       var tabsLen = thisRoom.$tabs.length;
       var idRoomName = thisRoom.$tabs[tabsLen - 1][0].className.split(' ')[2];
-      var newTabHtml = '<span>' + thisRoom.props.name + '</span><p style="font-size: x-small; position: absolute; top: 12px;">' + User.props.name + '</p>';
+      var newTabHtml = '<span>' + thisRoom.props.name + '</span><p style="font-size: x-small; margin-top: -12px;">' + User.props.name + '</p>';
       thisRoom.$tabs[tabsLen - 1].html(newTabHtml);
       $('<a class="close ui-corner-all">x</a>').on('click', function (ev) {
         ev.stopPropagation();
