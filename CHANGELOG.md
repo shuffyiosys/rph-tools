@@ -1,3 +1,8 @@
+RPH Tools (4.0.4)
+--------------
+* Added a link to a quick guide in the About module
+* Fixed a positioning issue with the user name in the chat tabs.
+
 RPH Tools (4.0.3)
 --------------
 * Implemented / commands. The following commands have been implemented
