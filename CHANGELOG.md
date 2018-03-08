@@ -15,7 +15,7 @@ RPH Tools (4.0.3)
   * /status [message] - Sets the current username's status
   * /away [message] - Sets the current username's status and sets it as "Away"
 * Modding Module
-  * Changed the delimiter for names from semicolon to comma, since commas are not valid usernames and can be used.
+  * Changed the delimiter for names from semicolon to comma, since commas are not valid in usernames. Thus they can be used for delimiting.
 
 RPH Tools (4.0.2)
 --------------
