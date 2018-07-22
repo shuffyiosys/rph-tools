@@ -274,7 +274,9 @@ var chatModule = (function () {
     }
 
     if (moddingModule !== null) {
-      moddingModule.addModFeatures(thisRoom);
+      if (thisRoom.props.mods.indexOf(userId) > -1 || thisRoom.props.owners.indexOf(userId) > -1) {
+        moddingModule.addModRoomPair(userId, thisRoom.props.name);
+      }
     }
 
     if (chatSettings.session === true) {

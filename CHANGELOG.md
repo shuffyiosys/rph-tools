@@ -1,5 +1,9 @@
 RPH Tools (4.0.5)
 --------------
+* Fixed a bug with adding room-name pairs to the modding tab.
+
+RPH Tools (4.0.5)
+--------------
 * Fixed retrieving user IDs out of the account blob since the format changed.
 
 RPH Tools (4.0.4)

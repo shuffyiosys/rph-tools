@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.0.5
+// @version    4.0.6
 // @description Adds extended settings to RPH
 // @match      http://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-var VERSION_STRING = '4.0.5';
+var VERSION_STRING = '4.0.6';
 /**
  * Gets the value from an input element.
  * @param {string} settingId Full selector of the input to get its value
@@ -586,7 +586,9 @@ var chatModule = (function () {
     }
 
     if (moddingModule !== null) {
-      moddingModule.addModFeatures(thisRoom);
+      if (thisRoom.props.mods.indexOf(userId) > -1 || thisRoom.props.owners.indexOf(userId) > -1) {
+        moddingModule.addModRoomPair(userId, thisRoom.props.name);
+      }
     }
 
     if (chatSettings.session === true) {
@@ -2054,41 +2056,24 @@ var moddingModule = (function () {
   };
 
   /**
-   * Initializes extra features if user is a mod of the room. This looks for
-   * the room's mod array and sees if any of the IDs match what's in the 
-   * account.users array
-   * @param {object} thisRoom - Room that was entered
-   */
-  var addModFeatures = function (thisRoom) {
-    for (var user in account.users) {
-      var userId = account.users[user];
-      if (thisRoom.props.mods.indexOf(userId) > -1 ||
-        thisRoom.props.owners.indexOf(userId) > -1) {
-        addModRoomPair(userId, thisRoom);
-      }
-    }
-  };
-
-  /**
    * Adds a key/value pair option to the Room-Name Pair droplist.
    * @param {number} userId User ID of the mod
    * @param {object} thisRoom Object containing the room data.
    */
-  var addModRoomPair = function (userId, thisRoom) {
-    getUserById(userId, function (user) {
-      var roomNamePair = thisRoom.props.name + ': ' + user.props.name;
-      var roomNameValue = thisRoom.props.name + '.' + userId;
-      var roomNameObj = {
-        'roomName': thisRoom.props.name,
-        'modName': user.props.name,
-        'modId': userId
-      };
-      if (roomNamePairs[roomNameValue] === undefined) {
-        roomNamePairs[roomNameValue] = roomNameObj;
-        $('#roomModSelect').append('<option value="' + roomNameValue + '">' +
-          roomNamePair + '</option>');
-      }
-    });
+  var addModRoomPair = function (userId, roomName) {
+    var username = rphToolsModule.getIdsToNames()[userId];
+    var roomNamePair = roomName + ': ' + username;
+    var roomNameValue = roomName + '.' + userId;
+    var roomNameObj = {
+      'roomName': roomName,
+      'modName': username,
+      'modId': userId
+    };
+    if (roomNamePairs[roomNameValue] === undefined) {
+      roomNamePairs[roomNameValue] = roomNameObj;
+      $('#roomModSelect').append('<option value="' + roomNameValue + '">' +
+        roomNamePair + '</option>');
+    }
   }
 
   /**
@@ -2156,7 +2141,7 @@ var moddingModule = (function () {
     },
 
     emitModAction: emitModAction,
-    addModFeatures: addModFeatures,
+    addModRoomPair: addModRoomPair,
     saveSettings: saveSettings,
     playAlert: playAlert,
   };
@@ -2341,6 +2326,8 @@ var aboutModule = (function () {
 var rphToolsModule = (function () {
   var namesToIds = {};
 
+  var idsToNames = {};
+
   var modules = [];
 
   var rpht_css =
@@ -2393,14 +2380,13 @@ var rphToolsModule = (function () {
     socket.on('accounts', function () {
       console.log('RPH Tools[_on.accounts]: Account data blob received');
       setTimeout(function(){
-        var users = [];
         account.users.forEach(function(userObj){
-          users.push(userObj.props.id);
+          idsToNames[userObj.props.id] = userObj.props.name;
           namesToIds[userObj.props.name] = userObj.props.id;
         });
         namesToIds = sortOnKeys(namesToIds);
 
-        console.log('RPH Tools[_on.accounts]: names to user IDs', namesToIds);
+        console.log('RPH Tools[_on.accounts]: names to user IDs', namesToIds, idsToNames);
         for (i = 0; i < modules.length; i++) {
           modules[i].init();
           if (modules[i].processAccountEvt !== undefined) {
@@ -2447,6 +2433,10 @@ var rphToolsModule = (function () {
 
     getNamesToIds: function(){
       return namesToIds;
+    },
+
+    getIdsToNames: function(){
+      return idsToNames;
     },
 
     getModule: getModule,

@@ -178,41 +178,24 @@ var moddingModule = (function () {
   };
 
   /**
-   * Initializes extra features if user is a mod of the room. This looks for
-   * the room's mod array and sees if any of the IDs match what's in the 
-   * account.users array
-   * @param {object} thisRoom - Room that was entered
-   */
-  var addModFeatures = function (thisRoom) {
-    for (var user in account.users) {
-      var userId = account.users[user];
-      if (thisRoom.props.mods.indexOf(userId) > -1 ||
-        thisRoom.props.owners.indexOf(userId) > -1) {
-        addModRoomPair(userId, thisRoom);
-      }
-    }
-  };
-
-  /**
    * Adds a key/value pair option to the Room-Name Pair droplist.
    * @param {number} userId User ID of the mod
    * @param {object} thisRoom Object containing the room data.
    */
-  var addModRoomPair = function (userId, thisRoom) {
-    getUserById(userId, function (user) {
-      var roomNamePair = thisRoom.props.name + ': ' + user.props.name;
-      var roomNameValue = thisRoom.props.name + '.' + userId;
-      var roomNameObj = {
-        'roomName': thisRoom.props.name,
-        'modName': user.props.name,
-        'modId': userId
-      };
-      if (roomNamePairs[roomNameValue] === undefined) {
-        roomNamePairs[roomNameValue] = roomNameObj;
-        $('#roomModSelect').append('<option value="' + roomNameValue + '">' +
-          roomNamePair + '</option>');
-      }
-    });
+  var addModRoomPair = function (userId, roomName) {
+    var username = rphToolsModule.getIdsToNames()[userId];
+    var roomNamePair = roomName + ': ' + username;
+    var roomNameValue = roomName + '.' + userId;
+    var roomNameObj = {
+      'roomName': roomName,
+      'modName': username,
+      'modId': userId
+    };
+    if (roomNamePairs[roomNameValue] === undefined) {
+      roomNamePairs[roomNameValue] = roomNameObj;
+      $('#roomModSelect').append('<option value="' + roomNameValue + '">' +
+        roomNamePair + '</option>');
+    }
   }
 
   /**
@@ -280,7 +263,7 @@ var moddingModule = (function () {
     },
 
     emitModAction: emitModAction,
-    addModFeatures: addModFeatures,
+    addModRoomPair: addModRoomPair,
     saveSettings: saveSettings,
     playAlert: playAlert,
   };

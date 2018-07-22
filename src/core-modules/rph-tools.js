@@ -4,6 +4,8 @@
 var rphToolsModule = (function () {
   var namesToIds = {};
 
+  var idsToNames = {};
+
   var modules = [];
 
   var rpht_css =
@@ -56,14 +58,13 @@ var rphToolsModule = (function () {
     socket.on('accounts', function () {
       console.log('RPH Tools[_on.accounts]: Account data blob received');
       setTimeout(function(){
-        var users = [];
         account.users.forEach(function(userObj){
-          users.push(userObj.props.id);
+          idsToNames[userObj.props.id] = userObj.props.name;
           namesToIds[userObj.props.name] = userObj.props.id;
         });
         namesToIds = sortOnKeys(namesToIds);
 
-        console.log('RPH Tools[_on.accounts]: names to user IDs', namesToIds);
+        console.log('RPH Tools[_on.accounts]: names to user IDs', namesToIds, idsToNames);
         for (i = 0; i < modules.length; i++) {
           modules[i].init();
           if (modules[i].processAccountEvt !== undefined) {
@@ -110,6 +111,10 @@ var rphToolsModule = (function () {
 
     getNamesToIds: function(){
       return namesToIds;
+    },
+
+    getIdsToNames: function(){
+      return idsToNames;
     },
 
     getModule: getModule,
