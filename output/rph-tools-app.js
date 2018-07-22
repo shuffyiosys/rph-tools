@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.0.4
+// @version    4.0.5
 // @description Adds extended settings to RPH
 // @match      http://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-var VERSION_STRING = '4.0.4';
+var VERSION_STRING = '4.0.5';
 /**
  * Gets the value from an input element.
  * @param {string} settingId Full selector of the input to get its value
@@ -931,7 +931,7 @@ var chatModule = (function () {
     getUserById(userId, function (User) {
       var tabsLen = thisRoom.$tabs.length;
       var idRoomName = thisRoom.$tabs[tabsLen - 1][0].className.split(' ')[2];
-      var newTabHtml = '<span>' + thisRoom.props.name + '</span><p style="font-size: x-small; margin-top: -12px;">' + User.props.name + '</p>';
+      var newTabHtml = '<span>' + thisRoom.props.name + '</span><p style="font-size: x-small; margin-top: -58px;">' + User.props.name + '</p>';
       thisRoom.$tabs[tabsLen - 1].html(newTabHtml);
       $('<a class="close ui-corner-all">x</a>').on('click', function (ev) {
         ev.stopPropagation();
@@ -962,13 +962,14 @@ var chatModule = (function () {
    */
   var resizeChatTabs = function () {
     $('#chat-tabs').addClass('rpht_chat_tab');
+    /* Window is smaller than the tabs width */
     if ($('#chat-tabs')[0].clientWidth < $('#chat-tabs')[0].scrollWidth ||
-      $('#chat-tabs')[0].clientWidth + 200 > $('#chat-bottom')[0].clientWidth) {
-      $('#chat-top').css('padding-bottom', '146px');
-      $('#chat-bottom').css('margin-top', '-144px');
+      $('#chat-tabs')[0].clientWidth > $('#chat-bottom')[0].clientWidth) {
+      $('#chat-top').css('padding-bottom', '136px');
+      $('#chat-bottom').css('margin-top', '-138px');
     } else {
-      $('#chat-top').css('padding-bottom', '130px');
-      $('#chat-bottom').css('margin-top', '-128px');
+      $('#chat-top').css('padding-bottom', '120px');
+      $('#chat-bottom').css('margin-top', '-118px');
     }
     // Debouce the function.
     $(window).off("resize", resizeChatTabs);
@@ -1238,10 +1239,8 @@ var chatModule = (function () {
 
   /**
    * @brief Processes account events.
-   *
-   * @param account - Data blob countaining the user's account.
    **/
-  var processAccountEvt = function (account) {
+  var processAccountEvt = function () {
     var namesToIds = rphToolsModule.getNamesToIds();
     $('#userColorDroplist').empty();
     $('#favUserDropList').empty();
@@ -1499,9 +1498,8 @@ var pmModule = (function () {
 
   /**
    * Processes account events.
-   * @param {object} account Data blob countaining the user's account.
    */
-  var processAccountEvt = function (account) {
+  var processAccountEvt = function () {
     var namesToIds = rphToolsModule.getNamesToIds();
     $('#pmNamesDroplist').empty();
     for (var name in namesToIds){
@@ -2351,7 +2349,7 @@ var rphToolsModule = (function () {
     '.rpht_textarea{border: 1px solid black; width: 611px;}' +
     '.rpht_chat_tab {' +
     'position: absolute;' +
-    'height: 60px;' +
+    'height: 54px;' +
     'overflow-x: auto;' +
     'overflow-y: hidden;' +
     'white-space: nowrap;' +
@@ -2389,46 +2387,29 @@ var rphToolsModule = (function () {
       }
     });
 
+    /* When the account data receive event happens, delay some time before 
+       initializing the modules because the relevant data isn't immediately
+       available.  */
     socket.on('accounts', function () {
-      var users = account.users;
-      console.log('RPH Tools[_on.accounts]: Account data blob received', users);
+      console.log('RPH Tools[_on.accounts]: Account data blob received');
       setTimeout(function(){
+        var users = [];
+        account.users.forEach(function(userObj){
+          users.push(userObj.props.id);
+          namesToIds[userObj.props.name] = userObj.props.id;
+        });
+        namesToIds = sortOnKeys(namesToIds);
+
+        console.log('RPH Tools[_on.accounts]: names to user IDs', namesToIds);
         for (i = 0; i < modules.length; i++) {
           modules[i].init();
+          if (modules[i].processAccountEvt !== undefined) {
+            modules[i].processAccountEvt();
+          }
         }
-        mapNamesToIds(account);
-      },1000);
-      setTimeout(function(){
-        processAccountEvt(account);
-      },2000);
+      },1500);
     });
   }
-
-  /**
-   * Maps user names to IDs into a dictionary
-   * @param {object} account Account data blob
-   */
-  var mapNamesToIds = function(account){
-    account.users.forEach(function(userId){
-      getUserById(userId, function(user){
-        namesToIds[user.props.name] = userId;
-      });
-    });
-  }
-
-  /**
-   * Handler for processing the event when account data comes in.
-   * @param {Dict} account Account data blob
-   */
-  var processAccountEvt = function (account) {
-    namesToIds = sortOnKeys(namesToIds);
-      for (var i = 0; i < modules.length; i++) {
-        if (modules[i].processAccountEvt !== undefined) {
-          modules[i].processAccountEvt(account);
-        }
-      }
-    
-  };
 
   /**
    * Returns a module based on a name passed in.
@@ -2472,7 +2453,6 @@ var rphToolsModule = (function () {
     getModules: getModules,
   };
 }());
-
 /****************************************************************************
  * Script initializations to execute after the page loads
  ***************************************************************************/

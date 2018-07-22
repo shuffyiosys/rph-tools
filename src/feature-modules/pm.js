@@ -221,9 +221,8 @@ var pmModule = (function () {
 
   /**
    * Processes account events.
-   * @param {object} account Data blob countaining the user's account.
    */
-  var processAccountEvt = function (account) {
+  var processAccountEvt = function () {
     var namesToIds = rphToolsModule.getNamesToIds();
     $('#pmNamesDroplist').empty();
     for (var name in namesToIds){

@@ -1,3 +1,7 @@
+RPH Tools (4.0.5)
+--------------
+* Fixed retrieving user IDs out of the account blob since the format changed.
+
 RPH Tools (4.0.4)
 --------------
 * Added a link to a quick guide in the About module

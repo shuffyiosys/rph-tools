@@ -12,7 +12,7 @@ var rphToolsModule = (function () {
     '.rpht_textarea{border: 1px solid black; width: 611px;}' +
     '.rpht_chat_tab {' +
     'position: absolute;' +
-    'height: 60px;' +
+    'height: 54px;' +
     'overflow-x: auto;' +
     'overflow-y: hidden;' +
     'white-space: nowrap;' +
@@ -50,46 +50,29 @@ var rphToolsModule = (function () {
       }
     });
 
+    /* When the account data receive event happens, delay some time before 
+       initializing the modules because the relevant data isn't immediately
+       available.  */
     socket.on('accounts', function () {
-      var users = account.users;
-      console.log('RPH Tools[_on.accounts]: Account data blob received', users);
+      console.log('RPH Tools[_on.accounts]: Account data blob received');
       setTimeout(function(){
+        var users = [];
+        account.users.forEach(function(userObj){
+          users.push(userObj.props.id);
+          namesToIds[userObj.props.name] = userObj.props.id;
+        });
+        namesToIds = sortOnKeys(namesToIds);
+
+        console.log('RPH Tools[_on.accounts]: names to user IDs', namesToIds);
         for (i = 0; i < modules.length; i++) {
           modules[i].init();
+          if (modules[i].processAccountEvt !== undefined) {
+            modules[i].processAccountEvt();
+          }
         }
-        mapNamesToIds(account);
-      },1000);
-      setTimeout(function(){
-        processAccountEvt(account);
-      },2000);
+      },1500);
     });
   }
-
-  /**
-   * Maps user names to IDs into a dictionary
-   * @param {object} account Account data blob
-   */
-  var mapNamesToIds = function(account){
-    account.users.forEach(function(userId){
-      getUserById(userId, function(user){
-        namesToIds[user.props.name] = userId;
-      });
-    });
-  }
-
-  /**
-   * Handler for processing the event when account data comes in.
-   * @param {Dict} account Account data blob
-   */
-  var processAccountEvt = function (account) {
-    namesToIds = sortOnKeys(namesToIds);
-      for (var i = 0; i < modules.length; i++) {
-        if (modules[i].processAccountEvt !== undefined) {
-          modules[i].processAccountEvt(account);
-        }
-      }
-    
-  };
 
   /**
    * Returns a module based on a name passed in.
@@ -133,4 +116,3 @@ var rphToolsModule = (function () {
     getModules: getModules,
   };
 }());
-
