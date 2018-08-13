@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.0.6
+// @version    4.0.7
 // @description Adds extended settings to RPH
 // @match      http://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,4 +9,4 @@
 // @license    MIT
 // ==/UserScript==
 
-var VERSION_STRING = '4.0.6';
+var VERSION_STRING = '4.0.7';

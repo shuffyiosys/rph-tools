@@ -1,4 +1,10 @@
-RPH Tools (4.0.5)
+RPH Tools (4.0.7)
+--------------
+* Added auto-refreshing on detecting the chat socket disconnected
+* Updated the sessioning functionality to fix issues
+* Sessioning and auto-refreshing are in a new module.
+
+RPH Tools (4.0.6)
 --------------
 * Fixed a bug with adding room-name pairs to the modding tab.
 
