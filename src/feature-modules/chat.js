@@ -168,11 +168,11 @@ var chatModule = (function () {
     });
 
     chatSocket.on('room-users-leave', function(data){
-      account.userids.forEach(function(userId){
-          if (data.users.indexOf(userId)){
+      data.users.forEach(function(userId){
+          if (account.userids.indexOf(userId) > -1){
             var sessionModule = rphToolsModule.getModule('Session Module');
             if (sessionModule !== null){
-              sessionModule.updateSession();
+              sessionModule.removeRoomFromSession(data.room, userId);
             }
           }
       });
@@ -211,7 +211,7 @@ var chatModule = (function () {
     }
 
     if (sessionModule !== null) {
-      sessionModule.updateSession();
+      sessionModule.addRoomToSession(room.room, userId);
     }
 
     resizeChatTabs();

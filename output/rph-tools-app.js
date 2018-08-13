@@ -480,11 +480,11 @@ var chatModule = (function () {
     });
 
     chatSocket.on('room-users-leave', function(data){
-      account.userids.forEach(function(userId){
-          if (data.users.indexOf(userId)){
+      data.users.forEach(function(userId){
+          if (account.userids.indexOf(userId) > -1){
             var sessionModule = rphToolsModule.getModule('Session Module');
             if (sessionModule !== null){
-              sessionModule.updateSession();
+              sessionModule.removeRoomFromSession(data.room, userId);
             }
           }
       });
@@ -523,7 +523,7 @@ var chatModule = (function () {
     }
 
     if (sessionModule !== null) {
-      sessionModule.updateSession();
+      sessionModule.addRoomToSession(room.room, userId);
     }
 
     resizeChatTabs();
@@ -1064,10 +1064,13 @@ var sessionModule = (function () {
         'tabId': 'session-module',
         'tabName': 'Sessions',
         'tabContents': '<h3>Sessions</h3>' +
-            '<h4>Auto Refresh</h4> Note: This will not save your text inputs or will re-join rooms with passwords. <br />' +
-            '<label class="rpht_labels">Refresh on D/C: </label><input style="width: 40px;" type="checkbox" id="dcRefresh" name="dcRefresh">' +
+            '<div>' +
+            '<h4>Auto Refresh</h4> <strong>Note:</strong> This will not save your text inputs or re-join rooms with passwords.' +
+            '<br /><br />' +
+            '<label class="rpht_labels">Refresh on Disconnect: </label><input style="width: 40px;" type="checkbox" id="dcRefresh" name="dcRefresh">' +
             '<br /><br />' +
             '<label class="rpht_labels">Auto-refresh time: </label><input style="width: 64px;" type="number" id="refreshTime" name="refreshTime" max="60" min="5" value="10"> seconds' +
+            '</div><div>' +
             '<h4>Auto Joining</h4>' +
             '<label class="rpht_labels">Can Cancel: </label><input style="width: 40px;" type="checkbox" id="canCancelJoining" name="canCancelJoining" checked>' +
             '<br /><br />' +
@@ -1109,11 +1112,6 @@ var sessionModule = (function () {
 
         $('#roomSessioning').click(function () {
             sessionSettings.joinSession = getCheckBox('#roomSessioning');
-            if (sessionSettings.joinSession) {
-                updateSessionTimer = setInterval(updateSession, 30 * 1000);
-            } else {
-                clearTimeout(updateSessionTimer);
-            }
             saveSettings();
         });
 
@@ -1252,7 +1250,34 @@ var sessionModule = (function () {
      */
     var updateSession = function () {
         sessionSettings.roomSession = rph.roomsJoined;
+        console.log('RPH Tools[updateSession]: Updating session to:', sessionSettings.roomSession);
     };
+
+    var addRoomToSession = function(roomname, userid){
+        var alreadyInSession = false
+        var roomSession = sessionSettings.roomSession
+        for(var i = 0; i < roomSession.length; i++){
+            var room = roomSession[i]
+            if (room.roomname == roomname && room.user == userid){
+                alreadyInSession = true;
+            }
+        }
+        if(!alreadyInSession){
+          console.log('RPH Tools[addRoomToSession]: Adding room to session:', roomname, userid);
+          sessionSettings.roomSession.push({'roomname': roomname, 'user': userid});
+        }
+    }
+
+    var removeRoomFromSession = function(roomname, userid){
+        var roomSession = sessionSettings.roomSession
+        for(var i = 0; i < roomSession.length; i++){
+            var room = roomSession[i]
+            if (room.roomname == roomname && room.user == userid){
+                console.log('RPH Tools[removeRoomFromSession]: Removing room -', room);
+                sessionSettings.roomSession.splice(i, 1);
+            }
+        }
+    }
 
     /** 
      * Adds an entry to the Favorite Chat Rooms list
@@ -1351,10 +1376,6 @@ var sessionModule = (function () {
             $('#favAdd').text("Favorites Full");
             $('#favAdd')[0].disabled = true;
         }
-
-        if (sessionSettings.joinSession) {
-            updateSessionTimer = setInterval(updateSession, 30 * 1000);
-        }
     };
 
     var processAccountEvt = function () {
@@ -1379,6 +1400,8 @@ var sessionModule = (function () {
         processAccountEvt: processAccountEvt,
         getSettings: getSettings,
         updateSession: updateSession,
+        addRoomToSession: addRoomToSession,
+        removeRoomFromSession: removeRoomFromSession,
     };
 }());/**
  * This module handles features for the PM system.
