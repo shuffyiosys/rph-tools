@@ -497,8 +497,6 @@ var chatModule = (function () {
       if (roomnames.length === 0) {
           return;
       }
-
-      console.log('Clicking the button');
       $("button span:contains('Continue')").trigger('click');
       clearTimeout(autoDismissTimer);
     })
@@ -509,6 +507,7 @@ var chatModule = (function () {
    * - Set up the .onMessage function for pinging
    * - Add the user's name to the chat tab and textarea
    * - Create a room-pair name for the Modding section
+   * - Add the room the session.
    * @param {object} room Room that the user has joined
    */
   var roomSetup = function (room) {
