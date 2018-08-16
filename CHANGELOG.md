@@ -3,6 +3,7 @@ RPH Tools (4.0.7)
 * Added auto-refreshing on detecting the chat socket disconnected
 * Updated the sessioning functionality to fix issues
 * Sessioning and auto-refreshing are in a new module.
+* Added a timer to dismiss the splash window when rooms are available.
 
 RPH Tools (4.0.6)
 --------------

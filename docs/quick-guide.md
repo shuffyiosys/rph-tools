@@ -16,22 +16,28 @@ This will play an audio cue plus highlight the text color when a message with a 
 5. Add matching options to taste. "Exact Match" will only match whole words (e.g., "Mel" only pings on "Mel" and not "Melody"). Case sensitive will take into account using uppercase letters or not (e.g., "Mel" only pings on "Mel" and not "mel")
 6. You can enter words in the "Ping Tester" section. Focus away (i.e., click out of it) to test if it triggers a ping or not.
 
+### Other Settings
+* "No image icons" prevents links to small images from being replaced by said image.
+* "Show username in tabs & textbox" shows the username of the current selected tab in the tab itself and the textbox input. If this setting is changed, it requires the user rejoin the room.
+
+## Sessions
+### Auto-Refresh
+This will refresh the page for you automatically when the script detects a disconnect event happens. It doesn't happen immediately, but after a delay. In addition, this will automatically re-join the rooms you were in.
+* Refresh on Disconnect, when checked, will cause the script to automatically refresh after the timeout.
+* Auto-Refresh time is the delay, in seconds, when a disconnect is detected to when the refresh happens. This can be set between 5-60 seconds.
+
 ### Auto Joining
 This auto joins rooms that you put into it whenever you log in.
 1. Set the options
     * "Can Cancel" means you can cancel auto joining if you don't want the system to.
-    * "Room Sessioning" keeps track of what rooms you were in and automatically joins them when you refresh the chat
     * "Join Favorites" joins all of the rooms in the favorites list
+    * "Always join last session" keeps track of what rooms you were in and automatically joins them when you refresh the chat. This has no effect on Auto-Refresh.
 2. To enter a favorite room:
     1. Select a username from the dropdown menu
     2. Enter the room name
     3. Enter the room's password, if any
     4. Press the "Add" button
     5. To remove a favorite room, select it on the list and press the "Remove" button
-
-### Other Settings
-* "No image icons" prevents links to small images from being replaced by said image.
-* "Show username in tabs & textbox" shows the username of the current selected tab in the tab itself and the textbox input. If this setting is changed, it requires the user rejoin the room.
 
 ## PMs
 ### PM Away System

@@ -336,6 +336,8 @@ var chatModule = (function () {
 
   var userColorDroplist = null;
 
+  var autoDismissTimer = null;
+
   var html = {
     'tabId': 'chat-module',
     'tabName': 'Chat',
@@ -489,6 +491,17 @@ var chatModule = (function () {
           }
       });
     });
+
+    autoDismissTimer = setInterval(()=>{
+      /* Don't run this if there's no rooms yet. */
+      if (roomnames.length === 0) {
+          return;
+      }
+
+      console.log('Clicking the button');
+      $("button span:contains('Continue')").trigger('click');
+      clearTimeout(autoDismissTimer);
+    })
   }
 
   /**

@@ -24,6 +24,8 @@ var chatModule = (function () {
 
   var userColorDroplist = null;
 
+  var autoDismissTimer = null;
+
   var html = {
     'tabId': 'chat-module',
     'tabName': 'Chat',
@@ -177,6 +179,15 @@ var chatModule = (function () {
           }
       });
     });
+
+    autoDismissTimer = setInterval(()=>{
+      /* Don't run this if there's no rooms yet. */
+      if (roomnames.length === 0) {
+          return;
+      }
+      $("button span:contains('Continue')").trigger('click');
+      clearTimeout(autoDismissTimer);
+    })
   }
 
   /**
@@ -184,6 +195,7 @@ var chatModule = (function () {
    * - Set up the .onMessage function for pinging
    * - Add the user's name to the chat tab and textarea
    * - Create a room-pair name for the Modding section
+   * - Add the room the session.
    * @param {object} room Room that the user has joined
    */
   var roomSetup = function (room) {
