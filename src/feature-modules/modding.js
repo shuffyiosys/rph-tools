@@ -16,6 +16,13 @@ var moddingModule = (function () {
     'tabName': 'Modding',
     'tabContents': '<h3>Modding</h3>' +
       '<div>' +
+      '<h4>Shortcuts</h4><br />' +
+      '<p><strong>Note:</strong>This must be done with the mod\'s chat tab selected.</p>'+
+      '<p>/kick [username],[reason] - Kicks a person from the chat room with the reason. Example: /kick Alice,Being rude</p>' +
+      '<p>/ban [username],[reason] - Bans a person from the chat room with the reason (optional). Example: /ban Bob,Being rude</p>' +
+      '<p>/unban [username],[reason] - Unbans a person from the chat room with the reason (optional). </p>' +
+      '</div>' +
+      '<div>' +
       '<h4>Mod commands</h4><br />' +
       '<p>This will only work if you\'re actually a mod and you own the user name.</p>' +
       '<br />' +

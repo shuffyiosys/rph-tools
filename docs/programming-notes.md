@@ -73,6 +73,9 @@ This contains the data necessary for the module to be it's own HTML block in the
 - ```tabContents```: This is the HTML of the page in the Settings window for this module
 
 ## Considerations when creating or modifying modules
+### RPH Tools should not make users who use it appear different than those who do
+While the goal of RPH Tools is to augment and add features to RPH as necessary, it should not be immediately obvious that something is different between those who use RPH Tools and those who don't.
+
 ### Remember to add your module to main.js and the build script
 ```main.js``` contains an array of all modules that will be active in the script. If you want the main ```RPH Tools``` module to run your module, it must be inlcuded in that array. It also must be included in the build script, otherwise it won't appear in the final output.
 

@@ -32,6 +32,8 @@ var chatModule = (function () {
     'tabContents': '<h3>Chat room settings</h3>' +
       '<div>' +
       '<h4>User text color</h4>' +
+      '<p><strong>Shortcut:</strong> /color [HTML color] - Changes the text color of the current username</p>'+
+      '<br /><br />' +
       '<label class="rpht_labels">Username:</label><select  style="width: 300px;" id="userColorDroplist"></select>' +
       '<br /><br />' +
       '<label class="rpht_labels">Text color:</label><input style="width: 300px;" type="text" id="userNameTextColor" name="userNameTextColor" value="#111">' +
@@ -327,15 +329,10 @@ var chatModule = (function () {
    */
   function parseSlashCommand(inputTextBox, Room, User) {
     var newMessage = inputTextBox.val();
-    var thisTab = rph.tabs[User.props.id];
     var error = false;
     var cmdArgs = newMessage.split(/ (.+)/);
-    var outMsg = -1;
 
     switch (cmdArgs[0]) {
-      case '/me':
-        sendChatMessage(inputTextBox, Room, User);
-        break;
       case '/coinflip':
         var rngModule = rphToolsModule.getModule('RNG Module');
         if (rngModule) {
@@ -420,11 +417,8 @@ var chatModule = (function () {
         }
         break;
       default:
-        Room.appendMessage(
-          '<span class="first">&nbsp;</span>\n\
-        <span title="' + makeTimestamp(false, true) + '">Command ' +
-          cmdArgs[0].substring(1, cmdArgs[0].length) + ' is not supported</span>'
-        ).addClass('sys');
+        console.log('RPH Tools[parseSlashCommand]: Command not recognized:', cmdArgs[0])
+        sendChatMessage(inputTextBox, Room, User);
         break;
     }
 

@@ -3,10 +3,11 @@
  */
 var sessionModule = (function () {
     var sessionSettings = {
+        'autoRefreshAttempts': 5,
         'dcHappened': false,
-        'autoRefresh': false,
+        'autoRefresh': true,
         'refreshSecs': 10,
-        'canCancel': false,
+        'canCancel': true,
         'joinFavorites': false,
         'joinSession': false,
         'roomSession': [],
@@ -17,8 +18,6 @@ var sessionModule = (function () {
 
     var autoJoinTimer = null;
 
-    var updateSessionTimer = null;
-
     var waitForDialog = true;
 
     var favUserDropList = null;
@@ -26,10 +25,18 @@ var sessionModule = (function () {
     var dcHappenedShadow = false;
 
     var sessionShadow = [];
-
+    
+    var connectionStabilityTimer = null;
+    
     var MAX_ROOMS = 30;
 
-    var AUTOJOIN_TIMEOUT_SECS = 5;
+    var AUTOJOIN_TIMEOUT_SEC = 5 * 1000;
+
+    var MAX_AUTO_REFRESH_ATTEMPTS = 5;
+
+    var REFRESH_ATTEMPTS_TIMEOUT = 10 * 60 * 1000;
+
+    var AUTOJOIN_INTERVAL = 2 * 1000
 
     var html = {
         'tabId': 'session-module',
@@ -43,7 +50,7 @@ var sessionModule = (function () {
             '<label class="rpht_labels">Auto-refresh time: </label><input style="width: 64px;" type="number" id="refreshTime" name="refreshTime" max="60" min="5" value="10"> seconds' +
             '</div><div>' +
             '<h4>Auto Joining</h4>' +
-            '<label class="rpht_labels">Can Cancel: </label><input style="width: 40px;" type="checkbox" id="canCancelJoining" name="canCancelJoining" checked>' +
+            '<label class="rpht_labels">Can Cancel: </label><input style="width: 40px;" type="checkbox" id="canCancelJoining" name="canCancelJoining">' +
             '<br /><br />' +
             '<label class="rpht_labels">Join favorites: </label><input style="width: 40px;" type="checkbox" id="favEnable" name="favEnable">' +
             '<br /><br />' +
@@ -101,23 +108,45 @@ var sessionModule = (function () {
             saveSettings();
         });
 
-        loadSettings();
+        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
         dcHappenedShadow = sessionSettings.dcHappened;
         sessionShadow = sessionSettings.roomSession;
 
         if (determineAutojoin()) {
             waitForDialog = sessionSettings.canCancel;
-            autoJoinTimer = setInterval(autoJoiningHandler, 2 * 1000);
+            autoJoinTimer = setInterval(autoJoiningHandler, AUTOJOIN_INTERVAL);
         }
 
+        connectionStabilityTimer = setTimeout(() => {
+            console.log('RPH Tools[connectionStabilityTimeout] - Connection considered stable');
+            sessionSettings.autoRefreshAttempts = MAX_AUTO_REFRESH_ATTEMPTS;
+            saveSettings();
+        }, REFRESH_ATTEMPTS_TIMEOUT);
+
         chatSocket.on('disconnect', function () {
-            if (sessionSettings.autoRefresh){
+            clearTimeout(connectionStabilityTimer);
+            if (sessionSettings.autoRefresh && sessionSettings.autoRefreshAttempts > 0){
                 setTimeout(() => {
+                    sessionSettings.autoRefreshAttempts -= 1;
                     sessionSettings.dcHappened = true;
                     saveSettings();
                     window.onbeforeunload = null;
                     window.location.reload(true);
                 }, sessionSettings.refreshSecs * 1000);
+            }
+            else {
+                console.log(sessionSettings.autoRefresh, sessionSettings.autoRefreshAttempts);
+                $('<div id="rpht-max-refresh" class="inner">' +
+                    '<p>Max auto refresh attempts tried. You will need to manually refresh.</p>' +
+                    '</div>'
+                ).dialog({
+                    open: function (event, ui) {},
+                    buttons: {
+                        Cancel: function () {
+                            $(this).dialog("close");
+                        }
+                    },
+                }).dialog('open');
             }
         });
 
@@ -133,12 +162,14 @@ var sessionModule = (function () {
 
         hasRooms |= (sessionSettings.favRooms.length > 0);
         hasRooms |= (sessionSettings.roomSession.length > 0);
-        return autoJoin && hasRooms;
+        
+        return autoJoin && hasRooms && (sessionSettings.autoRefreshAttempts > 0);
     }
 
     /**
      * Handler for the auto-joining mechanism.
      **/
+
     var autoJoiningHandler = function () {
         /* Don't run this if there's no rooms yet. */
         if (roomnames.length === 0) {
@@ -153,8 +184,8 @@ var sessionModule = (function () {
             ).dialog({
                 open: function (event, ui) {
                     setTimeout(function () {
-                        $('#rpht-autojoin').dialog('close');
-                    }, AUTOJOIN_TIMEOUT_SECS * 1000);
+                       $('#rpht-autojoin').dialog('close');
+                    }, AUTOJOIN_TIMEOUT_SEC);
                 },
                 buttons: {
                     Cancel: function () {
@@ -166,7 +197,7 @@ var sessionModule = (function () {
 
             waitForDialog = false;
             clearTimeout(autoJoinTimer);
-            autoJoinTimer = setTimeout(JoinRooms, AUTOJOIN_TIMEOUT_SECS * 1000);
+            autoJoinTimer = setTimeout(JoinRooms, AUTOJOIN_TIMEOUT_SEC);
         } else {
             JoinRooms();
         }
@@ -214,14 +245,6 @@ var sessionModule = (function () {
                 pw: favRoom.roomPw
             });
         }
-    };
-
-    /**
-     * Updates the chat session (which rooms the user is in at the time)
-     */
-    var updateSession = function () {
-        sessionSettings.roomSession = rph.roomsJoined;
-        console.log('RPH Tools[updateSession]: Updating session to:', sessionSettings.roomSession);
     };
 
     var addRoomToSession = function(roomname, userid){
@@ -314,10 +337,11 @@ var sessionModule = (function () {
         localStorage.setItem(localStorageName, JSON.stringify(getSettings()));
     };
 
-    var loadSettings = function () {
-        var storedSettings = JSON.parse(localStorage.getItem(localStorageName));
+    var loadSettings = function (storedSettings) {
         if (storedSettings !== null) {
-            sessionSettings = storedSettings;
+            for (var key in storedSettings){
+                sessionSettings[key] = storedSettings[key];
+            }
             populateSettings();
         }
     };
@@ -370,7 +394,7 @@ var sessionModule = (function () {
 
         processAccountEvt: processAccountEvt,
         getSettings: getSettings,
-        updateSession: updateSession,
+        loadSettings: loadSettings,
         addRoomToSession: addRoomToSession,
         removeRoomFromSession: removeRoomFromSession,
     };

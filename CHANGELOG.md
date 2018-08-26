@@ -1,3 +1,10 @@
+RPH Tools (4.0.8)
+--------------
+* Defaulted all unsupported slash commands to RPH's handler.
+* Auto-refresh system will only work for five attempts now. After trying five times, it will require manual refreshing. If the user's connection is stable for 10 minutes, auto-refresh will start working again.
+  * This can be overriden by importing settings.
+* For certain actions, the slash commands were added to the page to make it more obvious they exist.
+
 RPH Tools (4.0.7)
 --------------
 * Added auto-refreshing on detecting the chat socket disconnected

@@ -63,8 +63,6 @@ var rphToolsModule = (function () {
           namesToIds[userObj.props.name] = userObj.props.id;
         });
         namesToIds = sortOnKeys(namesToIds);
-
-        console.log('RPH Tools[_on.accounts]: names to user IDs', namesToIds, idsToNames);
         for (i = 0; i < modules.length; i++) {
           modules[i].init();
           if (modules[i].processAccountEvt !== undefined) {

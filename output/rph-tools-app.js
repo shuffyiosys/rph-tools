@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.0.7
+// @version    4.0.8
 // @description Adds extended settings to RPH
 // @match      http://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-var VERSION_STRING = '4.0.7';
+var VERSION_STRING = '4.0.8';
 /**
  * Gets the value from an input element.
  * @param {string} settingId Full selector of the input to get its value
@@ -271,8 +271,12 @@ function intputChatText(ev, User, Room){
           ).addClass('sys');
       return;
     }
+
     if (newMessage[0] === '/' && newMessage.substring(0,2) !== '//'){
-      chatModule.parseSlashCommand(inputTextBox, Room, User);
+      if (chatModule)
+        chatModule.parseSlashCommand(inputTextBox, Room, User);
+      else
+        sendChatMessage(inputTextBox, Room, User);
     }
     else {
       sendChatMessage(inputTextBox, Room, User);
@@ -344,6 +348,8 @@ var chatModule = (function () {
     'tabContents': '<h3>Chat room settings</h3>' +
       '<div>' +
       '<h4>User text color</h4>' +
+      '<p><strong>Shortcut:</strong> /color [HTML color] - Changes the text color of the current username</p>'+
+      '<br /><br />' +
       '<label class="rpht_labels">Username:</label><select  style="width: 300px;" id="userColorDroplist"></select>' +
       '<br /><br />' +
       '<label class="rpht_labels">Text color:</label><input style="width: 300px;" type="text" id="userNameTextColor" name="userNameTextColor" value="#111">' +
@@ -639,15 +645,10 @@ var chatModule = (function () {
    */
   function parseSlashCommand(inputTextBox, Room, User) {
     var newMessage = inputTextBox.val();
-    var thisTab = rph.tabs[User.props.id];
     var error = false;
     var cmdArgs = newMessage.split(/ (.+)/);
-    var outMsg = -1;
 
     switch (cmdArgs[0]) {
-      case '/me':
-        sendChatMessage(inputTextBox, Room, User);
-        break;
       case '/coinflip':
         var rngModule = rphToolsModule.getModule('RNG Module');
         if (rngModule) {
@@ -732,11 +733,8 @@ var chatModule = (function () {
         }
         break;
       default:
-        Room.appendMessage(
-          '<span class="first">&nbsp;</span>\n\
-        <span title="' + makeTimestamp(false, true) + '">Command ' +
-          cmdArgs[0].substring(1, cmdArgs[0].length) + ' is not supported</span>'
-        ).addClass('sys');
+        console.log('RPH Tools[parseSlashCommand]: Command not recognized:', cmdArgs[0])
+        sendChatMessage(inputTextBox, Room, User);
         break;
     }
 
@@ -1044,10 +1042,11 @@ var chatModule = (function () {
  */
 var sessionModule = (function () {
     var sessionSettings = {
+        'autoRefreshAttempts': 5,
         'dcHappened': false,
-        'autoRefresh': false,
+        'autoRefresh': true,
         'refreshSecs': 10,
-        'canCancel': false,
+        'canCancel': true,
         'joinFavorites': false,
         'joinSession': false,
         'roomSession': [],
@@ -1058,8 +1057,6 @@ var sessionModule = (function () {
 
     var autoJoinTimer = null;
 
-    var updateSessionTimer = null;
-
     var waitForDialog = true;
 
     var favUserDropList = null;
@@ -1067,10 +1064,18 @@ var sessionModule = (function () {
     var dcHappenedShadow = false;
 
     var sessionShadow = [];
-
+    
+    var connectionStabilityTimer = null;
+    
     var MAX_ROOMS = 30;
 
-    var AUTOJOIN_TIMEOUT_SECS = 5;
+    var AUTOJOIN_TIMEOUT_SEC = 5 * 1000;
+
+    var MAX_AUTO_REFRESH_ATTEMPTS = 5;
+
+    var REFRESH_ATTEMPTS_TIMEOUT = 10 * 60 * 1000;
+
+    var AUTOJOIN_INTERVAL = 2 * 1000
 
     var html = {
         'tabId': 'session-module',
@@ -1084,7 +1089,7 @@ var sessionModule = (function () {
             '<label class="rpht_labels">Auto-refresh time: </label><input style="width: 64px;" type="number" id="refreshTime" name="refreshTime" max="60" min="5" value="10"> seconds' +
             '</div><div>' +
             '<h4>Auto Joining</h4>' +
-            '<label class="rpht_labels">Can Cancel: </label><input style="width: 40px;" type="checkbox" id="canCancelJoining" name="canCancelJoining" checked>' +
+            '<label class="rpht_labels">Can Cancel: </label><input style="width: 40px;" type="checkbox" id="canCancelJoining" name="canCancelJoining">' +
             '<br /><br />' +
             '<label class="rpht_labels">Join favorites: </label><input style="width: 40px;" type="checkbox" id="favEnable" name="favEnable">' +
             '<br /><br />' +
@@ -1142,23 +1147,45 @@ var sessionModule = (function () {
             saveSettings();
         });
 
-        loadSettings();
+        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
         dcHappenedShadow = sessionSettings.dcHappened;
         sessionShadow = sessionSettings.roomSession;
 
         if (determineAutojoin()) {
             waitForDialog = sessionSettings.canCancel;
-            autoJoinTimer = setInterval(autoJoiningHandler, 2 * 1000);
+            autoJoinTimer = setInterval(autoJoiningHandler, AUTOJOIN_INTERVAL);
         }
 
+        connectionStabilityTimer = setTimeout(() => {
+            console.log('RPH Tools[connectionStabilityTimeout] - Connection considered stable');
+            sessionSettings.autoRefreshAttempts = MAX_AUTO_REFRESH_ATTEMPTS;
+            saveSettings();
+        }, REFRESH_ATTEMPTS_TIMEOUT);
+
         chatSocket.on('disconnect', function () {
-            if (sessionSettings.autoRefresh){
+            clearTimeout(connectionStabilityTimer);
+            if (sessionSettings.autoRefresh && sessionSettings.autoRefreshAttempts > 0){
                 setTimeout(() => {
+                    sessionSettings.autoRefreshAttempts -= 1;
                     sessionSettings.dcHappened = true;
                     saveSettings();
                     window.onbeforeunload = null;
                     window.location.reload(true);
                 }, sessionSettings.refreshSecs * 1000);
+            }
+            else {
+                console.log(sessionSettings.autoRefresh, sessionSettings.autoRefreshAttempts);
+                $('<div id="rpht-max-refresh" class="inner">' +
+                    '<p>Max auto refresh attempts tried. You will need to manually refresh.</p>' +
+                    '</div>'
+                ).dialog({
+                    open: function (event, ui) {},
+                    buttons: {
+                        Cancel: function () {
+                            $(this).dialog("close");
+                        }
+                    },
+                }).dialog('open');
             }
         });
 
@@ -1174,12 +1201,14 @@ var sessionModule = (function () {
 
         hasRooms |= (sessionSettings.favRooms.length > 0);
         hasRooms |= (sessionSettings.roomSession.length > 0);
-        return autoJoin && hasRooms;
+        
+        return autoJoin && hasRooms && (sessionSettings.autoRefreshAttempts > 0);
     }
 
     /**
      * Handler for the auto-joining mechanism.
      **/
+
     var autoJoiningHandler = function () {
         /* Don't run this if there's no rooms yet. */
         if (roomnames.length === 0) {
@@ -1194,8 +1223,8 @@ var sessionModule = (function () {
             ).dialog({
                 open: function (event, ui) {
                     setTimeout(function () {
-                        $('#rpht-autojoin').dialog('close');
-                    }, AUTOJOIN_TIMEOUT_SECS * 1000);
+                       $('#rpht-autojoin').dialog('close');
+                    }, AUTOJOIN_TIMEOUT_SEC);
                 },
                 buttons: {
                     Cancel: function () {
@@ -1207,7 +1236,7 @@ var sessionModule = (function () {
 
             waitForDialog = false;
             clearTimeout(autoJoinTimer);
-            autoJoinTimer = setTimeout(JoinRooms, AUTOJOIN_TIMEOUT_SECS * 1000);
+            autoJoinTimer = setTimeout(JoinRooms, AUTOJOIN_TIMEOUT_SEC);
         } else {
             JoinRooms();
         }
@@ -1255,14 +1284,6 @@ var sessionModule = (function () {
                 pw: favRoom.roomPw
             });
         }
-    };
-
-    /**
-     * Updates the chat session (which rooms the user is in at the time)
-     */
-    var updateSession = function () {
-        sessionSettings.roomSession = rph.roomsJoined;
-        console.log('RPH Tools[updateSession]: Updating session to:', sessionSettings.roomSession);
     };
 
     var addRoomToSession = function(roomname, userid){
@@ -1355,10 +1376,11 @@ var sessionModule = (function () {
         localStorage.setItem(localStorageName, JSON.stringify(getSettings()));
     };
 
-    var loadSettings = function () {
-        var storedSettings = JSON.parse(localStorage.getItem(localStorageName));
+    var loadSettings = function (storedSettings) {
         if (storedSettings !== null) {
-            sessionSettings = storedSettings;
+            for (var key in storedSettings){
+                sessionSettings[key] = storedSettings[key];
+            }
             populateSettings();
         }
     };
@@ -1411,7 +1433,7 @@ var sessionModule = (function () {
 
         processAccountEvt: processAccountEvt,
         getSettings: getSettings,
-        updateSession: updateSession,
+        loadSettings: loadSettings,
         addRoomToSession: addRoomToSession,
         removeRoomFromSession: removeRoomFromSession,
     };
@@ -1682,6 +1704,11 @@ var rngModule = (function () {
     'tabId': 'rng-module',
     'tabName': 'Random Numbers',
     'tabContents': '<h3>Random Number Generators</h3>' +
+      '<div>' +
+      '<h4>Shortcuts</h4><br />' +
+      '<p>/coinflip - Does a coin toss</p>' +
+      '<p>/roll [num]d[num] - Dice roll. If no argument is given, it rolls 1d1000. Example: /roll 2d6 will roll 2 dices with 6 sides</p>' +
+      '</div>' +
       '<div id="coinFlipOptions">' +
       '<h4>Coin toss</h4><br />' +
       '<button style="margin-left: 312px;" type="button" id="coinRngButton">Flip a coin!</button>' +
@@ -2031,6 +2058,13 @@ var moddingModule = (function () {
     'tabId': 'modding-module',
     'tabName': 'Modding',
     'tabContents': '<h3>Modding</h3>' +
+      '<div>' +
+      '<h4>Shortcuts</h4><br />' +
+      '<p><strong>Note:</strong>This must be done with the mod\'s chat tab selected.</p>'+
+      '<p>/kick [username],[reason] - Kicks a person from the chat room with the reason. Example: /kick Alice,Being rude</p>' +
+      '<p>/ban [username],[reason] - Bans a person from the chat room with the reason (optional). Example: /ban Bob,Being rude</p>' +
+      '<p>/unban [username],[reason] - Unbans a person from the chat room with the reason (optional). </p>' +
+      '</div>' +
       '<div>' +
       '<h4>Mod commands</h4><br />' +
       '<p>This will only work if you\'re actually a mod and you own the user name.</p>' +
@@ -2523,8 +2557,6 @@ var rphToolsModule = (function () {
           namesToIds[userObj.props.name] = userObj.props.id;
         });
         namesToIds = sortOnKeys(namesToIds);
-
-        console.log('RPH Tools[_on.accounts]: names to user IDs', namesToIds, idsToNames);
         for (i = 0; i < modules.length; i++) {
           modules[i].init();
           if (modules[i].processAccountEvt !== undefined) {

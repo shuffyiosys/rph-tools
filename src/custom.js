@@ -62,8 +62,12 @@ function intputChatText(ev, User, Room){
           ).addClass('sys');
       return;
     }
+
     if (newMessage[0] === '/' && newMessage.substring(0,2) !== '//'){
-      chatModule.parseSlashCommand(inputTextBox, Room, User);
+      if (chatModule)
+        chatModule.parseSlashCommand(inputTextBox, Room, User);
+      else
+        sendChatMessage(inputTextBox, Room, User);
     }
     else {
       sendChatMessage(inputTextBox, Room, User);

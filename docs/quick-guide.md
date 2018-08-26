@@ -26,6 +26,8 @@ This will refresh the page for you automatically when the script detects a disco
 * Refresh on Disconnect, when checked, will cause the script to automatically refresh after the timeout.
 * Auto-Refresh time is the delay, in seconds, when a disconnect is detected to when the refresh happens. This can be set between 5-60 seconds.
 
+This feature has a retry mechanism in that it will retry 5 times before giving up. The retry mechanism will reset if you have been on for more than 10 minutes without disconnecting.
+
 ### Auto Joining
 This auto joins rooms that you put into it whenever you log in.
 1. Set the options
