@@ -4,7 +4,7 @@
  * @return The extracted HTML's value
  */
 var getInput = function (settingId) {
-  return $(settingId).val();
+    return $(settingId).val();
 };
 
 /**
@@ -13,7 +13,7 @@ var getInput = function (settingId) {
  * @return The extracted HTML's value
  */
 var getCheckBox = function (settingId) {
-  return $(settingId).is(':checked');
+    return $(settingId).is(':checked');
 };
 
 /**
@@ -22,11 +22,11 @@ var getCheckBox = function (settingId) {
  * @param {boolean} mark If the mark is for good or bad
  */
 var markProblem = function (element, mark) {
-  if (mark === true) {
-    $(element).css('background', '#FF7F7F');
-  } else {
-    $(element).css('background', '#FFF');
-  }
+    if (mark === true) {
+        $(element).css('background', '#FF7F7F');
+    } else {
+        $(element).css('background', '#FFF');
+    }
 };
 
 /**
@@ -36,21 +36,21 @@ var markProblem = function (element, mark) {
  * @return If the input is valid or not
  */
 var validateSetting = function (settingId, setting) {
-  var validInput = false;
-  var input = $(settingId).val();
+    var validInput = false;
+    var input = $(settingId).val();
 
-  switch (setting) {
-    case "url":
-      validInput = validateUrl(input);
-      break;
+    switch (setting) {
+        case "url":
+            validInput = validateUrl(input);
+            break;
 
-    case "color":
-      validInput = validateColor(input);
-      validInput = validateColorRange(input);
-      break;
-  }
-  markProblem(settingId, !validInput);
-  return validInput;
+        case "color":
+            validInput = validateColor(input);
+            validInput = validateColorRange(input);
+            break;
+    }
+    markProblem(settingId, !validInput);
+    return validInput;
 };
 
 /**
@@ -59,8 +59,8 @@ var validateSetting = function (settingId, setting) {
  * @returns If the color input is valid
  */
 var validateColor = function (color) {
-  var pattern = new RegExp(/(^#[0-9A-Fa-f]{6}$)|(^#[0-9A-Fa-f]{3}$)/i);
-  return pattern.test(color);
+    var pattern = new RegExp(/(^#[0-9A-Fa-f]{6}$)|(^#[0-9A-Fa-f]{3}$)/i);
+    return pattern.test(color);
 };
 
 /**
@@ -69,18 +69,18 @@ var validateColor = function (color) {
  * @returns If the URL input is valid
  */
 var validateUrl = function (url) {
-  var match = false;
-  var regexp = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/;
-  var pingExt = url.slice((url.length - 4), (url.length));
+    var match = false;
+    var regexp = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/;
+    var pingExt = url.slice((url.length - 4), (url.length));
 
-  if (url === '') {
-    match = true;
-  } else if (regexp.test(url) === true) {
-    if (pingExt == ".wav" || pingExt == ".ogg" || pingExt == ".mp3") {
-      match = true;
+    if (url === '') {
+        match = true;
+    } else if (regexp.test(url) === true) {
+        if (pingExt == ".wav" || pingExt == ".ogg" || pingExt == ".mp3") {
+            match = true;
+        }
     }
-  }
-  return match;
+    return match;
 };
 
 /**
@@ -90,34 +90,34 @@ var validateUrl = function (url) {
  * @return True if the color is within range, false otherwise.
  */
 var validateColorRange = function (TextColor) {
-  var rawHex = TextColor.substring(1, TextColor.length);
-  var red = 255;
-  var green = 255;
-  var blue = 255;
+    var rawHex = TextColor.substring(1, TextColor.length);
+    var red = 255;
+    var green = 255;
+    var blue = 255;
 
-  /* If the color text is 3 characters, limit it to #DDD */
-  if (rawHex.length == 3) {
-    red = parseInt(rawHex.substring(0, 1), 16);
-    green = parseInt(rawHex.substring(1, 2), 16);
-    blue = parseInt(rawHex.substring(2, 3), 16);
+    /* If the color text is 3 characters, limit it to #DDD */
+    if (rawHex.length == 3) {
+        red = parseInt(rawHex.substring(0, 1), 16);
+        green = parseInt(rawHex.substring(1, 2), 16);
+        blue = parseInt(rawHex.substring(2, 3), 16);
 
-    if ((red <= 13) && (green <= 13) && (blue <= 13)) {
-      return true;
+        if ((red <= 13) && (green <= 13) && (blue <= 13)) {
+            return true;
+        }
     }
-  }
-  /* If the color text is 6 characters, limit it to #D2D2D2 */
-  else if (rawHex.length == 6) {
-    red = parseInt(rawHex.substring(0, 2), 16);
-    green = parseInt(rawHex.substring(2, 4), 16);
-    blue = parseInt(rawHex.substring(4, 6), 16);
-    if ((red <= 210) && (green <= 210) && (blue <= 210)) {
-      return true;
+    /* If the color text is 6 characters, limit it to #D2D2D2 */
+    else if (rawHex.length == 6) {
+        red = parseInt(rawHex.substring(0, 2), 16);
+        green = parseInt(rawHex.substring(2, 4), 16);
+        blue = parseInt(rawHex.substring(4, 6), 16);
+        if ((red <= 210) && (green <= 210) && (blue <= 210)) {
+            return true;
+        }
     }
-  }
 
-  console.log('RPH Tools[validateColorRange]: Color check failed',
-    rawHex, red, green, blue);
-  return false;
+    console.log('RPH Tools[validateColorRange]: Color check failed',
+        rawHex, red, green, blue);
+    return false;
 };
 
 /**
@@ -127,10 +127,10 @@ var validateColorRange = function (TextColor) {
  * @param {object} droplist Which select element to add option to
  */
 var addToDroplist = function (value, label, droplist) {
-  droplist.append($('<option>', {
-    value: value,
-    text: label
-  }));
+    droplist.append($('<option>', {
+        value: value,
+        text: label
+    }));
 };
 
 /**
@@ -143,12 +143,12 @@ var addToDroplist = function (value, label, droplist) {
  *         otherwise.
  */
 var arrayObjectIndexOf = function (objArray, key, value) {
-  for (var i = 0; i < objArray.length; i++) {
-    if (objArray[i][key] === value) {
-      return i;
+    for (var i = 0; i < objArray.length; i++) {
+        if (objArray[i][key] === value) {
+            return i;
+        }
     }
-  }
-  return -1;
+    return -1;
 };
 
 /**
@@ -158,8 +158,8 @@ var arrayObjectIndexOf = function (objArray, key, value) {
  * @returns True or false if there's a match.
  */
 var isInLink = function (searchTerm, msg) {
-  var regexp = new RegExp('href=".*?' + searchTerm + '.*?"', '');
-  return regexp.test(msg);
+    var regexp = new RegExp('href=".*?' + searchTerm + '.*?"', '');
+    return regexp.test(msg);
 };
 
 /**
@@ -167,13 +167,13 @@ var isInLink = function (searchTerm, msg) {
  * @param {object} room Object containing room data
  */
 var isModOfRoom = function (room) {
-  for (var idx = 0; idx < account.users.length; idx++) {
-    if (room.props.mods.indexOf(account.users[idx]) > -1 ||
-      room.props.owners.indexOf(account.users[idx]) > -1) {
-      return true;
+    for (var idx = 0; idx < account.users.length; idx++) {
+        if (room.props.mods.indexOf(account.users[idx]) > -1 ||
+            room.props.owners.indexOf(account.users[idx]) > -1) {
+            return true;
+        }
     }
-  }
-  return false;
+    return false;
 };
 
 /**
@@ -182,16 +182,16 @@ var isModOfRoom = function (room) {
  * @returns Sorted dictionary
  */
 var sortOnKeys = function (dict) {
-  var sorted = [];
-  for (var key in dict) {
-    sorted[sorted.length] = key;
-  }
-  sorted.sort();
+    var sorted = [];
+    for (var key in dict) {
+        sorted[sorted.length] = key;
+    }
+    sorted.sort();
 
-  var tempDict = {};
-  for (var i = 0; i < sorted.length; i++) {
-    tempDict[sorted[i]] = dict[sorted[i]];
-  }
+    var tempDict = {};
+    for (var i = 0; i < sorted.length; i++) {
+        tempDict[sorted[i]] = dict[sorted[i]];
+    }
 
-  return tempDict;
+    return tempDict;
 }
