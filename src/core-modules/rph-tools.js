@@ -8,6 +8,8 @@ var rphToolsModule = (function () {
 
     var modules = [];
 
+    var moduleDroplists = [];
+
     var rpht_css =
         '<style>' +
         '.rpht_labels{display: inline-block; width: 300px; text-align: right; margin-right: 10px;}' +
@@ -65,10 +67,8 @@ var rphToolsModule = (function () {
                 namesToIds = sortOnKeys(namesToIds);
                 for (i = 0; i < modules.length; i++) {
                     modules[i].init();
-                    if (modules[i].processAccountEvt !== undefined) {
-                        modules[i].processAccountEvt();
-                    }
                 }
+                populateDroplists();
             }, 1500);
         });
     }
@@ -97,25 +97,36 @@ var rphToolsModule = (function () {
         return modules;
     };
 
+    var registerDroplist = function (droplist) {
+        moduleDroplists.push(droplist);
+    };
+
+    var populateDroplists = function () {
+        moduleDroplists.forEach((droplist, index) => {
+            droplist.empty();
+            for (var name in namesToIds) {
+                addToDroplist(namesToIds[name], name, droplist);
+            }
+        });
+    };
+
     return {
         init: init,
+        getModule: getModule,
+        getModules: getModules,
+        registerDroplist: registerDroplist,
+
         getHtml: function () {
             return html;
         },
-
         toString: function () {
             return 'RPH Tools Module';
         },
-
         getNamesToIds: function () {
             return namesToIds;
         },
-
         getIdsToNames: function () {
             return idsToNames;
         },
-
-        getModule: getModule,
-        getModules: getModules,
     };
 }());

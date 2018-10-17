@@ -34,6 +34,8 @@ var pmModule = (function () {
     var awayMessages = {};
 
     var init = function () {
+        rphToolsModule.registerDroplist($('#pmNamesDroplist'));
+
         $('#pmNamesDroplist').change(function () {
             var userId = $('#pmNamesDroplist option:selected').val();
             var message = '';
@@ -211,40 +213,20 @@ var pmModule = (function () {
         $('input#pmIconsDisable').prop("checked", pmSettings.noIcons);
     };
 
-    /**
-     * Gets the current settings.
-     * @returns Object containing the current settings.
-     */
-    var getSettings = function () {
-        return pmSettings;
-    };
-
-    /**
-     * Processes account events.
-     */
-    var processAccountEvt = function () {
-        var namesToIds = rphToolsModule.getNamesToIds();
-        $('#pmNamesDroplist').empty();
-        for (var name in namesToIds) {
-            addToDroplist(namesToIds[name], name, $('#pmNamesDroplist'));
-        }
-    };
-
     return {
         init: init,
+        saveSettings: saveSettings,
+        loadSettings: loadSettings,
+        deleteSettings: deleteSettings,
 
         getHtml: function () {
             return html;
         },
-
         toString: function () {
             return 'PM Module';
         },
-
-        getSettings: getSettings,
-        saveSettings: saveSettings,
-        loadSettings: loadSettings,
-        deleteSettings: deleteSettings,
-        processAccountEvt: processAccountEvt,
+        getSettings: function () {
+            return pmSettings;
+        },
     };
 }());

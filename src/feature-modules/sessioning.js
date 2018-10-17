@@ -25,9 +25,9 @@ var sessionModule = (function () {
     var dcHappenedShadow = false;
 
     var sessionShadow = [];
-    
+
     var connectionStabilityTimer = null;
-    
+
     var MAX_ROOMS = 30;
 
     var AUTOJOIN_TIMEOUT_SEC = 5 * 1000;
@@ -71,7 +71,7 @@ var sessionModule = (function () {
     };
 
     var init = function () {
-        favUserDropList = $('#favUserDropList');
+        rphToolsModule.registerDroplist($('#favUserDropList'));
 
         $('#dcRefresh').click(function () {
             sessionSettings.autoRefresh = getCheckBox('#dcRefresh');
@@ -125,7 +125,7 @@ var sessionModule = (function () {
 
         chatSocket.on('disconnect', function () {
             clearTimeout(connectionStabilityTimer);
-            if (sessionSettings.autoRefresh && sessionSettings.autoRefreshAttempts > 0){
+            if (sessionSettings.autoRefresh && sessionSettings.autoRefreshAttempts > 0) {
                 setTimeout(() => {
                     sessionSettings.autoRefreshAttempts -= 1;
                     sessionSettings.dcHappened = true;
@@ -133,8 +133,7 @@ var sessionModule = (function () {
                     window.onbeforeunload = null;
                     window.location.reload(true);
                 }, sessionSettings.refreshSecs * 1000);
-            }
-            else {
+            } else {
                 console.log(sessionSettings.autoRefresh, sessionSettings.autoRefreshAttempts);
                 $('<div id="rpht-max-refresh" class="inner">' +
                     '<p>Max auto refresh attempts tried. You will need to manually refresh.</p>' +
@@ -151,10 +150,9 @@ var sessionModule = (function () {
         });
 
         sessionSettings.dcHappened = false;
-        saveSettings();
     }
 
-    var determineAutojoin = function() {
+    var determineAutojoin = function () {
         var hasRooms = false;
         var autoJoin = sessionSettings.joinFavorites;
         autoJoin |= sessionSettings.joinSession;
@@ -162,7 +160,7 @@ var sessionModule = (function () {
 
         hasRooms |= (sessionSettings.favRooms.length > 0);
         hasRooms |= (sessionSettings.roomSession.length > 0);
-        
+
         return autoJoin && hasRooms && (sessionSettings.autoRefreshAttempts > 0);
     }
 
@@ -184,7 +182,7 @@ var sessionModule = (function () {
             ).dialog({
                 open: function (event, ui) {
                     setTimeout(function () {
-                       $('#rpht-autojoin').dialog('close');
+                        $('#rpht-autojoin').dialog('close');
                     }, AUTOJOIN_TIMEOUT_SEC);
                 },
                 buttons: {
@@ -203,12 +201,12 @@ var sessionModule = (function () {
         }
     };
 
-    var JoinRooms = function(){
+    var JoinRooms = function () {
         if (sessionSettings.joinFavorites === true) {
             JoinFavoriteRooms();
         }
 
-        setTimeout(function(){
+        setTimeout(function () {
             if (sessionSettings.joinSession || dcHappenedShadow) {
                 dcHappenedShadow = false;
                 JoinSessionedRooms();
@@ -218,13 +216,13 @@ var sessionModule = (function () {
         clearTimeout(autoJoinTimer);
     }
 
-    var JoinSessionedRooms = function(){
+    var JoinSessionedRooms = function () {
         for (var i = 0; i < sessionShadow.length; i++) {
             var room = sessionShadow[i];
             var roomJoined = arrayObjectIndexOf(rph.roomsJoined, 'roomname', room.roomname) > -1;
             var userJoined = arrayObjectIndexOf(rph.roomsJoined, 'user', room.user) > -1;
             var alreadyInRoom = roomJoined && userJoined;
-            if(!alreadyInRoom){
+            if (!alreadyInRoom) {
                 chatSocket.emit('join', {
                     name: room.roomname,
                     userid: room.user
@@ -247,26 +245,29 @@ var sessionModule = (function () {
         }
     };
 
-    var addRoomToSession = function(roomname, userid){
+    var addRoomToSession = function (roomname, userid) {
         var alreadyInSession = false
         var roomSession = sessionSettings.roomSession
-        for(var i = 0; i < roomSession.length; i++){
+        for (var i = 0; i < roomSession.length; i++) {
             var room = roomSession[i]
-            if (room.roomname == roomname && room.user == userid){
+            if (room.roomname == roomname && room.user == userid) {
                 alreadyInSession = true;
             }
         }
-        if(!alreadyInSession){
-          console.log('RPH Tools[addRoomToSession]: Adding room to session:', roomname, userid);
-          sessionSettings.roomSession.push({'roomname': roomname, 'user': userid});
+        if (!alreadyInSession) {
+            console.log('RPH Tools[addRoomToSession]: Adding room to session:', roomname, userid);
+            sessionSettings.roomSession.push({
+                'roomname': roomname,
+                'user': userid
+            });
         }
     }
 
-    var removeRoomFromSession = function(roomname, userid){
+    var removeRoomFromSession = function (roomname, userid) {
         var roomSession = sessionSettings.roomSession
-        for(var i = 0; i < roomSession.length; i++){
+        for (var i = 0; i < roomSession.length; i++) {
             var room = roomSession[i]
-            if (room.roomname == roomname && room.user == userid){
+            if (room.roomname == roomname && room.user == userid) {
                 console.log('RPH Tools[removeRoomFromSession]: Removing room -', room);
                 sessionSettings.roomSession.splice(i, 1);
             }
@@ -339,15 +340,11 @@ var sessionModule = (function () {
 
     var loadSettings = function (storedSettings) {
         if (storedSettings !== null) {
-            for (var key in storedSettings){
+            for (var key in storedSettings) {
                 sessionSettings[key] = storedSettings[key];
             }
             populateSettings();
         }
-    };
-
-    var getSettings = function () {
-        return sessionSettings;
     };
 
     var populateSettings = function () {
@@ -373,29 +370,20 @@ var sessionModule = (function () {
         }
     };
 
-    var processAccountEvt = function () {
-        var namesToIds = rphToolsModule.getNamesToIds();
-        $('#favUserDropList').empty();
-        for (var name in namesToIds) {
-          addToDroplist(namesToIds[name], name, favUserDropList);
-        }
-      };
-
     return {
         init: init,
+        loadSettings: loadSettings,
+        addRoomToSession: addRoomToSession,
+        removeRoomFromSession: removeRoomFromSession,
 
         getHtml: function () {
             return html;
         },
-
         toString: function () {
             return 'Session Module';
         },
-
-        processAccountEvt: processAccountEvt,
-        getSettings: getSettings,
-        loadSettings: loadSettings,
-        addRoomToSession: addRoomToSession,
-        removeRoomFromSession: removeRoomFromSession,
+        getSettings: function () {
+            return sessionSettings;
+        },
     };
 }());

@@ -45,19 +45,18 @@ var settingsModule = (function () {
      * to see if it's a valid JSON formatted string.
      */
     var importSettingsHanlder = function () {
-        settings = $('textarea#importExportTextarea').val().split("|");
-        try {
-            for (var i = 0; i < settings.length - 1; i++) {
+        settings = $('textarea#importExportTextarea').val().split("\n");
+        for (var i = 0; i < settings.length - 1; i++) {
+            try {
                 var settingsObj = JSON.parse(settings[i]);
                 console.log('RPHT [Setting Module]: Importing...', settingsObj);
                 importSettings(settingsObj);
+            } catch (err) {
+                console.log('RPH Tools[importSettings]: Error importing settings', err);
+                markProblem("importExportTextarea", true);
             }
-        } catch (err) {
-            console.log('RPH Tools[importSettings]: Error importing settings', err);
-            markProblem("importExportTextarea", true);
         }
     }
-
     /**
      * Takes the object from the JSON formatted string and imports it into the
      * relevant modules
@@ -65,7 +64,6 @@ var settingsModule = (function () {
      */
     var importSettings = function (settingsObj) {
         var module = rphToolsModule.getModule(settingsObj.name);
-
         if (!module) {
             return;
         } else if (!module.loadSettings) {
@@ -86,7 +84,7 @@ var settingsModule = (function () {
                     name: modules[i].toString(),
                     settings: modules[i].getSettings(),
                 };
-                settingsString += JSON.stringify(modSettings) + "|";
+                settingsString += JSON.stringify(modSettings) + "\n";
             }
         }
         return settingsString;
@@ -119,7 +117,7 @@ var settingsModule = (function () {
      * Deletes all of the settings of the modules that have settings.
      */
     var deleteAllSettings = function () {
-        var modules = rphToolsModule.getSettings();
+        var modules = rphToolsModule.getModules();
         for (var i = 0; i < modules.length; i++) {
             if (modules[i].deleteSettings) {
                 modules[i].deleteSettings();

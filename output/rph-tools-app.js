@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name       RPH Tools
+// @name       RPH Tools Test
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
 // @version    4.0.9
 // @description Adds extended settings to RPH
@@ -385,7 +385,7 @@ var chatModule = (function () {
     }
 
     var init = function () {
-        userColorDroplist = $('#userColorDroplist');
+        rphToolsModule.registerDroplist($('#userColorDroplist'));
 
         $('#userNameTextColorButton').click(function () {
             changeTextColor();
@@ -1002,41 +1002,25 @@ var chatModule = (function () {
         pingSound = new Audio(pingSettings.audioUrl);
     };
 
-    /**
-     * @brief Processes account events.
-     **/
-    var processAccountEvt = function () {
-        var namesToIds = rphToolsModule.getNamesToIds();
-        $('#userColorDroplist').empty();
-        for (var name in namesToIds) {
-            addToDroplist(namesToIds[name], name, userColorDroplist);
-        }
-    };
-
-    var getSettings = function () {
-        return {
-            'chatSettings': chatSettings,
-            'pingSettings': pingSettings
-        };
-    };
-
     return {
         init: init,
+        parseSlashCommand: parseSlashCommand,
+        saveSettings: saveSettings,
+        loadSettings: loadSettings,
+        deleteSettings: deleteSettings,
 
         getHtml: function () {
             return html;
         },
-
         toString: function () {
             return 'Chat Module';
         },
-
-        parseSlashCommand: parseSlashCommand,
-        getSettings: getSettings,
-        saveSettings: saveSettings,
-        loadSettings: loadSettings,
-        deleteSettings: deleteSettings,
-        processAccountEvt: processAccountEvt,
+        getSettings: function () {
+            return {
+                'chatSettings': chatSettings,
+                'pingSettings': pingSettings
+            };
+        },
     };
 }());/**
  * This module handles the "Session" section in RPH Tools
@@ -1065,9 +1049,9 @@ var sessionModule = (function () {
     var dcHappenedShadow = false;
 
     var sessionShadow = [];
-    
+
     var connectionStabilityTimer = null;
-    
+
     var MAX_ROOMS = 30;
 
     var AUTOJOIN_TIMEOUT_SEC = 5 * 1000;
@@ -1111,7 +1095,7 @@ var sessionModule = (function () {
     };
 
     var init = function () {
-        favUserDropList = $('#favUserDropList');
+        rphToolsModule.registerDroplist($('#favUserDropList'));
 
         $('#dcRefresh').click(function () {
             sessionSettings.autoRefresh = getCheckBox('#dcRefresh');
@@ -1165,7 +1149,7 @@ var sessionModule = (function () {
 
         chatSocket.on('disconnect', function () {
             clearTimeout(connectionStabilityTimer);
-            if (sessionSettings.autoRefresh && sessionSettings.autoRefreshAttempts > 0){
+            if (sessionSettings.autoRefresh && sessionSettings.autoRefreshAttempts > 0) {
                 setTimeout(() => {
                     sessionSettings.autoRefreshAttempts -= 1;
                     sessionSettings.dcHappened = true;
@@ -1173,8 +1157,7 @@ var sessionModule = (function () {
                     window.onbeforeunload = null;
                     window.location.reload(true);
                 }, sessionSettings.refreshSecs * 1000);
-            }
-            else {
+            } else {
                 console.log(sessionSettings.autoRefresh, sessionSettings.autoRefreshAttempts);
                 $('<div id="rpht-max-refresh" class="inner">' +
                     '<p>Max auto refresh attempts tried. You will need to manually refresh.</p>' +
@@ -1191,10 +1174,9 @@ var sessionModule = (function () {
         });
 
         sessionSettings.dcHappened = false;
-        saveSettings();
     }
 
-    var determineAutojoin = function() {
+    var determineAutojoin = function () {
         var hasRooms = false;
         var autoJoin = sessionSettings.joinFavorites;
         autoJoin |= sessionSettings.joinSession;
@@ -1202,7 +1184,7 @@ var sessionModule = (function () {
 
         hasRooms |= (sessionSettings.favRooms.length > 0);
         hasRooms |= (sessionSettings.roomSession.length > 0);
-        
+
         return autoJoin && hasRooms && (sessionSettings.autoRefreshAttempts > 0);
     }
 
@@ -1224,7 +1206,7 @@ var sessionModule = (function () {
             ).dialog({
                 open: function (event, ui) {
                     setTimeout(function () {
-                       $('#rpht-autojoin').dialog('close');
+                        $('#rpht-autojoin').dialog('close');
                     }, AUTOJOIN_TIMEOUT_SEC);
                 },
                 buttons: {
@@ -1243,12 +1225,12 @@ var sessionModule = (function () {
         }
     };
 
-    var JoinRooms = function(){
+    var JoinRooms = function () {
         if (sessionSettings.joinFavorites === true) {
             JoinFavoriteRooms();
         }
 
-        setTimeout(function(){
+        setTimeout(function () {
             if (sessionSettings.joinSession || dcHappenedShadow) {
                 dcHappenedShadow = false;
                 JoinSessionedRooms();
@@ -1258,13 +1240,13 @@ var sessionModule = (function () {
         clearTimeout(autoJoinTimer);
     }
 
-    var JoinSessionedRooms = function(){
+    var JoinSessionedRooms = function () {
         for (var i = 0; i < sessionShadow.length; i++) {
             var room = sessionShadow[i];
             var roomJoined = arrayObjectIndexOf(rph.roomsJoined, 'roomname', room.roomname) > -1;
             var userJoined = arrayObjectIndexOf(rph.roomsJoined, 'user', room.user) > -1;
             var alreadyInRoom = roomJoined && userJoined;
-            if(!alreadyInRoom){
+            if (!alreadyInRoom) {
                 chatSocket.emit('join', {
                     name: room.roomname,
                     userid: room.user
@@ -1287,26 +1269,29 @@ var sessionModule = (function () {
         }
     };
 
-    var addRoomToSession = function(roomname, userid){
+    var addRoomToSession = function (roomname, userid) {
         var alreadyInSession = false
         var roomSession = sessionSettings.roomSession
-        for(var i = 0; i < roomSession.length; i++){
+        for (var i = 0; i < roomSession.length; i++) {
             var room = roomSession[i]
-            if (room.roomname == roomname && room.user == userid){
+            if (room.roomname == roomname && room.user == userid) {
                 alreadyInSession = true;
             }
         }
-        if(!alreadyInSession){
-          console.log('RPH Tools[addRoomToSession]: Adding room to session:', roomname, userid);
-          sessionSettings.roomSession.push({'roomname': roomname, 'user': userid});
+        if (!alreadyInSession) {
+            console.log('RPH Tools[addRoomToSession]: Adding room to session:', roomname, userid);
+            sessionSettings.roomSession.push({
+                'roomname': roomname,
+                'user': userid
+            });
         }
     }
 
-    var removeRoomFromSession = function(roomname, userid){
+    var removeRoomFromSession = function (roomname, userid) {
         var roomSession = sessionSettings.roomSession
-        for(var i = 0; i < roomSession.length; i++){
+        for (var i = 0; i < roomSession.length; i++) {
             var room = roomSession[i]
-            if (room.roomname == roomname && room.user == userid){
+            if (room.roomname == roomname && room.user == userid) {
                 console.log('RPH Tools[removeRoomFromSession]: Removing room -', room);
                 sessionSettings.roomSession.splice(i, 1);
             }
@@ -1379,15 +1364,11 @@ var sessionModule = (function () {
 
     var loadSettings = function (storedSettings) {
         if (storedSettings !== null) {
-            for (var key in storedSettings){
+            for (var key in storedSettings) {
                 sessionSettings[key] = storedSettings[key];
             }
             populateSettings();
         }
-    };
-
-    var getSettings = function () {
-        return sessionSettings;
     };
 
     var populateSettings = function () {
@@ -1413,30 +1394,21 @@ var sessionModule = (function () {
         }
     };
 
-    var processAccountEvt = function () {
-        var namesToIds = rphToolsModule.getNamesToIds();
-        $('#favUserDropList').empty();
-        for (var name in namesToIds) {
-          addToDroplist(namesToIds[name], name, favUserDropList);
-        }
-      };
-
     return {
         init: init,
+        loadSettings: loadSettings,
+        addRoomToSession: addRoomToSession,
+        removeRoomFromSession: removeRoomFromSession,
 
         getHtml: function () {
             return html;
         },
-
         toString: function () {
             return 'Session Module';
         },
-
-        processAccountEvt: processAccountEvt,
-        getSettings: getSettings,
-        loadSettings: loadSettings,
-        addRoomToSession: addRoomToSession,
-        removeRoomFromSession: removeRoomFromSession,
+        getSettings: function () {
+            return sessionSettings;
+        },
     };
 }());/**
  * This module handles features for the PM system.
@@ -1474,6 +1446,8 @@ var pmModule = (function () {
     var awayMessages = {};
 
     var init = function () {
+        rphToolsModule.registerDroplist($('#pmNamesDroplist'));
+
         $('#pmNamesDroplist').change(function () {
             var userId = $('#pmNamesDroplist option:selected').val();
             var message = '';
@@ -1651,41 +1625,21 @@ var pmModule = (function () {
         $('input#pmIconsDisable').prop("checked", pmSettings.noIcons);
     };
 
-    /**
-     * Gets the current settings.
-     * @returns Object containing the current settings.
-     */
-    var getSettings = function () {
-        return pmSettings;
-    };
-
-    /**
-     * Processes account events.
-     */
-    var processAccountEvt = function () {
-        var namesToIds = rphToolsModule.getNamesToIds();
-        $('#pmNamesDroplist').empty();
-        for (var name in namesToIds) {
-            addToDroplist(namesToIds[name], name, $('#pmNamesDroplist'));
-        }
-    };
-
     return {
         init: init,
+        saveSettings: saveSettings,
+        loadSettings: loadSettings,
+        deleteSettings: deleteSettings,
 
         getHtml: function () {
             return html;
         },
-
         toString: function () {
             return 'PM Module';
         },
-
-        getSettings: getSettings,
-        saveSettings: saveSettings,
-        loadSettings: loadSettings,
-        deleteSettings: deleteSettings,
-        processAccountEvt: processAccountEvt,
+        getSettings: function () {
+            return pmSettings;
+        },
     };
 }());/** 
  * Random number generator module. This is mostly used for chance games that
@@ -2362,19 +2316,18 @@ var settingsModule = (function () {
      * to see if it's a valid JSON formatted string.
      */
     var importSettingsHanlder = function () {
-        settings = $('textarea#importExportTextarea').val().split("|");
-        try {
-            for (var i = 0; i < settings.length - 1; i++) {
+        settings = $('textarea#importExportTextarea').val().split("\n");
+        for (var i = 0; i < settings.length - 1; i++) {
+            try {
                 var settingsObj = JSON.parse(settings[i]);
                 console.log('RPHT [Setting Module]: Importing...', settingsObj);
                 importSettings(settingsObj);
+            } catch (err) {
+                console.log('RPH Tools[importSettings]: Error importing settings', err);
+                markProblem("importExportTextarea", true);
             }
-        } catch (err) {
-            console.log('RPH Tools[importSettings]: Error importing settings', err);
-            markProblem("importExportTextarea", true);
         }
     }
-
     /**
      * Takes the object from the JSON formatted string and imports it into the
      * relevant modules
@@ -2382,7 +2335,6 @@ var settingsModule = (function () {
      */
     var importSettings = function (settingsObj) {
         var module = rphToolsModule.getModule(settingsObj.name);
-
         if (!module) {
             return;
         } else if (!module.loadSettings) {
@@ -2403,7 +2355,7 @@ var settingsModule = (function () {
                     name: modules[i].toString(),
                     settings: modules[i].getSettings(),
                 };
-                settingsString += JSON.stringify(modSettings) + "|";
+                settingsString += JSON.stringify(modSettings) + "\n";
             }
         }
         return settingsString;
@@ -2436,7 +2388,7 @@ var settingsModule = (function () {
      * Deletes all of the settings of the modules that have settings.
      */
     var deleteAllSettings = function () {
-        var modules = rphToolsModule.getSettings();
+        var modules = rphToolsModule.getModules();
         for (var i = 0; i < modules.length; i++) {
             if (modules[i].deleteSettings) {
                 modules[i].deleteSettings();
@@ -2498,6 +2450,8 @@ var rphToolsModule = (function () {
 
     var modules = [];
 
+    var moduleDroplists = [];
+
     var rpht_css =
         '<style>' +
         '.rpht_labels{display: inline-block; width: 300px; text-align: right; margin-right: 10px;}' +
@@ -2555,10 +2509,8 @@ var rphToolsModule = (function () {
                 namesToIds = sortOnKeys(namesToIds);
                 for (i = 0; i < modules.length; i++) {
                     modules[i].init();
-                    if (modules[i].processAccountEvt !== undefined) {
-                        modules[i].processAccountEvt();
-                    }
                 }
+                populateDroplists();
             }, 1500);
         });
     }
@@ -2587,26 +2539,37 @@ var rphToolsModule = (function () {
         return modules;
     };
 
+    var registerDroplist = function (droplist) {
+        moduleDroplists.push(droplist);
+    };
+
+    var populateDroplists = function () {
+        moduleDroplists.forEach((droplist, index) => {
+            droplist.empty();
+            for (var name in namesToIds) {
+                addToDroplist(namesToIds[name], name, droplist);
+            }
+        });
+    };
+
     return {
         init: init,
+        getModule: getModule,
+        getModules: getModules,
+        registerDroplist: registerDroplist,
+
         getHtml: function () {
             return html;
         },
-
         toString: function () {
             return 'RPH Tools Module';
         },
-
         getNamesToIds: function () {
             return namesToIds;
         },
-
         getIdsToNames: function () {
             return idsToNames;
         },
-
-        getModule: getModule,
-        getModules: getModules,
     };
 }());/****************************************************************************
  * Script initializations to execute after the page loads

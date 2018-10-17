@@ -48,9 +48,6 @@ This initializes the module. rph-tools will call this when it's initializing on 
 ### toString function (MANDATORY)
 Returns a string describing the module. This is needed for ```RPH Tools``` module ```getModule```.
 
-### processAccountEvt function
-When RPH sends the client an account data blob, this is function will process what to do with it.
-
 ### getSettings
 Gets persistent settings that are saved for a module.
 

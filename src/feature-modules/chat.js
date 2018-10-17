@@ -71,7 +71,7 @@ var chatModule = (function () {
     }
 
     var init = function () {
-        userColorDroplist = $('#userColorDroplist');
+        rphToolsModule.registerDroplist($('#userColorDroplist'));
 
         $('#userNameTextColorButton').click(function () {
             changeTextColor();
@@ -688,40 +688,24 @@ var chatModule = (function () {
         pingSound = new Audio(pingSettings.audioUrl);
     };
 
-    /**
-     * @brief Processes account events.
-     **/
-    var processAccountEvt = function () {
-        var namesToIds = rphToolsModule.getNamesToIds();
-        $('#userColorDroplist').empty();
-        for (var name in namesToIds) {
-            addToDroplist(namesToIds[name], name, userColorDroplist);
-        }
-    };
-
-    var getSettings = function () {
-        return {
-            'chatSettings': chatSettings,
-            'pingSettings': pingSettings
-        };
-    };
-
     return {
         init: init,
+        parseSlashCommand: parseSlashCommand,
+        saveSettings: saveSettings,
+        loadSettings: loadSettings,
+        deleteSettings: deleteSettings,
 
         getHtml: function () {
             return html;
         },
-
         toString: function () {
             return 'Chat Module';
         },
-
-        parseSlashCommand: parseSlashCommand,
-        getSettings: getSettings,
-        saveSettings: saveSettings,
-        loadSettings: loadSettings,
-        deleteSettings: deleteSettings,
-        processAccountEvt: processAccountEvt,
+        getSettings: function () {
+            return {
+                'chatSettings': chatSettings,
+                'pingSettings': pingSettings
+            };
+        },
     };
 }());
