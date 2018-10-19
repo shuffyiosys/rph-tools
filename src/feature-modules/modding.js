@@ -89,8 +89,8 @@ var moddingModule = (function () {
         $('#resetPwButton').click(function () {
             var room = $('input#modRoomTextInput').val();
             var user = $('input#modFromTextInput').val();
-            getUserByName($('input#modFromTextInput').val(), function (user) {
-                var userId = user.props.id;
+            getUserByName(user, function (mod) {
+                var userId = mod.props.id;
                 chatSocket.emit('modify', {
                     room: room,
                     userid: userId,
@@ -184,20 +184,31 @@ var moddingModule = (function () {
         });
     };
 
+    var findUserAsMod = function(userObj){
+        roomnames.forEach((roomname) => {
+            var roomObj = getRoom(roomname);
+            if (roomObj.props.mods.indexOf(userObj.props.id) > -1 || 
+                roomObj.props.owners.indexOf(userObj.props.id) > -1){
+                addModRoomPair(userObj.props, roomname);
+            }
+        });
+    }
+
+
     /**
      * Adds a key/value pair option to the Room-Name Pair droplist.
      * @param {number} userId User ID of the mod
      * @param {object} thisRoom Object containing the room data.
      */
-    var addModRoomPair = function (userId, roomName) {
-        var username = rphToolsModule.getIdsToNames()[userId];
-        var roomNamePair = roomName + ': ' + username;
-        var roomNameValue = roomName + '.' + userId;
+    var addModRoomPair = function (userProps, roomName) {
+        var roomNamePair = roomName + ': ' + userProps.name;
+        var roomNameValue = roomName + '.' + userProps.id;
         var roomNameObj = {
             'roomName': roomName,
-            'modName': username,
-            'modId': userId
+            'modName': userProps.name,
+            'modId': userProps.id
         };
+
         if (roomNamePairs[roomNameValue] === undefined) {
             roomNamePairs[roomNameValue] = roomNameObj;
             $('#roomModSelect').append('<option value="' + roomNameValue + '">' +
@@ -256,22 +267,20 @@ var moddingModule = (function () {
 
     return {
         init: init,
+        emitModAction: emitModAction,
+        addModRoomPair: addModRoomPair,
+        findUserAsMod: findUserAsMod,
+        playAlert: playAlert,
+        deleteSettings: deleteSettings,
 
         getHtml: function () {
             return html;
         },
-
         toString: function () {
             return 'Modding Module';
         },
-
         getSettings: function () {
             return settings;
         },
-
-        emitModAction: emitModAction,
-        addModRoomPair: addModRoomPair,
-        saveSettings: saveSettings,
-        playAlert: playAlert,
     };
 }());

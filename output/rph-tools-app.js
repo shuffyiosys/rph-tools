@@ -329,14 +329,11 @@ var chatModule = (function () {
 
     var chatSettings = {
         'showNames': true,
-        'noIcons': false,
     };
 
     var localStorageName = "rpht_ChatModule";
 
     var pingSound = null;
-
-    var userColorDroplist = null;
 
     var autoDismissTimer = null;
 
@@ -472,11 +469,6 @@ var chatModule = (function () {
             saveSettings();
         });
 
-        $('#imgIconDisable').change(function () {
-            chatSettings.noIcons = getCheckBox('#imgIconDisable');
-            saveSettings();
-        });
-
         $(window).resize(resizeChatTabs);
 
         loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
@@ -517,7 +509,6 @@ var chatModule = (function () {
     var roomSetup = function (room) {
         var thisRoom = getRoom(room.room);
         var userId = getIdFromChatTab(thisRoom);
-        var moddingModule = rphToolsModule.getModule('Modding Module');
         var sessionModule = rphToolsModule.getModule('Session Module');
 
         thisRoom.onMessage = function (data) {
@@ -530,12 +521,6 @@ var chatModule = (function () {
 
         if (chatSettings.showNames) {
             addNameToUI(thisRoom, userId);
-        }
-
-        if (moddingModule !== null) {
-            if (thisRoom.props.mods.indexOf(userId) > -1 || thisRoom.props.owners.indexOf(userId) > -1) {
-                moddingModule.addModRoomPair(userId, thisRoom.props.name);
-            }
         }
 
         if (sessionModule !== null) {
@@ -626,11 +611,7 @@ var chatModule = (function () {
                     User.props.color + '">' + msg + '</span>';
             }
 
-            if (chatSettings.noIcons) {
-                $el = appendMessageTextOnly(msgHtml, thisRoom).addClass(classes);
-            } else {
-                $el = thisRoom.appendMessage(msgHtml).addClass(classes);
-            }
+            $el = thisRoom.appendMessage(msgHtml).addClass(classes);
             $el.find('br:gt(7)').remove();
         });
     };
@@ -975,7 +956,6 @@ var chatModule = (function () {
 
         chatSettings = {
             'showNames': true,
-            'noIcons': false,
         };
 
         populateSettings();
@@ -995,9 +975,7 @@ var chatModule = (function () {
         $('input#pingExactMatch').prop("checked", pingSettings.exact);
         $('input#pingCaseSense').prop("checked", pingSettings.case);
 
-
         $('input#showUsername').prop("checked", chatSettings.showNames);
-        $('inputimgIconDisable').prop("checked", chatSettings.noIcons);
 
         pingSound = new Audio(pingSettings.audioUrl);
     };
@@ -1005,7 +983,6 @@ var chatModule = (function () {
     return {
         init: init,
         parseSlashCommand: parseSlashCommand,
-        saveSettings: saveSettings,
         loadSettings: loadSettings,
         deleteSettings: deleteSettings,
 
@@ -1627,7 +1604,6 @@ var pmModule = (function () {
 
     return {
         init: init,
-        saveSettings: saveSettings,
         loadSettings: loadSettings,
         deleteSettings: deleteSettings,
 
@@ -2084,8 +2060,8 @@ var moddingModule = (function () {
         $('#resetPwButton').click(function () {
             var room = $('input#modRoomTextInput').val();
             var user = $('input#modFromTextInput').val();
-            getUserByName($('input#modFromTextInput').val(), function (user) {
-                var userId = user.props.id;
+            getUserByName(user, function (mod) {
+                var userId = mod.props.id;
                 chatSocket.emit('modify', {
                     room: room,
                     userid: userId,
@@ -2179,20 +2155,31 @@ var moddingModule = (function () {
         });
     };
 
+    var findUserAsMod = function(userObj){
+        roomnames.forEach((roomname) => {
+            var roomObj = getRoom(roomname);
+            if (roomObj.props.mods.indexOf(userObj.props.id) > -1 || 
+                roomObj.props.owners.indexOf(userObj.props.id) > -1){
+                addModRoomPair(userObj.props, roomname);
+            }
+        });
+    }
+
+
     /**
      * Adds a key/value pair option to the Room-Name Pair droplist.
      * @param {number} userId User ID of the mod
      * @param {object} thisRoom Object containing the room data.
      */
-    var addModRoomPair = function (userId, roomName) {
-        var username = rphToolsModule.getIdsToNames()[userId];
-        var roomNamePair = roomName + ': ' + username;
-        var roomNameValue = roomName + '.' + userId;
+    var addModRoomPair = function (userProps, roomName) {
+        var roomNamePair = roomName + ': ' + userProps.name;
+        var roomNameValue = roomName + '.' + userProps.id;
         var roomNameObj = {
             'roomName': roomName,
-            'modName': username,
-            'modId': userId
+            'modName': userProps.name,
+            'modId': userProps.id
         };
+
         if (roomNamePairs[roomNameValue] === undefined) {
             roomNamePairs[roomNameValue] = roomNameObj;
             $('#roomModSelect').append('<option value="' + roomNameValue + '">' +
@@ -2251,23 +2238,21 @@ var moddingModule = (function () {
 
     return {
         init: init,
+        emitModAction: emitModAction,
+        findUserAsMod: findUserAsMod,
+        addModRoomPair: addModRoomPair,
+        playAlert: playAlert,
+        deleteSettings: deleteSettings,
 
         getHtml: function () {
             return html;
         },
-
         toString: function () {
             return 'Modding Module';
         },
-
         getSettings: function () {
             return settings;
         },
-
-        emitModAction: emitModAction,
-        addModRoomPair: addModRoomPair,
-        saveSettings: saveSettings,
-        playAlert: playAlert,
     };
 }());/**
  * Handles importing, exporting, and deleting of settings.
@@ -2502,7 +2487,11 @@ var rphToolsModule = (function () {
         socket.on('accounts', function () {
             console.log('RPH Tools[_on.accounts]: Account data blob received');
             setTimeout(function () {
+                var moddingModule = getModule('Modding Module');
                 account.users.forEach(function (userObj) {
+                    if (moddingModule){
+                        moddingModule.findUserAsMod(userObj);
+                    }
                     idsToNames[userObj.props.id] = userObj.props.name;
                     namesToIds[userObj.props.name] = userObj.props.id;
                 });

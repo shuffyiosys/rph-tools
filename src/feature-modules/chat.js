@@ -15,14 +15,11 @@ var chatModule = (function () {
 
     var chatSettings = {
         'showNames': true,
-        'noIcons': false,
     };
 
     var localStorageName = "rpht_ChatModule";
 
     var pingSound = null;
-
-    var userColorDroplist = null;
 
     var autoDismissTimer = null;
 
@@ -158,11 +155,6 @@ var chatModule = (function () {
             saveSettings();
         });
 
-        $('#imgIconDisable').change(function () {
-            chatSettings.noIcons = getCheckBox('#imgIconDisable');
-            saveSettings();
-        });
-
         $(window).resize(resizeChatTabs);
 
         loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
@@ -203,7 +195,6 @@ var chatModule = (function () {
     var roomSetup = function (room) {
         var thisRoom = getRoom(room.room);
         var userId = getIdFromChatTab(thisRoom);
-        var moddingModule = rphToolsModule.getModule('Modding Module');
         var sessionModule = rphToolsModule.getModule('Session Module');
 
         thisRoom.onMessage = function (data) {
@@ -312,11 +303,7 @@ var chatModule = (function () {
                     User.props.color + '">' + msg + '</span>';
             }
 
-            if (chatSettings.noIcons) {
-                $el = appendMessageTextOnly(msgHtml, thisRoom).addClass(classes);
-            } else {
-                $el = thisRoom.appendMessage(msgHtml).addClass(classes);
-            }
+            $el = thisRoom.appendMessage(msgHtml).addClass(classes);
             $el.find('br:gt(7)').remove();
         });
     };
@@ -661,7 +648,6 @@ var chatModule = (function () {
 
         chatSettings = {
             'showNames': true,
-            'noIcons': false,
         };
 
         populateSettings();
@@ -681,9 +667,7 @@ var chatModule = (function () {
         $('input#pingExactMatch').prop("checked", pingSettings.exact);
         $('input#pingCaseSense').prop("checked", pingSettings.case);
 
-
         $('input#showUsername').prop("checked", chatSettings.showNames);
-        $('inputimgIconDisable').prop("checked", chatSettings.noIcons);
 
         pingSound = new Audio(pingSettings.audioUrl);
     };
@@ -691,7 +675,6 @@ var chatModule = (function () {
     return {
         init: init,
         parseSlashCommand: parseSlashCommand,
-        saveSettings: saveSettings,
         loadSettings: loadSettings,
         deleteSettings: deleteSettings,
 

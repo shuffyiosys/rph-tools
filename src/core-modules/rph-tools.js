@@ -60,7 +60,11 @@ var rphToolsModule = (function () {
         socket.on('accounts', function () {
             console.log('RPH Tools[_on.accounts]: Account data blob received');
             setTimeout(function () {
+                var moddingModule = getModule('Modding Module');
                 account.users.forEach(function (userObj) {
+                    if (moddingModule){
+                        moddingModule.findUserAsMod(userObj);
+                    }
                     idsToNames[userObj.props.id] = userObj.props.name;
                     namesToIds[userObj.props.name] = userObj.props.id;
                 });

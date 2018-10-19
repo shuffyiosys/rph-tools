@@ -215,7 +215,6 @@ var pmModule = (function () {
 
     return {
         init: init,
-        saveSettings: saveSettings,
         loadSettings: loadSettings,
         deleteSettings: deleteSettings,
 
