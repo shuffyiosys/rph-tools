@@ -96,13 +96,14 @@ var validateUrl = function (url) {
 };
 
 /**
- * Makes sure the color is less than #D2D2D2 or #DDD depending on how many 
+ * Makes sure the color is less than #DDDDDD or #DDD depending on how many
  * digits were entered.
  * @param {string} TextColor String representation of the color.
  * @return True if the color is within range, false otherwise.
  */
 var validateColorRange = function (TextColor) {
     var rawHex = TextColor.substring(1, TextColor.length);
+    var validColor = false;
     var red = 255;
     var green = 255;
     var blue = 255;
@@ -113,23 +114,20 @@ var validateColorRange = function (TextColor) {
         green = parseInt(rawHex.substring(1, 2), 16);
         blue = parseInt(rawHex.substring(2, 3), 16);
 
-        if ((red <= 13) && (green <= 13) && (blue <= 13)) {
-            return true;
+        if ((red <= 0xD) && (green <= 0xD) && (blue <= 0xD)) {
+            validColor = true;
         }
     }
-    /* If the color text is 6 characters, limit it to #D2D2D2 */
+    /* If the color text is 6 characters, limit it to #DDDDDD */
     else if (rawHex.length == 6) {
         red = parseInt(rawHex.substring(0, 2), 16);
         green = parseInt(rawHex.substring(2, 4), 16);
         blue = parseInt(rawHex.substring(4, 6), 16);
-        if ((red <= 210) && (green <= 210) && (blue <= 210)) {
-            return true;
+        if ((red <= 0xDD) && (green <= 0xDD) && (blue <= 0xDD)) {
+            validColor = true;
         }
     }
-
-    console.log('RPH Tools[validateColorRange]: Color check failed',
-        rawHex, red, green, blue);
-    return false;
+    return validColor;
 };
 
 /**
@@ -179,13 +177,14 @@ var isInLink = function (searchTerm, msg) {
  * @param {object} room Object containing room data
  */
 var isModOfRoom = function (room) {
-    for (var idx = 0; idx < account.users.length; idx++) {
+    var isMod = false;
+    for (var idx = 0; idx < account.users.length && !isMod; idx++) {
         if (room.props.mods.indexOf(account.users[idx]) > -1 ||
             room.props.owners.indexOf(account.users[idx]) > -1) {
-            return true;
+            isMod = true;
         }
     }
-    return false;
+    return isMod;
 };
 
 /**
@@ -223,31 +222,6 @@ String.prototype.hashCode = function () {
 };
 
 /**
- * Appends message to a room without adding an image icon
- * @param {string} html - HTML to add to the room.
- * @param {object} thisRoom - Object to the room receiving the message.
- *
- * This was modified from RPH's original code, which is not covered by the
- * license.
- */
-var appendMessageTextOnly = function (html, thisRoom) {
-    var $el = $('<div>\n' + html + '\n</div>').appendTo(thisRoom.$el);
-    var extra = 5; //add more if near the bottom
-    if (thisRoom.$el[0].scrollHeight - thisRoom.$el.scrollTop() < 50) {
-        extra = 60;
-    }
-    thisRoom.$el.animate({
-        scrollTop: '+=' + ($el.outerHeight() + extra)
-    }, 180);
-
-    if (thisRoom.$el.children('div').length > account.settings.maxHistory) {
-        thisRoom.$el.children('div:not(.sys):lt(3)').remove();
-    }
-
-    return $el;
-};
-
-/**
  * Modified handler for keyup events from the chat textbox
  * @param {object} ev - Event
  * @param {object} User - User the textbox is attached to
@@ -271,11 +245,8 @@ function intputChatText(ev, User, Room) {
             return;
         }
 
-        if (newMessage[0] === '/' && newMessage.substring(0, 2) !== '//') {
-            if (chatModule)
+        if (newMessage[0] === '/' && newMessage.substring(0, 2) !== '//' && chatModule) {
                 chatModule.parseSlashCommand(inputTextBox, Room, User);
-            else
-                sendChatMessage(inputTextBox, Room, User);
         } else {
             sendChatMessage(inputTextBox, Room, User);
         }
@@ -383,6 +354,7 @@ var chatModule = (function () {
 
     var init = function () {
         rphToolsModule.registerDroplist($('#userColorDroplist'));
+        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
 
         $('#userNameTextColorButton').click(function () {
             changeTextColor();
@@ -450,7 +422,7 @@ var chatModule = (function () {
         $('#pingPreviewInput').blur(function () {
             var msg = getInput('#pingPreviewInput');
             var testRegex = matchPing(msg, pingSettings.triggers, pingSettings.case,
-                pingSettings.exact);;
+                pingSettings.exact);
             if (testRegex !== null) {
                 msg = highlightPing(msg, testRegex, pingSettings.color,
                     pingSettings.highlight, pingSettings.bold,
@@ -471,31 +443,23 @@ var chatModule = (function () {
 
         $(window).resize(resizeChatTabs);
 
-        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
-
         chatSocket.on('confirm-room-join', function (data) {
             roomSetup(data);
         });
 
         chatSocket.on('room-users-leave', function (data) {
-            data.users.forEach(function (userId) {
-                if (account.userids.indexOf(userId) > -1) {
-                    var sessionModule = rphToolsModule.getModule('Session Module');
-                    if (sessionModule !== null) {
-                        sessionModule.removeRoomFromSession(data.room, userId);
-                    }
-                }
-            });
+            handleRoomLeave(data);
         });
 
+        /* Setup the timer for automatically dismissing the opening dialog once
+           rooms are available. The timer clears after. */
         autoDismissTimer = setInterval(() => {
-            /* Don't run this if there's no rooms yet. */
             if (roomnames.length === 0) {
                 return;
             }
             $("button span:contains('Continue')").trigger('click');
             clearTimeout(autoDismissTimer);
-        })
+        }, 1000);
     }
 
     /**
@@ -509,6 +473,7 @@ var chatModule = (function () {
     var roomSetup = function (room) {
         var thisRoom = getRoom(room.room);
         var userId = getIdFromChatTab(thisRoom);
+        var moddingModule = rphToolsModule.getModule('Modding Module');
         var sessionModule = rphToolsModule.getModule('Session Module');
 
         thisRoom.onMessage = function (data) {
@@ -516,19 +481,26 @@ var chatModule = (function () {
             if (account.ignores.indexOf(data.userid) !== -1) {
                 return;
             }
-            postMessage(thisRoom, data);
+
+            getUserById(data.userid, function (User) {
+                postMessage(thisRoom, data, User);
+            });
         };
 
-        if (chatSettings.showNames) {
-            addNameToUI(thisRoom, userId);
-        }
+        getUserById(userId, (User) => {
+            if (chatSettings.showNames) {
+                addNameToUI(thisRoom, User);
+            }
 
-        if (sessionModule !== null) {
-            sessionModule.addRoomToSession(room.room, userId);
-        }
+            if (moddingModule !== null && isModOfRoom(thisRoom)) {
+                moddingModule.addModRoomPair(userId, thisRoom.props.name);
+            }
 
-        resizeChatTabs();
-        getUserById(userId, function (User) {
+            if (sessionModule !== null) {
+                sessionModule.addRoomToSession(room.room, userId);
+            }
+
+            resizeChatTabs();
             var chatTextArea = $('textarea.' + User.props.id + '_' + makeSafeForCss(thisRoom.props.name));
             chatTextArea.unbind('keyup');
             chatTextArea.bind('keyup', function (ev) {
@@ -538,82 +510,101 @@ var chatModule = (function () {
     };
 
     /**
+     * Handle actions needed when a user leaves a room.
+     * @param {Object} data - Data blob containing room info.
+     */
+    var handleRoomLeave = function (data) {
+        data.users.forEach(function (userId) {
+            if (account.userids.indexOf(userId) > -1) {
+                var sessionModule = rphToolsModule.getModule('Session Module');
+                if (sessionModule !== null) {
+                    sessionModule.removeRoomFromSession(data.room, userId);
+                }
+            }
+        });
+    }
+
+    /**
      * Takes a message received in the chat and processes it for pinging or 
      * otherwise
      * @param {object} thisRoom The room that the message is for.
      * @param {object} data The message for the room
      */
-    var postMessage = function (thisRoom, data) {
-        getUserById(data.userid, function (User) {
-            var moddingModule = rphToolsModule.getModule('Modding Module');
-            var timestamp = makeTimestamp(data.time);
-            var msg = parseMsg(data.msg);
-            var classes = '';
-            var $el = '';
-            var msgHtml = '';
+    var postMessage = function (thisRoom, data, User) {
+        var moddingModule = rphToolsModule.getModule('Modding Module');
+        var timestamp = makeTimestamp(data.time);
+        var msg = parseMsg(data.msg);
+        var classes = '';
+        var $el = '';
+        var msgHtml = '';
 
-            if (User.blocked) {
-                return;
+        if (User.blocked) {
+            return;
+        }
+
+        classes = getClasses(User, thisRoom);
+
+        /* Check if this is a valid RNG */
+        if (msg[msg.length - 1] === '\u200b') {
+            msg += '&nbsp;<span style="background:#4A4; color: #000;">&#9745;</span>';
+        }
+
+        /* Add pinging higlights */
+        try {
+            var testRegex = null;
+            testRegex = matchPing(msg, pingSettings.triggers, pingSettings.case,
+                pingSettings.exact);
+            if (testRegex !== null) {
+                msg = highlightPing(msg, testRegex, pingSettings.color,
+                    pingSettings.highlight, pingSettings.bold,
+                    pingSettings.italics);
+                highlightRoom(thisRoom, pingSettings.color, pingSettings.highlight);
+                if (pingSound !== null) {
+                    pingSound.play();
+                }
             }
 
-            classes = getClasses(User, thisRoom);
-
-            /* Check if this is a valid RNG */
-            if (msg[msg.length - 1] === '\u200b') {
-                msg += '&nbsp;<span style="background:#4A4; color: #000;">&#9745;</span>';
-            }
-
-            /* Add pinging higlights */
-            try {
-                var testRegex = null;
-                testRegex = matchPing(msg, pingSettings.triggers, pingSettings.case,
-                    pingSettings.exact);
+            if (moddingModule !== null) {
+                var modSettings = moddingModule.getSettings();
+                testRegex = matchPing(msg, modSettings.alertWords, false, true);
                 if (testRegex !== null) {
-                    msg = highlightPing(msg, testRegex, pingSettings.color,
-                        pingSettings.highlight, pingSettings.bold,
-                        pingSettings.italics);
-                    highlightRoom(thisRoom, pingSettings.color, pingSettings.highlight);
+                    msg = highlightPing(msg, testRegex, "#EEE", "#E00", true, false);
+                    highlightRoom(thisRoom, "#EEE", "#E00");
                     if (pingSound !== null) {
-                        pingSound.play();
+                        moddingModule.playAlert();
                     }
                 }
+                var modName = moddingModule.findModOfRoom(thisRoom.props.name);
+                var kickRegex = msg.match(modSettings.kickWords, 'gi');
 
-                if (moddingModule !== null && isModOfRoom(thisRoom) === true) {
-                    var modSettings = moddingModule.getSettings();
-                    testRegex = matchPing(msg, modSettings.alertWords, false, true);
-                    if (testRegex !== null) {
-                        msg = highlightPing(msg, testRegex, "#EEE", "#E00", true, false);
-                        highlightRoom(thisRoom, "#EEE", "#E00");
-                        if (pingSound !== null) {
-                            moddingModule.playAlert();
-                        }
-                        //moddingModule.autoKick(thisRoom, data.userid, msg);
-                    }
+                if (kickRegex !== null && modName !== '') {
+                    console.log(modName, User.props.name, thisRoom.props.name);
+                    moddingModule.handleAutoKick(modName, User.props.name, thisRoom.props.name);
                 }
-            } catch (err) {
-                console.log('RPH Tools[postMessage]: I tried pinging D:', err);
-                msg = parseMsg(data.msg);
             }
+        } catch (err) {
+            console.log('RPH Tools[postMessage]: I tried pinging D:', err);
+            msg = parseMsg(data.msg);
+        }
 
-            if (msg.charAt(0) === '/' && msg.slice(1, 3) === 'me') {
-                classes += 'action ';
-                msg = msg.slice(3);
-                msgHtml = '<span class="first">[' + timestamp +
-                    ']</span>\n<span style="color:#' + User.props.color +
-                    '"><a class="name" title="[' + timestamp +
-                    ']" style="color:#' + User.props.color +
-                    '">' + User.props.name + '</a>' + msg + '</span>';
-            } else {
-                msgHtml = '<span class="first">[' + timestamp + ']<a class="name" title="[' +
-                    timestamp + ']" style="color:#' + User.props.color + '">' +
-                    User.props.name +
-                    '<span class="colon">:</span></a></span>\n<span style="color:#' +
-                    User.props.color + '">' + msg + '</span>';
-            }
+        if (msg.charAt(0) === '/' && msg.slice(1, 3) === 'me') {
+            classes += 'action ';
+            msg = msg.slice(3);
+            msgHtml = '<span class="first">[' + timestamp +
+                ']</span>\n<span style="color:#' + User.props.color +
+                '"><a class="name" title="[' + timestamp +
+                ']" style="color:#' + User.props.color +
+                '">' + User.props.name + '</a>' + msg + '</span>';
+        } else {
+            msgHtml = '<span class="first">[' + timestamp + ']<a class="name" title="[' +
+                timestamp + ']" style="color:#' + User.props.color + '">' +
+                User.props.name +
+                '<span class="colon">:</span></a></span>\n<span style="color:#' +
+                User.props.color + '">' + msg + '</span>';
+        }
 
-            $el = thisRoom.appendMessage(msgHtml).addClass(classes);
-            $el.find('br:gt(7)').remove();
-        });
+        $el = thisRoom.appendMessage(msgHtml).addClass(classes);
+        $el.find('br:gt(7)').remove();
     };
 
     /**
@@ -715,7 +706,6 @@ var chatModule = (function () {
                 }
                 break;
             default:
-                console.log('RPH Tools[parseSlashCommand]: Command not recognized:', cmdArgs[0])
                 sendChatMessage(inputTextBox, Room, User);
                 break;
         }
@@ -799,20 +789,18 @@ var chatModule = (function () {
      * @returns Modified message
      */
     var highlightPing = function (msg, testRegex, color, highlight, bold, italicize) {
-        var boldEnabled = "";
-        var italicsEnabled = "";
+        var boldStyle = "";
+        var italicsStyle = "";
 
         if (bold === true) {
-            boldEnabled = "font-weight: bold; ";
+            boldStyle = "font-weight: bold; ";
         }
-
         if (italicize === true) {
-            italicsEnabled = "font-style:italic; ";
+            italicsStyle = "font-style:italic; ";
         }
         msg = msg.replace(testRegex, '<span style="color: ' + color +
-            '; background: ' + highlight + '; ' + boldEnabled +
-            italicsEnabled + '">' + msg.match(testRegex) + '</span>');
-
+            '; background: ' + highlight + '; ' + boldStyle +
+            italicsStyle + '">' + msg.match(testRegex) + '</span>');
         return msg;
     };
 
@@ -845,22 +833,22 @@ var chatModule = (function () {
      * @param {object} thisRoom - Room that was entered
      * @param {number} userId - ID of the user that entered
      **/
-    var addNameToUI = function (thisRoom, userId) {
-        getUserById(userId, function (User) {
-            var tabsLen = thisRoom.$tabs.length;
-            var idRoomName = thisRoom.$tabs[tabsLen - 1][0].className.split(' ')[2];
-            var newTabHtml = '<span>' + thisRoom.props.name + '</span><p style="font-size: x-small; margin-top: -58px;">' + User.props.name + '</p>';
-            thisRoom.$tabs[tabsLen - 1].html(newTabHtml);
-            $('<a class="close ui-corner-all">x</a>').on('click', function (ev) {
-                ev.stopPropagation();
-                chatSocket.emit('leave', {
-                    userid: User.props.id,
-                    name: thisRoom.props.name
-                });
-            }).appendTo(thisRoom.$tabs[tabsLen - 1]);
-            $('textarea.' + idRoomName).prop('placeholder', 'Post as ' + User.props.name);
-            $('textarea.' + idRoomName).css('color', "#" + User.props.color);
-        });
+    var addNameToUI = function (thisRoom, User) {
+        var tabsLen = thisRoom.$tabs.length;
+        var idRoomName = thisRoom.$tabs[tabsLen - 1][0].className.split(' ')[2];
+        var newTabHtml = '<span>' + thisRoom.props.name +
+            '</span><p style="font-size: x-small; margin-top: -58px;">' +
+            User.props.name + '</p>';
+        thisRoom.$tabs[tabsLen - 1].html(newTabHtml);
+        $('<a class="close ui-corner-all">x</a>').on('click', (ev) => {
+            ev.stopPropagation();
+            chatSocket.emit('leave', {
+                userid: User.props.id,
+                name: thisRoom.props.name
+            });
+        }).appendTo(thisRoom.$tabs[tabsLen - 1]);
+        $('textarea.' + idRoomName).prop('placeholder', 'Post as ' + User.props.name);
+        $('textarea.' + idRoomName).css('color', "#" + User.props.color);
     };
 
     /**
@@ -902,15 +890,13 @@ var chatModule = (function () {
      * Handlers for text color changing
      */
     var changeTextColor = function () {
-        var text_color = $('input#userNameTextColor').val();
+        var textColor = $('input#userNameTextColor').val();
         if (validateSetting('input#userNameTextColor', 'color') === true) {
             var userId = $('#userColorDroplist option:selected').val();
-            text_color = text_color.substring(1, text_color.length);
-            getUserById(userId, function (User) {
-                socket.emit('modify', {
-                    userid: User.props.id,
-                    color: text_color
-                });
+            textColor = textColor.substring(1, textColor.length);
+            socket.emit('modify', {
+                userid: userId,
+                color: textColor
             });
         }
     };
@@ -924,6 +910,13 @@ var chatModule = (function () {
      */
     var saveSettings = function () {
         localStorage.setItem(localStorageName, JSON.stringify(getSettings()));
+    };
+
+    var getSettings = function () {
+        return {
+            'chatSettings': chatSettings,
+            'pingSettings': pingSettings
+        };
     };
 
     /**
@@ -965,7 +958,6 @@ var chatModule = (function () {
      * Populate the GUI with settings from the browser's local storage
      */
     var populateSettings = function () {
-
         $('#pingNames').val(pingSettings.triggers);
         $('#pingURL').val(pingSettings.audioUrl);
         $('#pingTextColor').val(pingSettings.color);
@@ -983,6 +975,7 @@ var chatModule = (function () {
     return {
         init: init,
         parseSlashCommand: parseSlashCommand,
+        getSettings: getSettings,
         loadSettings: loadSettings,
         deleteSettings: deleteSettings,
 
@@ -992,12 +985,7 @@ var chatModule = (function () {
         toString: function () {
             return 'Chat Module';
         },
-        getSettings: function () {
-            return {
-                'chatSettings': chatSettings,
-                'pingSettings': pingSettings
-            };
-        },
+
     };
 }());/**
  * This module handles the "Session" section in RPH Tools
@@ -1020,8 +1008,6 @@ var sessionModule = (function () {
     var autoJoinTimer = null;
 
     var waitForDialog = true;
-
-    var favUserDropList = null;
 
     var dcHappenedShadow = false;
 
@@ -1049,6 +1035,8 @@ var sessionModule = (function () {
             '<label class="rpht_labels">Refresh on Disconnect: </label><input style="width: 40px;" type="checkbox" id="dcRefresh" name="dcRefresh">' +
             '<br /><br />' +
             '<label class="rpht_labels">Auto-refresh time: </label><input style="width: 64px;" type="number" id="refreshTime" name="refreshTime" max="60" min="5" value="10"> seconds' +
+            '<br /><br /><br /><br />' +
+            '<button style="margin-left: 586px;" type="button" id="resetSession">Reset Session</button>' +
             '</div><div>' +
             '<h4>Auto Joining</h4>' +
             '<label class="rpht_labels">Can Cancel: </label><input style="width: 40px;" type="checkbox" id="canCancelJoining" name="canCancelJoining">' +
@@ -1073,43 +1061,49 @@ var sessionModule = (function () {
 
     var init = function () {
         rphToolsModule.registerDroplist($('#favUserDropList'));
+        sessionSettings.dcHappened = false;
+        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
 
-        $('#dcRefresh').click(function () {
+        $('#dcRefresh').click(() => {
             sessionSettings.autoRefresh = getCheckBox('#dcRefresh');
             saveSettings();
         });
 
-        $('#refreshTime').change(function () {
+        $('#refreshTime').change(() => {
             sessionSettings.refreshSecs = $('#refreshTime').val();
             saveSettings();
         });
 
-        $('#canCancelJoining').click(function () {
+        $('#canCancelJoining').click(() => {
             sessionSettings.canCancel = getCheckBox('#canCancelJoining');
             saveSettings();
         });
 
-        $('#roomSessioning').click(function () {
+        $('#roomSessioning').click(() => {
             sessionSettings.joinSession = getCheckBox('#roomSessioning');
             saveSettings();
         });
 
-        $('#favEnable').click(function () {
+        $('#favEnable').click(() => {
             sessionSettings.joinFavorites = getCheckBox('#favEnable');
             saveSettings();
         });
 
-        $('#favAdd').click(function () {
+        $('#favAdd').click(() => {
             addFavoriteRoom();
             saveSettings();
         });
 
-        $('#favRemove').click(function () {
+        $('#favRemove').click(() => {
             removeFavoriteRoom();
             saveSettings();
         });
 
-        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
+        $('#resetSession').click(() => {
+            clearRoomSession();
+            saveSettings();
+        });
+
         dcHappenedShadow = sessionSettings.dcHappened;
         sessionShadow = sessionSettings.roomSession;
 
@@ -1134,7 +1128,7 @@ var sessionModule = (function () {
                     window.onbeforeunload = null;
                     window.location.reload(true);
                 }, sessionSettings.refreshSecs * 1000);
-            } else {
+            } else if (sessionSettings.autoRefresh) {
                 console.log(sessionSettings.autoRefresh, sessionSettings.autoRefreshAttempts);
                 $('<div id="rpht-max-refresh" class="inner">' +
                     '<p>Max auto refresh attempts tried. You will need to manually refresh.</p>' +
@@ -1149,8 +1143,6 @@ var sessionModule = (function () {
                 }).dialog('open');
             }
         });
-
-        sessionSettings.dcHappened = false;
     }
 
     var determineAutojoin = function () {
@@ -1182,7 +1174,7 @@ var sessionModule = (function () {
                 '</div>'
             ).dialog({
                 open: function (event, ui) {
-                    setTimeout(function () {
+                    setTimeout(() => {
                         $('#rpht-autojoin').dialog('close');
                     }, AUTOJOIN_TIMEOUT_SEC);
                 },
@@ -1202,21 +1194,28 @@ var sessionModule = (function () {
         }
     };
 
+    /**
+     * Join rooms in the favorites and what was in the session.
+     */
     var JoinRooms = function () {
         if (sessionSettings.joinFavorites === true) {
             JoinFavoriteRooms();
         }
 
-        setTimeout(function () {
+        setTimeout(() => {
             if (sessionSettings.joinSession || dcHappenedShadow) {
                 dcHappenedShadow = false;
+                console.log('Joining rooms');
+                clearRoomSession();
                 JoinSessionedRooms();
             }
         }, 1000);
-
         clearTimeout(autoJoinTimer);
     }
 
+    /**
+     * Join rooms that were in the last session.
+     */
     var JoinSessionedRooms = function () {
         for (var i = 0; i < sessionShadow.length; i++) {
             var room = sessionShadow[i];
@@ -1230,6 +1229,7 @@ var sessionModule = (function () {
                 });
             }
         }
+        delete sessionShadow;
     }
 
     /** 
@@ -1253,8 +1253,10 @@ var sessionModule = (function () {
             var room = roomSession[i]
             if (room.roomname == roomname && room.user == userid) {
                 alreadyInSession = true;
+                break;
             }
         }
+
         if (!alreadyInSession) {
             console.log('RPH Tools[addRoomToSession]: Adding room to session:', roomname, userid);
             sessionSettings.roomSession.push({
@@ -1262,7 +1264,7 @@ var sessionModule = (function () {
                 'user': userid
             });
         }
-    }
+    };
 
     var removeRoomFromSession = function (roomname, userid) {
         var roomSession = sessionSettings.roomSession
@@ -1273,13 +1275,22 @@ var sessionModule = (function () {
                 sessionSettings.roomSession.splice(i, 1);
             }
         }
-    }
+    };
+
+    /**
+     * Clear the room session.
+     */
+    var clearRoomSession = function () {
+        sessionSettings.roomSession = []
+        saveSettings();
+    };
 
     /** 
-     * Adds an entry to the Favorite Chat Rooms list
+     * Adds an entry to the Favorite Chat Rooms list from an input
+     * @param {string} roomname - Name of the room
      */
-    var addFavoriteRoom = function () {
-        var room = getRoom($('#favRoom').val());
+    var parseFavoriteRoom = function (roomname) {
+        var room = getRoom(roomname);
 
         if (room === undefined) {
             markProblem('favRoom', true);
@@ -1287,30 +1298,36 @@ var sessionModule = (function () {
         }
 
         if (sessionSettings.favRooms.length < MAX_ROOMS) {
-            var favExists = false;
-            var hashStr = $('#favRoom').val() + $('#favUserDropList option:selected').html();
+            var selectedFav = $('#favUserDropList option:selected');
+            var hashStr = $('#favRoom').val() + selectedFav.html();
             var favRoomObj = {
                 _id: hashStr.hashCode(),
-                user: $('#favUserDropList option:selected').html(),
-                userId: parseInt($('#favUserDropList option:selected').val()),
+                user: selectedFav.html(),
+                userId: parseInt(selectedFav.val()),
                 room: $('#favRoom').val(),
                 roomPw: $('#favRoomPw').val()
             };
-
+            addFavoriteRoom(favRoomObj);
             markProblem('favRoom', false);
-            if (arrayObjectIndexOf(sessionSettings.favRooms, "_id", favRoomObj._id) === -1) {
-                $('#favRoomsList').append(
-                    '<option value="' + favRoomObj._id + '">' +
-                    favRoomObj.user + ": " + favRoomObj.room + '</option>'
-                );
-                sessionSettings.favRooms.push(favRoomObj);
-                console.log('RPH Tools[addFavoriteRoom]: Added favorite room', favRoomObj);
-            }
+        }
+    };
 
-            if (sessionSettings.favRooms.length >= 10) {
-                $('#favAdd').text("Favorites Full");
-                $('#favAdd')[0].disabled = true;
-            }
+    /**
+     * Adds a favorite room to the settings list
+     * @param {Object} favRoomObj - Object containing the favorite room parameters.
+     */
+    var addFavoriteRoom = function (favRoomObj) {
+        if (arrayObjectIndexOf(sessionSettings.favRooms, "_id", favRoomObj._id) === -1) {
+            $('#favRoomsList').append(
+                '<option value="' + favRoomObj._id + '">' +
+                favRoomObj.user + ": " + favRoomObj.room + '</option>'
+            );
+            sessionSettings.favRooms.push(favRoomObj);
+        }
+
+        if (sessionSettings.favRooms.length >= MAX_ROOMS) {
+            $('#favAdd').text("Favorites Full");
+            $('#favAdd')[0].disabled = true;
         }
     };
 
@@ -1322,9 +1339,9 @@ var sessionModule = (function () {
         var favItemId = $('#favRoomsList option:selected').val();
         favItem.remove(favItem.selectedIndex);
 
-        for (var favs_i = 0; favs_i < sessionSettings.favRooms.length; favs_i++) {
-            if (sessionSettings.favRooms[favs_i]._id == favItemId) {
-                sessionSettings.favRooms.splice(favs_i, 1);
+        for (var idx = 0; idx < sessionSettings.favRooms.length; idx++) {
+            if (sessionSettings.favRooms[idx]._id == favItemId) {
+                sessionSettings.favRooms.splice(idx, 1);
                 break;
             }
         }
@@ -1336,7 +1353,7 @@ var sessionModule = (function () {
     };
 
     var saveSettings = function () {
-        localStorage.setItem(localStorageName, JSON.stringify(getSettings()));
+        localStorage.setItem(localStorageName, JSON.stringify(sessionSettings));
     };
 
     var loadSettings = function (storedSettings) {
@@ -1347,6 +1364,22 @@ var sessionModule = (function () {
             populateSettings();
         }
     };
+
+    var deleteSettings = function () {
+        sessionSettings = {
+            'autoRefreshAttempts': 5,
+            'dcHappened': false,
+            'autoRefresh': true,
+            'refreshSecs': 10,
+            'canCancel': true,
+            'joinFavorites': false,
+            'joinSession': false,
+            'roomSession': [],
+            'favRooms': [],
+        };
+
+        populateSettings();
+    }
 
     var populateSettings = function () {
         $('#favUserDropList').empty();
@@ -1374,6 +1407,7 @@ var sessionModule = (function () {
     return {
         init: init,
         loadSettings: loadSettings,
+        deleteSettings: deleteSettings,
         addRoomToSession: addRoomToSession,
         removeRoomFromSession: removeRoomFromSession,
 
@@ -1393,7 +1427,6 @@ var sessionModule = (function () {
 var pmModule = (function () {
     var pmSettings = {
         'audioUrl': 'http://chat.rphaven.com/sounds/imsound.mp3',
-        'noIcons': false,
     };
 
     var localStorageName = "rpht_PmModule";
@@ -1424,6 +1457,7 @@ var pmModule = (function () {
 
     var init = function () {
         rphToolsModule.registerDroplist($('#pmNamesDroplist'));
+        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
 
         $('#pmNamesDroplist').change(function () {
             var userId = $('#pmNamesDroplist option:selected').val();
@@ -1459,13 +1493,6 @@ var pmModule = (function () {
             }
         });
 
-        $('#pmIconsDisable').change(function () {
-            pmSettings.noIcons = getCheckBox('pmIconsDisable');
-            saveSettings();
-        });
-
-        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
-
         socket.on('pm', function (data) {
             handleIncomingPm(data);
         });
@@ -1480,21 +1507,19 @@ var pmModule = (function () {
      * @param {object } data Data containing the PM.
      */
     var handleIncomingPm = function (data) {
-        getUserById(data.to, function (fromUser) {
-            if (!awayMessages[data.from]) {
-                return;
-            }
+        if (!awayMessages[data.from]) {
+            return;
+        }
 
-            if (awayMessages[data.from].enabled) {
-                awayMessages[data.from].usedPmAwayMsg = true;
-                socket.emit('pm', {
-                    'from': data.from,
-                    'to': data.to,
-                    'msg': awayMessages[data.from].message,
-                    'target': 'all'
-                });
-            }
-        });
+        if (awayMessages[data.from].enabled) {
+            awayMessages[data.from].usedPmAwayMsg = true;
+            socket.emit('pm', {
+                'from': data.from,
+                'to': data.to,
+                'msg': awayMessages[data.from].message,
+                'target': 'all'
+            });
+        }
     }
 
     /**
@@ -1502,19 +1527,17 @@ var pmModule = (function () {
      * @param {object } data Data containing the PM.
      */
     var handleOutgoingPm = function (data) {
-        getUserById(data.from, function (fromUser) {
-            if (!awayMessages[data.from]) {
-                return;
-            }
+        if (!awayMessages[data.from]) {
+            return;
+        }
 
-            if (!awayMessages[data.from].usedPmAwayMsg) {
-                awayMessages[data.from].enabled = false;
-                $('#pmNamesDroplist option').filter(function () {
-                    return this.value == data.from;
-                }).css("background-color", "");
-            }
-            awayMessages[data.from].usedPmAwayMsg = false;
-        });
+        if (!awayMessages[data.from].usedPmAwayMsg) {
+            awayMessages[data.from].enabled = false;
+            $('#pmNamesDroplist option').filter(function () {
+                return this.value == data.from;
+            }).css("background-color", "");
+        }
+        awayMessages[data.from].usedPmAwayMsg = false;
     }
 
     /**
@@ -1625,9 +1648,9 @@ var rngModule = (function () {
     var DIE_MIN = 1;
     var DIE_MAX = 100;
     var DIE_SIDE_MIN = 2;
-    var DIE_SIDE_MAX = 1000;
-    var RNG_NUM_MIN = -4294967296;
-    var RNG_NUM_MAX = 4294967296;
+    var DIE_SIDE_MAX = 100;
+    var RNG_NUM_MIN = -10000000000000;
+    var RNG_NUM_MAX = 10000000000000;
 
     var html = {
         'tabId': 'rng-module',
@@ -1743,7 +1766,7 @@ var rngModule = (function () {
      * @returns String containing the dice roll result
      */
     var getDiceRoll = function (dieNum, dieSides, showTotals) {
-        //Cap the values, just in case.
+        /* Cap the values, just in case. */
         dieNum = (dieNum > DIE_MAX) ? DIE_MAX : dieNum;
         dieNum = (dieNum < DIE_MIN) ? DIE_MIN : dieNum;
         dieSides = (dieSides > DIE_SIDE_MAX) ? DIE_SIDE_MAX : dieSides;
@@ -1956,6 +1979,8 @@ var blockingModule = (function () {
 
     return {
         init: init,
+        loadSettings: loadSettings,
+        deleteSettings: deleteSettings,
 
         getHtml: function () {
             return html;
@@ -1977,6 +2002,10 @@ var blockingModule = (function () {
 var moddingModule = (function () {
     var settings = {
         'alertWords': [],
+        'kickWords': [],
+        'enableAutoKick': false,
+        'enableAutoBan': false,
+        'autoKickMsg': '',
         'alertUrl': 'http://chat.rphaven.com/sounds/boop.mp3',
     };
 
@@ -2026,9 +2055,21 @@ var moddingModule = (function () {
             '<p>Words to trigger alert (comma separated, no spaces)</p>' +
             '<textarea name="modAlertWords" id="modAlertWords" rows=6 class="rpht_textarea"></textarea>' +
             '<br/><br/>' +
-            '<label class="rpht_labels">Alert Sound URL: </label><input style="width: 370px;" type="text" id="modAlertUrl" name="modAlertUrl">'
-    };
+            '<label class="rpht_labels">Alert Sound URL: </label><input style="width: 370px;" type="text" id="modAlertUrl" name="modAlertUrl">' +
+            '<br/><br/>' +
+            '</div><div>' +
+            '<h4>Auto-kick/ban</h4><br />' +
+            '<p>Triggers (separate by pipe | )</p>' +
+            '<textarea name="autoKickTriggers" id="autoKickTriggers" rows=6 class="rpht_textarea"></textarea>' +
+            '<br/><br/>' +
+            '<label class="rpht_labels">Message:</label><input style="width: 300px;" type="text" id="autoKickMessage" placeholder="Message">' +
+            '<br/>' +
+            '<label class="rpht_labels">Enable autokick</label><input style="width: 40px;" type="checkbox" id="autoKickEnable" name="autoKickEnable">' +
+            '<br/>' +
+            '<label class="rpht_labels">Ban instead of kick</label><input style="width: 40px;" type="checkbox" id="autoBanEnable" name="autoBanEnable">' +
+            '</div>'
 
+    };
 
     var alertSound = null;
 
@@ -2045,6 +2086,8 @@ var moddingModule = (function () {
     };
 
     var init = function () {
+        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
+
         $('#roomModSelect').change(function () {
             var roomModeIdx = $('#roomModSelect')[0].selectedIndex;
             var roomModVal = $('#roomModSelect')[0].options[roomModeIdx].value;
@@ -2059,9 +2102,9 @@ var moddingModule = (function () {
 
         $('#resetPwButton').click(function () {
             var room = $('input#modRoomTextInput').val();
-            var user = $('input#modFromTextInput').val();
-            getUserByName(user, function (mod) {
-                var userId = mod.props.id;
+
+            getUserByName($('input#modFromTextInput').val(), function (user) {
+                var userId = user.props.id;
                 chatSocket.emit('modify', {
                     room: room,
                     userid: userId,
@@ -2113,8 +2156,25 @@ var moddingModule = (function () {
             }
         });
 
-        loadSettings();
-        populateSettings();
+        $('#autoKickTriggers').blur(() => {
+            settings.kickWords = $('#autoKickTriggers').val();
+            saveSettings();
+        });
+
+        $('#autoKickEnable').change(() => {
+            settings.enableAutoKick = getCheckBox('#autoKickEnable');
+            saveSettings();
+        });
+
+        $('#autoBanEnable').change(() => {
+            settings.enableAutoBan = getCheckBox('#autoBanEnable');
+            saveSettings();
+        });
+
+        $('#autoKickMessage').blur(() => {
+            settings.autoKickMsg = $('#autoKickMessage').val();
+            saveSettings();
+        });
     };
 
     /**
@@ -2126,7 +2186,7 @@ var moddingModule = (function () {
         targets = targets.split(',');
         console.log('RPH Tools[modAction]: Performing', action, 'on', targets);
 
-        targets.forEach(function (target, index) {
+        targets.forEach(function (target) {
             emitModAction(action, target, $('input#modFromTextInput').val(),
                 $('input#modRoomTextInput').val(),
                 $("input#modMessageTextInput").val());
@@ -2155,16 +2215,27 @@ var moddingModule = (function () {
         });
     };
 
-    var findUserAsMod = function(userObj){
+    var findUserAsMod = function (userObj) {
         roomnames.forEach((roomname) => {
             var roomObj = getRoom(roomname);
-            if (roomObj.props.mods.indexOf(userObj.props.id) > -1 || 
-                roomObj.props.owners.indexOf(userObj.props.id) > -1){
+            if (roomObj.props.mods.indexOf(userObj.props.id) > -1 ||
+                roomObj.props.owners.indexOf(userObj.props.id) > -1) {
                 addModRoomPair(userObj.props, roomname);
             }
         });
     }
 
+    var findModOfRoom = function (roomName) {
+        var modName = '';
+        for (var key in roomNamePairs) {
+            var pair = roomNamePairs[key]
+            if (pair.roomName == roomName) {
+                modName = pair.modName;
+                break;
+            }
+        }
+        return modName;
+    }
 
     /**
      * Adds a key/value pair option to the Room-Name Pair droplist.
@@ -2196,6 +2267,20 @@ var moddingModule = (function () {
         }
     };
 
+    var handleAutoKick = function (modName, targetName, roomName) {
+        if (!settings.enableAutoKick && !settings.enableAutoBan) {
+            return;
+        }
+        var action = settings.enableAutoBan ? 'ban' : 'kick';
+
+        setTimeout(() => {
+                console.log("doing something");
+                moddingModule.emitModAction(action, targetName, modName, roomName, settings.autoKickMsg);
+            },
+            (Math.random() + 1) * 1000
+        );
+    }
+
     /**
      * Saves settings to local storage
      */
@@ -2206,9 +2291,7 @@ var moddingModule = (function () {
     /** 
      * Loads saved settings if they exist
      */
-    var loadSettings = function () {
-        var storedSettings = JSON.parse(localStorage.getItem(localStorageName));
-
+    var loadSettings = function (storedSettings) {
         if (storedSettings) {
             settings = storedSettings;
             populateSettings();
@@ -2234,14 +2317,22 @@ var moddingModule = (function () {
         $('#modAlertWords').val(settings.alertWords);
         $('#modAlertUrl').val(settings.alertUrl);
         alertSound = new Audio(settings.alertUrl);
+
+        $('#autoKickTriggers').val(settings.kickWords);
+        $('#autoKickMessage').val(settings.autoKickMsg);
+        $('#autoKickEnable').prop('checked', settings.enableAutoKick);
+        $('#autoBanEnable').prop('checked', settings.enableAutoBan);
     };
 
     return {
         init: init,
         emitModAction: emitModAction,
         findUserAsMod: findUserAsMod,
+        findModOfRoom: findModOfRoom,
         addModRoomPair: addModRoomPair,
         playAlert: playAlert,
+        handleAutoKick: handleAutoKick,
+        loadSettings:loadSettings,
         deleteSettings: deleteSettings,
 
         getHtml: function () {
@@ -2355,7 +2446,7 @@ var settingsModule = (function () {
             $('#deleteSettingsButton').text('Press again to delete');
             confirmDelete = true;
 
-            // Set a timeout to make "confirmDelete" false automatically
+            /* Set a timeout to make "confirmDelete" false automatically */
             deleteTimer = setTimeout(function () {
                 confirmDelete = false;
                 $('#deleteSettingsButton').text('Delete Settings');
@@ -2399,6 +2490,7 @@ var settingsModule = (function () {
  * This module handles the "About" section for information on RPH Tools.
  */
 var aboutModule = (function () {
+
     var html = {
         'tabId': 'about-module',
         'tabName': 'About',
@@ -2416,11 +2508,9 @@ var aboutModule = (function () {
         init: function () {
             return;
         },
-
         getHtml: function () {
             return html;
         },
-
         toString: function () {
             return 'About Module';
         },
