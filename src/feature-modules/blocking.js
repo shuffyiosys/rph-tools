@@ -130,6 +130,8 @@ var blockingModule = (function () {
 
     return {
         init: init,
+        loadSettings: loadSettings,
+        deleteSettings: deleteSettings,
 
         getHtml: function () {
             return html;

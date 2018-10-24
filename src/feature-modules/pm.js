@@ -4,7 +4,6 @@
 var pmModule = (function () {
     var pmSettings = {
         'audioUrl': 'http://chat.rphaven.com/sounds/imsound.mp3',
-        'noIcons': false,
     };
 
     var localStorageName = "rpht_PmModule";
@@ -35,6 +34,7 @@ var pmModule = (function () {
 
     var init = function () {
         rphToolsModule.registerDroplist($('#pmNamesDroplist'));
+        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
 
         $('#pmNamesDroplist').change(function () {
             var userId = $('#pmNamesDroplist option:selected').val();
@@ -70,13 +70,6 @@ var pmModule = (function () {
             }
         });
 
-        $('#pmIconsDisable').change(function () {
-            pmSettings.noIcons = getCheckBox('pmIconsDisable');
-            saveSettings();
-        });
-
-        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
-
         socket.on('pm', function (data) {
             handleIncomingPm(data);
         });
@@ -91,21 +84,19 @@ var pmModule = (function () {
      * @param {object } data Data containing the PM.
      */
     var handleIncomingPm = function (data) {
-        getUserById(data.to, function (fromUser) {
-            if (!awayMessages[data.from]) {
-                return;
-            }
+        if (!awayMessages[data.from]) {
+            return;
+        }
 
-            if (awayMessages[data.from].enabled) {
-                awayMessages[data.from].usedPmAwayMsg = true;
-                socket.emit('pm', {
-                    'from': data.from,
-                    'to': data.to,
-                    'msg': awayMessages[data.from].message,
-                    'target': 'all'
-                });
-            }
-        });
+        if (awayMessages[data.from].enabled) {
+            awayMessages[data.from].usedPmAwayMsg = true;
+            socket.emit('pm', {
+                'from': data.from,
+                'to': data.to,
+                'msg': awayMessages[data.from].message,
+                'target': 'all'
+            });
+        }
     }
 
     /**
@@ -113,19 +104,17 @@ var pmModule = (function () {
      * @param {object } data Data containing the PM.
      */
     var handleOutgoingPm = function (data) {
-        getUserById(data.from, function (fromUser) {
-            if (!awayMessages[data.from]) {
-                return;
-            }
+        if (!awayMessages[data.from]) {
+            return;
+        }
 
-            if (!awayMessages[data.from].usedPmAwayMsg) {
-                awayMessages[data.from].enabled = false;
-                $('#pmNamesDroplist option').filter(function () {
-                    return this.value == data.from;
-                }).css("background-color", "");
-            }
-            awayMessages[data.from].usedPmAwayMsg = false;
-        });
+        if (!awayMessages[data.from].usedPmAwayMsg) {
+            awayMessages[data.from].enabled = false;
+            $('#pmNamesDroplist option').filter(function () {
+                return this.value == data.from;
+            }).css("background-color", "");
+        }
+        awayMessages[data.from].usedPmAwayMsg = false;
     }
 
     /**

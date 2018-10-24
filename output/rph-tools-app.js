@@ -205,7 +205,17 @@ var sortOnKeys = function (dict) {
     }
 
     return tempDict;
-}/**
+}
+
+var makeFullTimeStamp = function(){
+    var timeObj = new Date();
+    var timestamp = timeObj.getHours().toString().padStart(2, '0') + ':';
+    timestamp += timeObj.getMinutes().toString().padStart(2, '0') + ':';
+    timestamp += timeObj.getSeconds().toString().padStart(2, '0');
+
+    return timestamp
+}
+/**
  * Generates a hash value for a string
  * This was modified from https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
  */
@@ -263,6 +273,7 @@ function sendChatMessage(inputTextBox, Room, User) {
     if (newMessage.match(/\n/gi)) {
         newLength = newLength + (newMessage.match(/\n/gi).length * 250);
     }
+    
     var curTime = Math.round(new Date().getTime() / 1000);
     thisTab.bufferLength = (thisTab.bufferLength / (curTime - thisTab.lastTime + 1)) + ((newLength + thisTab.bufferLength) / 3) + 250;
     thisTab.lastTime = curTime;
@@ -300,6 +311,8 @@ var chatModule = (function () {
 
     var chatSettings = {
         'showNames': true,
+        'filterFlood': true,
+        'spamThreshold': 1000,
     };
 
     var localStorageName = "rpht_ChatModule";
@@ -307,6 +320,16 @@ var chatModule = (function () {
     var pingSound = null;
 
     var autoDismissTimer = null;
+
+    var spamFilter = {};
+
+    var spamLenModifier = 3;
+
+    var spamBufPadding = 250;
+
+    var filterFloodShadow = false;
+
+    var filterSupressTimer = null;
 
     var html = {
         'tabId': 'chat-module',
@@ -349,6 +372,12 @@ var chatModule = (function () {
             '<label class="rpht_labels">No image icons</label><input style="width: 40px;" type="checkbox" id="imgIconDisable" name="imgIconDisable">' +
             '<br /><br />' +
             '<label class="rpht_labels">Show username in tabs & textbox (requires rejoin)</label><input style="width: 40px;" type="checkbox" id="showUsername" name="showUsername">' +
+            '<br /><br />' +
+            '<label class="rpht_labels">Filter flooding </label><input style="width: 40px;" type="checkbox" id="filterFlood" name="filterFlood">' +
+            '<br /><br />' +
+            '<label  class="rpht_labels">Flooding Threshold: </label><input style="width: 300px;" type="number" id="spamThresh" name="spamThresh" max="2000" min="0" value="1000">' +
+            '<br /><br />' +
+            '<button style="margin-left: 557px;" type="button" id="resetFilters">Reset spam filter</button>' +
             '</div>'
     }
 
@@ -437,8 +466,22 @@ var chatModule = (function () {
         });
 
         $('#showUsername').change(function () {
-            chatSettings.showNames = getCheckBox('#showUsername');
+            pingSettings.case = getCheckBox('#pingCaseSense');
             saveSettings();
+        });
+
+        $('#filterFlood').change(() => {
+            chatSettings.filterFlood = getCheckBox('#filterFlood');
+            saveSettings();
+        });
+
+        $('#spamThresh').change(() => {
+            chatSettings.spamThreshold = parseInt($('#spamThresh').val());
+            saveSettings();
+        });
+
+        $('#resetFilters').click(() => {
+            spamFilter = {};
         });
 
         $(window).resize(resizeChatTabs);
@@ -475,6 +518,19 @@ var chatModule = (function () {
         var userId = getIdFromChatTab(thisRoom);
         var moddingModule = rphToolsModule.getModule('Modding Module');
         var sessionModule = rphToolsModule.getModule('Session Module');
+
+        if (filterSupressTimer === null) {
+            filterFloodShadow = chatSettings.filterFlood;
+            chatSettings.filterFlood = false;
+            
+            /* Set a timer to suppress spam filtering since incoming chat messages 
+               from the history will appear as all at once.
+             */
+            filterSupressTimer = setTimeout(() => {
+                chatSettings.filterFlood = filterFloodShadow;
+                filterSupressTimer = null;
+            }, 1000);
+        }
 
         thisRoom.onMessage = function (data) {
             var thisRoom = this;
@@ -532,13 +588,21 @@ var chatModule = (function () {
      */
     var postMessage = function (thisRoom, data, User) {
         var moddingModule = rphToolsModule.getModule('Modding Module');
-        var timestamp = makeTimestamp(data.time);
+        var timestamp = makeFullTimeStamp();
         var msg = parseMsg(data.msg);
         var classes = '';
         var $el = '';
         var msgHtml = '';
 
-        if (User.blocked) {
+        var filterMsg = filterSpam(thisRoom, data, User);
+
+        if (filterMsg === true) {
+            var modName = moddingModule.findModOfRoom(thisRoom.props.name);
+            if (moddingModule !== null) {
+                moddingModule.handleAutoKick(modName, User.props.name, thisRoom.props.name);
+            }
+            return;
+        } else if (User.blocked) {
             return;
         }
 
@@ -574,13 +638,15 @@ var chatModule = (function () {
                         moddingModule.playAlert();
                     }
                 }
-                var modName = moddingModule.findModOfRoom(thisRoom.props.name);
-                var kickRegex = msg.match(modSettings.kickWords, 'gi');
-
-                if (kickRegex !== null && modName !== '') {
-                    console.log(modName, User.props.name, thisRoom.props.name);
-                    moddingModule.handleAutoKick(modName, User.props.name, thisRoom.props.name);
+                if (modSettings.kickWords.length > 0){
+                    var modName = moddingModule.findModOfRoom(thisRoom.props.name);
+                    var kickRegex = msg.match(modSettings.kickWords, 'gi');
+    
+                    if (kickRegex !== null && modName !== '') {
+                        moddingModule.handleAutoKick(modName, User.props.name, thisRoom.props.name);
+                    }
                 }
+
             }
         } catch (err) {
             console.log('RPH Tools[postMessage]: I tried pinging D:', err);
@@ -606,6 +672,59 @@ var chatModule = (function () {
         $el = thisRoom.appendMessage(msgHtml).addClass(classes);
         $el.find('br:gt(7)').remove();
     };
+
+    var filterSpam = function (thisRoom, data, user) {
+        var roomName = thisRoom.props.name;
+        var msgAuthor = user.props.name;
+        var filterMsg = false;
+
+        /* If the message is the user's own or the filter is off, return */
+        if (account.userids.includes(user.props.id) === false &&
+            chatSettings.filterFlood === false) {
+            return filterMsg;
+        }
+
+        if (!spamFilter[roomName]) {
+            spamFilter[roomName] = {};
+        }
+
+        if (!spamFilter[roomName][msgAuthor]) {
+            spamFilter[roomName][msgAuthor] = {};
+            spamFilter[roomName][msgAuthor].bufferLength = 0;
+            spamFilter[roomName][msgAuthor].lastTime = 0;
+            spamFilter[roomName][msgAuthor].offenses = 0;
+        }
+
+        var tempBufferLength = spamFilter[roomName][msgAuthor].bufferLength;
+        var tempLastTime = spamFilter[roomName][msgAuthor].lastTime;
+
+        var newMessage = data.msg;
+        var newLength = data.msg.length;
+        var curTime = Math.round(new Date().getTime() / 1000);
+        if (newMessage.match(/\n/gi)) {
+            newLength = newLength + (newMessage.match(/\n/gi).length * 250);
+        }
+
+        var lenMod = parseInt($('#spamLenMod').val());
+        var bufPad = parseInt($('#spamBufPad').val());
+        var threshold = parseInt($('#spamThresh').val());
+
+
+        tempBufferLength = (tempBufferLength / (curTime - tempLastTime + 1)) + ((newLength + tempBufferLength) / spamLenModifier) + spamBufPadding;
+        tempLastTime = curTime;
+
+        if (tempBufferLength > threshold) {
+            spamFilter[roomName][msgAuthor].offenses += 1;
+            if (spamFilter[roomName][msgAuthor].offenses > 1) {
+                console.log('Spam filter triggered:', roomName, msgAuthor, data.msg);
+                filterMsg = true;
+            }
+        }
+        spamFilter[roomName][msgAuthor].bufferLength = tempBufferLength;
+        spamFilter[roomName][msgAuthor].lastTime = tempLastTime;
+
+        return filterMsg;
+    }
 
     /**
      * Parses a slash command from an input source.
@@ -969,6 +1088,8 @@ var chatModule = (function () {
 
         $('input#showUsername').prop("checked", chatSettings.showNames);
 
+        $('#filterFlood').prop("checked", chatSettings.filterFlood);
+        $('#spamThresh').val(chatSettings.spamThreshold);
         pingSound = new Audio(pingSettings.audioUrl);
     };
 
@@ -1090,7 +1211,7 @@ var sessionModule = (function () {
         });
 
         $('#favAdd').click(() => {
-            addFavoriteRoom();
+            parseFavoriteRoom($('#favRoom').val());
             saveSettings();
         });
 
@@ -2274,7 +2395,6 @@ var moddingModule = (function () {
         var action = settings.enableAutoBan ? 'ban' : 'kick';
 
         setTimeout(() => {
-                console.log("doing something");
                 moddingModule.emitModAction(action, targetName, modName, roomName, settings.autoKickMsg);
             },
             (Math.random() + 1) * 1000

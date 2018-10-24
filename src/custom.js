@@ -15,31 +15,6 @@ String.prototype.hashCode = function () {
 };
 
 /**
- * Appends message to a room without adding an image icon
- * @param {string} html - HTML to add to the room.
- * @param {object} thisRoom - Object to the room receiving the message.
- *
- * This was modified from RPH's original code, which is not covered by the
- * license.
- */
-var appendMessageTextOnly = function (html, thisRoom) {
-    var $el = $('<div>\n' + html + '\n</div>').appendTo(thisRoom.$el);
-    var extra = 5; //add more if near the bottom
-    if (thisRoom.$el[0].scrollHeight - thisRoom.$el.scrollTop() < 50) {
-        extra = 60;
-    }
-    thisRoom.$el.animate({
-        scrollTop: '+=' + ($el.outerHeight() + extra)
-    }, 180);
-
-    if (thisRoom.$el.children('div').length > account.settings.maxHistory) {
-        thisRoom.$el.children('div:not(.sys):lt(3)').remove();
-    }
-
-    return $el;
-};
-
-/**
  * Modified handler for keyup events from the chat textbox
  * @param {object} ev - Event
  * @param {object} User - User the textbox is attached to
@@ -63,11 +38,8 @@ function intputChatText(ev, User, Room) {
             return;
         }
 
-        if (newMessage[0] === '/' && newMessage.substring(0, 2) !== '//') {
-            if (chatModule)
+        if (newMessage[0] === '/' && newMessage.substring(0, 2) !== '//' && chatModule) {
                 chatModule.parseSlashCommand(inputTextBox, Room, User);
-            else
-                sendChatMessage(inputTextBox, Room, User);
         } else {
             sendChatMessage(inputTextBox, Room, User);
         }
@@ -84,6 +56,7 @@ function sendChatMessage(inputTextBox, Room, User) {
     if (newMessage.match(/\n/gi)) {
         newLength = newLength + (newMessage.match(/\n/gi).length * 250);
     }
+    
     var curTime = Math.round(new Date().getTime() / 1000);
     thisTab.bufferLength = (thisTab.bufferLength / (curTime - thisTab.lastTime + 1)) + ((newLength + thisTab.bufferLength) / 3) + 250;
     thisTab.lastTime = curTime;

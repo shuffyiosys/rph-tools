@@ -6,9 +6,9 @@ var rngModule = (function () {
     var DIE_MIN = 1;
     var DIE_MAX = 100;
     var DIE_SIDE_MIN = 2;
-    var DIE_SIDE_MAX = 1000;
-    var RNG_NUM_MIN = -4294967296;
-    var RNG_NUM_MAX = 4294967296;
+    var DIE_SIDE_MAX = 100;
+    var RNG_NUM_MIN = -10000000000000;
+    var RNG_NUM_MAX = 10000000000000;
 
     var html = {
         'tabId': 'rng-module',
@@ -124,7 +124,7 @@ var rngModule = (function () {
      * @returns String containing the dice roll result
      */
     var getDiceRoll = function (dieNum, dieSides, showTotals) {
-        //Cap the values, just in case.
+        /* Cap the values, just in case. */
         dieNum = (dieNum > DIE_MAX) ? DIE_MAX : dieNum;
         dieNum = (dieNum < DIE_MIN) ? DIE_MIN : dieNum;
         dieSides = (dieSides > DIE_SIDE_MAX) ? DIE_SIDE_MAX : dieSides;

@@ -6,6 +6,10 @@
 var moddingModule = (function () {
     var settings = {
         'alertWords': [],
+        'kickWords': [],
+        'enableAutoKick': false,
+        'enableAutoBan': false,
+        'autoKickMsg': '',
         'alertUrl': 'http://chat.rphaven.com/sounds/boop.mp3',
     };
 
@@ -55,9 +59,21 @@ var moddingModule = (function () {
             '<p>Words to trigger alert (comma separated, no spaces)</p>' +
             '<textarea name="modAlertWords" id="modAlertWords" rows=6 class="rpht_textarea"></textarea>' +
             '<br/><br/>' +
-            '<label class="rpht_labels">Alert Sound URL: </label><input style="width: 370px;" type="text" id="modAlertUrl" name="modAlertUrl">'
-    };
+            '<label class="rpht_labels">Alert Sound URL: </label><input style="width: 370px;" type="text" id="modAlertUrl" name="modAlertUrl">' +
+            '<br/><br/>' +
+            '</div><div>' +
+            '<h4>Auto-kick/ban</h4><br />' +
+            '<p>Triggers (separate by pipe | )</p>' +
+            '<textarea name="autoKickTriggers" id="autoKickTriggers" rows=6 class="rpht_textarea"></textarea>' +
+            '<br/><br/>' +
+            '<label class="rpht_labels">Message:</label><input style="width: 300px;" type="text" id="autoKickMessage" placeholder="Message">' +
+            '<br/>' +
+            '<label class="rpht_labels">Enable autokick</label><input style="width: 40px;" type="checkbox" id="autoKickEnable" name="autoKickEnable">' +
+            '<br/>' +
+            '<label class="rpht_labels">Ban instead of kick</label><input style="width: 40px;" type="checkbox" id="autoBanEnable" name="autoBanEnable">' +
+            '</div>'
 
+    };
 
     var alertSound = null;
 
@@ -74,6 +90,8 @@ var moddingModule = (function () {
     };
 
     var init = function () {
+        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
+
         $('#roomModSelect').change(function () {
             var roomModeIdx = $('#roomModSelect')[0].selectedIndex;
             var roomModVal = $('#roomModSelect')[0].options[roomModeIdx].value;
@@ -88,9 +106,9 @@ var moddingModule = (function () {
 
         $('#resetPwButton').click(function () {
             var room = $('input#modRoomTextInput').val();
-            var user = $('input#modFromTextInput').val();
-            getUserByName(user, function (mod) {
-                var userId = mod.props.id;
+
+            getUserByName($('input#modFromTextInput').val(), function (user) {
+                var userId = user.props.id;
                 chatSocket.emit('modify', {
                     room: room,
                     userid: userId,
@@ -142,8 +160,25 @@ var moddingModule = (function () {
             }
         });
 
-        loadSettings();
-        populateSettings();
+        $('#autoKickTriggers').blur(() => {
+            settings.kickWords = $('#autoKickTriggers').val();
+            saveSettings();
+        });
+
+        $('#autoKickEnable').change(() => {
+            settings.enableAutoKick = getCheckBox('#autoKickEnable');
+            saveSettings();
+        });
+
+        $('#autoBanEnable').change(() => {
+            settings.enableAutoBan = getCheckBox('#autoBanEnable');
+            saveSettings();
+        });
+
+        $('#autoKickMessage').blur(() => {
+            settings.autoKickMsg = $('#autoKickMessage').val();
+            saveSettings();
+        });
     };
 
     /**
@@ -155,7 +190,7 @@ var moddingModule = (function () {
         targets = targets.split(',');
         console.log('RPH Tools[modAction]: Performing', action, 'on', targets);
 
-        targets.forEach(function (target, index) {
+        targets.forEach(function (target) {
             emitModAction(action, target, $('input#modFromTextInput').val(),
                 $('input#modRoomTextInput').val(),
                 $("input#modMessageTextInput").val());
@@ -184,16 +219,27 @@ var moddingModule = (function () {
         });
     };
 
-    var findUserAsMod = function(userObj){
+    var findUserAsMod = function (userObj) {
         roomnames.forEach((roomname) => {
             var roomObj = getRoom(roomname);
-            if (roomObj.props.mods.indexOf(userObj.props.id) > -1 || 
-                roomObj.props.owners.indexOf(userObj.props.id) > -1){
+            if (roomObj.props.mods.indexOf(userObj.props.id) > -1 ||
+                roomObj.props.owners.indexOf(userObj.props.id) > -1) {
                 addModRoomPair(userObj.props, roomname);
             }
         });
     }
 
+    var findModOfRoom = function (roomName) {
+        var modName = '';
+        for (var key in roomNamePairs) {
+            var pair = roomNamePairs[key]
+            if (pair.roomName == roomName) {
+                modName = pair.modName;
+                break;
+            }
+        }
+        return modName;
+    }
 
     /**
      * Adds a key/value pair option to the Room-Name Pair droplist.
@@ -225,6 +271,19 @@ var moddingModule = (function () {
         }
     };
 
+    var handleAutoKick = function (modName, targetName, roomName) {
+        if (!settings.enableAutoKick && !settings.enableAutoBan) {
+            return;
+        }
+        var action = settings.enableAutoBan ? 'ban' : 'kick';
+
+        setTimeout(() => {
+                moddingModule.emitModAction(action, targetName, modName, roomName, settings.autoKickMsg);
+            },
+            (Math.random() + 1) * 1000
+        );
+    }
+
     /**
      * Saves settings to local storage
      */
@@ -235,9 +294,7 @@ var moddingModule = (function () {
     /** 
      * Loads saved settings if they exist
      */
-    var loadSettings = function () {
-        var storedSettings = JSON.parse(localStorage.getItem(localStorageName));
-
+    var loadSettings = function (storedSettings) {
         if (storedSettings) {
             settings = storedSettings;
             populateSettings();
@@ -263,14 +320,22 @@ var moddingModule = (function () {
         $('#modAlertWords').val(settings.alertWords);
         $('#modAlertUrl').val(settings.alertUrl);
         alertSound = new Audio(settings.alertUrl);
+
+        $('#autoKickTriggers').val(settings.kickWords);
+        $('#autoKickMessage').val(settings.autoKickMsg);
+        $('#autoKickEnable').prop('checked', settings.enableAutoKick);
+        $('#autoBanEnable').prop('checked', settings.enableAutoBan);
     };
 
     return {
         init: init,
         emitModAction: emitModAction,
-        addModRoomPair: addModRoomPair,
         findUserAsMod: findUserAsMod,
+        findModOfRoom: findModOfRoom,
+        addModRoomPair: addModRoomPair,
         playAlert: playAlert,
+        handleAutoKick: handleAutoKick,
+        loadSettings:loadSettings,
         deleteSettings: deleteSettings,
 
         getHtml: function () {

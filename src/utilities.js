@@ -84,13 +84,14 @@ var validateUrl = function (url) {
 };
 
 /**
- * Makes sure the color is less than #D2D2D2 or #DDD depending on how many 
+ * Makes sure the color is less than #DDDDDD or #DDD depending on how many
  * digits were entered.
  * @param {string} TextColor String representation of the color.
  * @return True if the color is within range, false otherwise.
  */
 var validateColorRange = function (TextColor) {
     var rawHex = TextColor.substring(1, TextColor.length);
+    var validColor = false;
     var red = 255;
     var green = 255;
     var blue = 255;
@@ -101,23 +102,20 @@ var validateColorRange = function (TextColor) {
         green = parseInt(rawHex.substring(1, 2), 16);
         blue = parseInt(rawHex.substring(2, 3), 16);
 
-        if ((red <= 13) && (green <= 13) && (blue <= 13)) {
-            return true;
+        if ((red <= 0xD) && (green <= 0xD) && (blue <= 0xD)) {
+            validColor = true;
         }
     }
-    /* If the color text is 6 characters, limit it to #D2D2D2 */
+    /* If the color text is 6 characters, limit it to #DDDDDD */
     else if (rawHex.length == 6) {
         red = parseInt(rawHex.substring(0, 2), 16);
         green = parseInt(rawHex.substring(2, 4), 16);
         blue = parseInt(rawHex.substring(4, 6), 16);
-        if ((red <= 210) && (green <= 210) && (blue <= 210)) {
-            return true;
+        if ((red <= 0xDD) && (green <= 0xDD) && (blue <= 0xDD)) {
+            validColor = true;
         }
     }
-
-    console.log('RPH Tools[validateColorRange]: Color check failed',
-        rawHex, red, green, blue);
-    return false;
+    return validColor;
 };
 
 /**
@@ -167,13 +165,14 @@ var isInLink = function (searchTerm, msg) {
  * @param {object} room Object containing room data
  */
 var isModOfRoom = function (room) {
-    for (var idx = 0; idx < account.users.length; idx++) {
+    var isMod = false;
+    for (var idx = 0; idx < account.users.length && !isMod; idx++) {
         if (room.props.mods.indexOf(account.users[idx]) > -1 ||
             room.props.owners.indexOf(account.users[idx]) > -1) {
-            return true;
+            isMod = true;
         }
     }
-    return false;
+    return isMod;
 };
 
 /**
@@ -194,4 +193,13 @@ var sortOnKeys = function (dict) {
     }
 
     return tempDict;
+}
+
+var makeFullTimeStamp = function(){
+    var timeObj = new Date();
+    var timestamp = timeObj.getHours().toString().padStart(2, '0') + ':';
+    timestamp += timeObj.getMinutes().toString().padStart(2, '0') + ':';
+    timestamp += timeObj.getSeconds().toString().padStart(2, '0');
+
+    return timestamp
 }

@@ -99,7 +99,7 @@ var settingsModule = (function () {
             $('#deleteSettingsButton').text('Press again to delete');
             confirmDelete = true;
 
-            // Set a timeout to make "confirmDelete" false automatically
+            /* Set a timeout to make "confirmDelete" false automatically */
             deleteTimer = setTimeout(function () {
                 confirmDelete = false;
                 $('#deleteSettingsButton').text('Delete Settings');

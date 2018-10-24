@@ -2,6 +2,7 @@
  * This module handles the "About" section for information on RPH Tools.
  */
 var aboutModule = (function () {
+
     var html = {
         'tabId': 'about-module',
         'tabName': 'About',
@@ -19,11 +20,9 @@ var aboutModule = (function () {
         init: function () {
             return;
         },
-
         getHtml: function () {
             return html;
         },
-
         toString: function () {
             return 'About Module';
         },
