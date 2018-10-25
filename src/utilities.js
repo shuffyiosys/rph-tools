@@ -166,14 +166,27 @@ var isInLink = function (searchTerm, msg) {
  */
 var isModOfRoom = function (room) {
     var isMod = false;
-    for (var idx = 0; idx < account.users.length && !isMod; idx++) {
-        if (room.props.mods.indexOf(account.users[idx]) > -1 ||
-            room.props.owners.indexOf(account.users[idx]) > -1) {
+    for (var idx = 0; idx < account.userids.length && !isMod; idx++) {
+        if (room.props.mods.indexOf(account.userids[idx]) > -1 ||
+            room.props.owners.indexOf(account.userids[idx]) > -1) {
             isMod = true;
         }
     }
     return isMod;
 };
+
+var getModForRoom = function (room){
+    var modName = '';
+    var users = account.users;
+    for (var idx = 0; idx < users.length; idx++) {
+        if (room.props.mods.includes(users[idx].props.id) ||
+            room.props.owners.includes(users[idx].props.id)) {
+            modName = users[idx].props.name;
+            break;
+        }
+    }
+    return modName;
+}
 
 /**
  * Takes a dictionary and creates a sorted version of it based on its keys

@@ -62,7 +62,7 @@ var rphToolsModule = (function () {
             setTimeout(function () {
                 var moddingModule = getModule('Modding Module');
                 account.users.forEach(function (userObj) {
-                    if (moddingModule){
+                    if (moddingModule) {
                         moddingModule.findUserAsMod(userObj);
                     }
                     idsToNames[userObj.props.id] = userObj.props.name;

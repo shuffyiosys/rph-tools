@@ -16,8 +16,9 @@ var rngModule = (function () {
         'tabContents': '<h3>Random Number Generators</h3>' +
             '<div>' +
             '<h4>Shortcuts</h4><br />' +
-            '<p>/coinflip - Does a coin toss</p>' +
-            '<p>/roll [num]d[num] - Dice roll. If no argument is given, it rolls 1d1000. Example: /roll 2d6 will roll 2 dices with 6 sides</p>' +
+            '<p><span style="font-family: courier">/coinflip</span> - Does a coin toss</p>' +
+            '<p><span style="font-family: courier">/roll [num]d[num]</span> - Dice roll. ' + 
+            'If no argument is given, it rolls 1d1000. Example: <span style="font-family: courier">/roll 2d6</span> will roll 2 dices with 6 sides</p>' +
             '</div>' +
             '<div id="coinFlipOptions">' +
             '<h4>Coin toss</h4><br />' +

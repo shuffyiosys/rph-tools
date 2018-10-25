@@ -25,9 +25,7 @@ var pmModule = (function () {
             '</p>' +
             '<label class="rpht_labels">PM Sound: </label><input type="text" id="pmPingURL" name="pmPingURL">' +
             '<br /><br />' +
-            '<label class="rpht_labels">Mute PMs: </label><input style="width: 40px;" type="checkbox" id="pmMute" name="pmMute">' +
-            '<br /><br />' +
-            '<label class="rpht_labels">No Image Icons: </label><input style="width: 40px;" type="checkbox" id="pmIconsDisable" name="pmIconsDisable">'
+            '<label class="rpht_labels">Mute PMs: </label><input style="width: 40px;" type="checkbox" id="pmMute" name="pmMute">'
     };
 
     var awayMessages = {};
@@ -189,7 +187,6 @@ var pmModule = (function () {
         localStorage.removeItem(localStorageName);
         pmSettings = {
             'audioUrl': 'http://chat.rphaven.com/sounds/imsound.mp3',
-            'noIcons': false,
         };
         populateSettings();
     };

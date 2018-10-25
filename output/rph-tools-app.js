@@ -178,14 +178,27 @@ var isInLink = function (searchTerm, msg) {
  */
 var isModOfRoom = function (room) {
     var isMod = false;
-    for (var idx = 0; idx < account.users.length && !isMod; idx++) {
-        if (room.props.mods.indexOf(account.users[idx]) > -1 ||
-            room.props.owners.indexOf(account.users[idx]) > -1) {
+    for (var idx = 0; idx < account.userids.length && !isMod; idx++) {
+        if (room.props.mods.indexOf(account.userids[idx]) > -1 ||
+            room.props.owners.indexOf(account.userids[idx]) > -1) {
             isMod = true;
         }
     }
     return isMod;
 };
+
+var getModForRoom = function (room){
+    var modName = '';
+    var users = account.users;
+    for (var idx = 0; idx < users.length; idx++) {
+        if (room.props.mods.includes(users[idx].props.id) ||
+            room.props.owners.includes(users[idx].props.id)) {
+            modName = users[idx].props.name;
+            break;
+        }
+    }
+    return modName;
+}
 
 /**
  * Takes a dictionary and creates a sorted version of it based on its keys
@@ -310,7 +323,6 @@ var chatModule = (function () {
     };
 
     var chatSettings = {
-        'showNames': true,
         'filterFlood': true,
         'spamThreshold': 1000,
     };
@@ -327,9 +339,11 @@ var chatModule = (function () {
 
     var spamBufPadding = 250;
 
-    var filterFloodShadow = false;
+    var filterSuppressTimer = null;
 
-    var filterSupressTimer = null;
+    var filterSuppressed = false;
+
+    var FILTER_SUPPRESS_TIME = 2000;
 
     var html = {
         'tabId': 'chat-module',
@@ -368,16 +382,13 @@ var chatModule = (function () {
             '<br /><br />' +
             '<label class="rpht_labels">Ping preview:</label><span id="pingPreviewText"></span>' +
             '</div><div>' +
-            '<h4>Other Settings</h4>' +
-            '<label class="rpht_labels">No image icons</label><input style="width: 40px;" type="checkbox" id="imgIconDisable" name="imgIconDisable">' +
-            '<br /><br />' +
-            '<label class="rpht_labels">Show username in tabs & textbox (requires rejoin)</label><input style="width: 40px;" type="checkbox" id="showUsername" name="showUsername">' +
+            '<h4>Flood Filtering</h4>' +
             '<br /><br />' +
             '<label class="rpht_labels">Filter flooding </label><input style="width: 40px;" type="checkbox" id="filterFlood" name="filterFlood">' +
             '<br /><br />' +
-            '<label  class="rpht_labels">Flooding Threshold: </label><input style="width: 300px;" type="number" id="spamThresh" name="spamThresh" max="2000" min="0" value="1000">' +
+            '<label class="rpht_labels">Filter Strength:</label><select  style="width: 300px;" id="filterStrengthDroplist"></select>' +
             '<br /><br />' +
-            '<button style="margin-left: 557px;" type="button" id="resetFilters">Reset spam filter</button>' +
+            '<button style="margin-left: 557px;" type="button" id="resetFilters">Reset filter</button>' +
             '</div>'
     }
 
@@ -404,6 +415,7 @@ var chatModule = (function () {
         $('#pingURL').blur(function () {
             if (validateSetting('#pingURL', 'url')) {
                 pingSettings.audioUrl = getInput('#pingURL');
+                pingSound = new Audio(pingSettings.audioUrl);
                 saveSettings();
             }
         });
@@ -456,9 +468,7 @@ var chatModule = (function () {
                 msg = highlightPing(msg, testRegex, pingSettings.color,
                     pingSettings.highlight, pingSettings.bold,
                     pingSettings.italics);
-                if (pingSound !== null) {
-                    pingSound.play();
-                }
+                pingSound.play();
                 $('#pingPreviewText')[0].innerHTML = msg;
             } else {
                 $('#pingPreviewText')[0].innerHTML = "No match";
@@ -470,17 +480,25 @@ var chatModule = (function () {
             saveSettings();
         });
 
-        $('#filterFlood').change(() => {
+        $('#filterFlood').change(function () {
             chatSettings.filterFlood = getCheckBox('#filterFlood');
             saveSettings();
         });
 
-        $('#spamThresh').change(() => {
-            chatSettings.spamThreshold = parseInt($('#spamThresh').val());
+        /* Setting up the filter droplist. */
+        addToDroplist(800, 'Strongest', $('#filterStrengthDroplist'));
+        addToDroplist(1000, 'Stronger', $('#filterStrengthDroplist'));
+        addToDroplist(1250, 'Strong', $('#filterStrengthDroplist'));
+        addToDroplist(1500, 'Normal', $('#filterStrengthDroplist'));
+        addToDroplist(1750, 'Default (RPH)', $('#filterStrengthDroplist'));
+        $('#filterStrengthDroplist').val(1000);
+
+        $('#filterStrengthDroplist').change(function () {
+            chatSettings.spamThreshold = $('#filterStrengthDroplist option:selected').val();
             saveSettings();
         });
 
-        $('#resetFilters').click(() => {
+        $('#resetFilters').click(function () {
             spamFilter = {};
         });
 
@@ -496,7 +514,7 @@ var chatModule = (function () {
 
         /* Setup the timer for automatically dismissing the opening dialog once
            rooms are available. The timer clears after. */
-        autoDismissTimer = setInterval(() => {
+        autoDismissTimer = setInterval(function () {
             if (roomnames.length === 0) {
                 return;
             }
@@ -519,18 +537,16 @@ var chatModule = (function () {
         var moddingModule = rphToolsModule.getModule('Modding Module');
         var sessionModule = rphToolsModule.getModule('Session Module');
 
-        if (filterSupressTimer === null) {
-            filterFloodShadow = chatSettings.filterFlood;
-            chatSettings.filterFlood = false;
-            
-            /* Set a timer to suppress spam filtering since incoming chat messages 
-               from the history will appear as all at once.
-             */
-            filterSupressTimer = setTimeout(() => {
-                chatSettings.filterFlood = filterFloodShadow;
-                filterSupressTimer = null;
-            }, 1000);
+        if (filterSuppressed === true) {
+            clearTimeout(filterSuppressTimer);
         }
+
+        filterSuppressTimer = setTimeout(function () {
+            filterSuppressed = false;
+        }, FILTER_SUPPRESS_TIME);
+        filterSuppressed = true;
+
+        spamFilter[room.room] = {};
 
         thisRoom.onMessage = function (data) {
             var thisRoom = this;
@@ -544,9 +560,7 @@ var chatModule = (function () {
         };
 
         getUserById(userId, (User) => {
-            if (chatSettings.showNames) {
-                addNameToUI(thisRoom, User);
-            }
+            addNameToUI(thisRoom, User);
 
             if (moddingModule !== null && isModOfRoom(thisRoom)) {
                 moddingModule.addModRoomPair(userId, thisRoom.props.name);
@@ -587,22 +601,55 @@ var chatModule = (function () {
      * @param {object} data The message for the room
      */
     var postMessage = function (thisRoom, data, User) {
-        var moddingModule = rphToolsModule.getModule('Modding Module');
         var timestamp = makeFullTimeStamp();
         var msg = parseMsg(data.msg);
         var classes = '';
         var $el = '';
         var msgHtml = '';
+        var ownMessage = account.userids.includes(User.props.id);
+        var filterMsgFlag = false;
 
-        var filterMsg = filterSpam(thisRoom, data, User);
+        /* Process only if not own message */
+        if (ownMessage === false) {
+            var moddingModule = rphToolsModule.getModule('Modding Module');
 
-        if (filterMsg === true) {
-            var modName = moddingModule.findModOfRoom(thisRoom.props.name);
+            /* Check if needs filtering */
+            filterMsgFlag = processMsgFitler(thisRoom, data, User);
+
+            /* Perform mod actions */
             if (moddingModule !== null) {
-                moddingModule.handleAutoKick(modName, User.props.name, thisRoom.props.name);
+                var modSettings = moddingModule.getSettings();
+                var modName = getModForRoom(thisRoom);
+                testRegex = matchPing(msg, modSettings.alertWords, false, true);
+
+                // Process alert
+                if (modSettings.alertWords !== '') {
+                    var alertRegex = new RegExp(modSettings.alertWords, 'gi');
+                    if (msg.match(alertRegex)) {
+                        msg = highlightPing(msg, alertRegex, "#EEE", "#E00", true, false);
+                        highlightRoom(thisRoom, "#EEE", "#E00");
+                        moddingModule.playAlert();
+                    }
+                }
+                if (modSettings.kickWords !== '') {
+                    var kickRegex = new RegExp(modSettings.kickWords, 'gi');
+                    if (msg.match(kickRegex)) {
+                        moddingModule.processFilterAction('kick', modName, User.props.name, thisRoom.props.name);
+                    }
+                }
+                if (modSettings.banWords !== '') {
+                    var banRegex = new RegExp(modSettings.banWords, 'gi');
+                    if (msg.match(banRegex)) {
+                        moddingModule.processFilterAction('ban', modName, User.props.name, thisRoom.props.name);
+                    }
+                }
+                if (filterMsgFlag) {
+                    moddingModule.processFlooding(modName, User.props.name, thisRoom.props.name);
+                }
             }
-            return;
-        } else if (User.blocked) {
+        }
+
+        if (filterMsgFlag === true) {
             return;
         }
 
@@ -623,30 +670,7 @@ var chatModule = (function () {
                     pingSettings.highlight, pingSettings.bold,
                     pingSettings.italics);
                 highlightRoom(thisRoom, pingSettings.color, pingSettings.highlight);
-                if (pingSound !== null) {
-                    pingSound.play();
-                }
-            }
-
-            if (moddingModule !== null) {
-                var modSettings = moddingModule.getSettings();
-                testRegex = matchPing(msg, modSettings.alertWords, false, true);
-                if (testRegex !== null) {
-                    msg = highlightPing(msg, testRegex, "#EEE", "#E00", true, false);
-                    highlightRoom(thisRoom, "#EEE", "#E00");
-                    if (pingSound !== null) {
-                        moddingModule.playAlert();
-                    }
-                }
-                if (modSettings.kickWords.length > 0){
-                    var modName = moddingModule.findModOfRoom(thisRoom.props.name);
-                    var kickRegex = msg.match(modSettings.kickWords, 'gi');
-    
-                    if (kickRegex !== null && modName !== '') {
-                        moddingModule.handleAutoKick(modName, User.props.name, thisRoom.props.name);
-                    }
-                }
-
+                pingSound.play();
             }
         } catch (err) {
             console.log('RPH Tools[postMessage]: I tried pinging D:', err);
@@ -673,16 +697,27 @@ var chatModule = (function () {
         $el.find('br:gt(7)').remove();
     };
 
+    var processMsgFitler = function (thisRoom, data, User) {
+        var filterMsg = false;
+        /* Exit if the following is true: filter is not on, filter is being suppressed*/
+        if (chatSettings.filterFlood === false ||
+            filterSuppressed === true) {
+            return filterMsg;
+        }
+
+        if (User.blocked) {
+            filterMsg = true;
+        } else if (filterSpam(thisRoom, data, User)) {
+            filterMsg = true;
+        }
+
+        return filterMsg;
+    }
+
     var filterSpam = function (thisRoom, data, user) {
         var roomName = thisRoom.props.name;
         var msgAuthor = user.props.name;
         var filterMsg = false;
-
-        /* If the message is the user's own or the filter is off, return */
-        if (account.userids.includes(user.props.id) === false &&
-            chatSettings.filterFlood === false) {
-            return filterMsg;
-        }
 
         if (!spamFilter[roomName]) {
             spamFilter[roomName] = {};
@@ -697,29 +732,22 @@ var chatModule = (function () {
 
         var tempBufferLength = spamFilter[roomName][msgAuthor].bufferLength;
         var tempLastTime = spamFilter[roomName][msgAuthor].lastTime;
-
-        var newMessage = data.msg;
-        var newLength = data.msg.length;
         var curTime = Math.round(new Date().getTime() / 1000);
-        if (newMessage.match(/\n/gi)) {
-            newLength = newLength + (newMessage.match(/\n/gi).length * 250);
+        if (data.msg.match(/\n/gi)) {
+            data.msg.length = data.msg.length + (data.msg.match(/\n/gi).length * 250);
         }
-
-        var lenMod = parseInt($('#spamLenMod').val());
-        var bufPad = parseInt($('#spamBufPad').val());
-        var threshold = parseInt($('#spamThresh').val());
-
-
-        tempBufferLength = (tempBufferLength / (curTime - tempLastTime + 1)) + ((newLength + tempBufferLength) / spamLenModifier) + spamBufPadding;
+        tempBufferLength = (tempBufferLength / (curTime - tempLastTime + 1)) + ((data.msg.length + tempBufferLength) / spamLenModifier) + spamBufPadding;
         tempLastTime = curTime;
-
-        if (tempBufferLength > threshold) {
+        if (tempBufferLength > chatSettings.spamThreshold) {
             spamFilter[roomName][msgAuthor].offenses += 1;
             if (spamFilter[roomName][msgAuthor].offenses > 1) {
                 console.log('Spam filter triggered:', roomName, msgAuthor, data.msg);
                 filterMsg = true;
             }
+        } else {
+            spamFilter[roomName][msgAuthor].offenses = 0;
         }
+
         spamFilter[roomName][msgAuthor].bufferLength = tempBufferLength;
         spamFilter[roomName][msgAuthor].lastTime = tempLastTime;
 
@@ -754,7 +782,6 @@ var chatModule = (function () {
                     if (cmdArgs[0] === '/away') {
                         type = 1;
                     }
-                    console.log('Status msg', cmdArgs[1], type);
                     socket.emit('modify', {
                         userid: User.props.id,
                         statusMsg: cmdArgs[1],
@@ -797,6 +824,10 @@ var chatModule = (function () {
             case '/kick':
             case '/ban':
             case '/unban':
+            case '/add-owner':
+            case '/add-mod':
+            case '/remove-owner':
+            case '/remove-mod':
                 var moddingModule = rphToolsModule.getModule('Modding Module');
                 if (cmdArgs.length < 2) {
                     error = true;
@@ -1067,7 +1098,8 @@ var chatModule = (function () {
         };
 
         chatSettings = {
-            'showNames': true,
+            'filterFlood': true,
+            'spamThreshold': 1000,
         };
 
         populateSettings();
@@ -1085,8 +1117,6 @@ var chatModule = (function () {
         $('input#pingItalicsEnable').prop("checked", pingSettings.italics);
         $('input#pingExactMatch').prop("checked", pingSettings.exact);
         $('input#pingCaseSense').prop("checked", pingSettings.case);
-
-        $('input#showUsername').prop("checked", chatSettings.showNames);
 
         $('#filterFlood').prop("checked", chatSettings.filterFlood);
         $('#spamThresh').val(chatSettings.spamThreshold);
@@ -1185,42 +1215,42 @@ var sessionModule = (function () {
         sessionSettings.dcHappened = false;
         loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
 
-        $('#dcRefresh').click(() => {
+        $('#dcRefresh').click(function () {
             sessionSettings.autoRefresh = getCheckBox('#dcRefresh');
             saveSettings();
         });
 
-        $('#refreshTime').change(() => {
+        $('#refreshTime').change(function () {
             sessionSettings.refreshSecs = $('#refreshTime').val();
             saveSettings();
         });
 
-        $('#canCancelJoining').click(() => {
+        $('#canCancelJoining').click(function () {
             sessionSettings.canCancel = getCheckBox('#canCancelJoining');
             saveSettings();
         });
 
-        $('#roomSessioning').click(() => {
+        $('#roomSessioning').click(function () {
             sessionSettings.joinSession = getCheckBox('#roomSessioning');
             saveSettings();
         });
 
-        $('#favEnable').click(() => {
+        $('#favEnable').click(function () {
             sessionSettings.joinFavorites = getCheckBox('#favEnable');
             saveSettings();
         });
 
-        $('#favAdd').click(() => {
+        $('#favAdd').click(function () {
             parseFavoriteRoom($('#favRoom').val());
             saveSettings();
         });
 
-        $('#favRemove').click(() => {
+        $('#favRemove').click(function () {
             removeFavoriteRoom();
             saveSettings();
         });
 
-        $('#resetSession').click(() => {
+        $('#resetSession').click(function () {
             clearRoomSession();
             saveSettings();
         });
@@ -1233,7 +1263,7 @@ var sessionModule = (function () {
             autoJoinTimer = setInterval(autoJoiningHandler, AUTOJOIN_INTERVAL);
         }
 
-        connectionStabilityTimer = setTimeout(() => {
+        connectionStabilityTimer = setTimeout(function () {
             console.log('RPH Tools[connectionStabilityTimeout] - Connection considered stable');
             sessionSettings.autoRefreshAttempts = MAX_AUTO_REFRESH_ATTEMPTS;
             saveSettings();
@@ -1242,7 +1272,7 @@ var sessionModule = (function () {
         chatSocket.on('disconnect', function () {
             clearTimeout(connectionStabilityTimer);
             if (sessionSettings.autoRefresh && sessionSettings.autoRefreshAttempts > 0) {
-                setTimeout(() => {
+                setTimeout(function () {
                     sessionSettings.autoRefreshAttempts -= 1;
                     sessionSettings.dcHappened = true;
                     saveSettings();
@@ -1295,7 +1325,7 @@ var sessionModule = (function () {
                 '</div>'
             ).dialog({
                 open: function (event, ui) {
-                    setTimeout(() => {
+                    setTimeout(function () {
                         $('#rpht-autojoin').dialog('close');
                     }, AUTOJOIN_TIMEOUT_SEC);
                 },
@@ -1323,10 +1353,9 @@ var sessionModule = (function () {
             JoinFavoriteRooms();
         }
 
-        setTimeout(() => {
+        setTimeout(function () {
             if (sessionSettings.joinSession || dcHappenedShadow) {
                 dcHappenedShadow = false;
-                console.log('Joining rooms');
                 clearRoomSession();
                 JoinSessionedRooms();
             }
@@ -1569,9 +1598,7 @@ var pmModule = (function () {
             '</p>' +
             '<label class="rpht_labels">PM Sound: </label><input type="text" id="pmPingURL" name="pmPingURL">' +
             '<br /><br />' +
-            '<label class="rpht_labels">Mute PMs: </label><input style="width: 40px;" type="checkbox" id="pmMute" name="pmMute">' +
-            '<br /><br />' +
-            '<label class="rpht_labels">No Image Icons: </label><input style="width: 40px;" type="checkbox" id="pmIconsDisable" name="pmIconsDisable">'
+            '<label class="rpht_labels">Mute PMs: </label><input style="width: 40px;" type="checkbox" id="pmMute" name="pmMute">'
     };
 
     var awayMessages = {};
@@ -1733,7 +1760,6 @@ var pmModule = (function () {
         localStorage.removeItem(localStorageName);
         pmSettings = {
             'audioUrl': 'http://chat.rphaven.com/sounds/imsound.mp3',
-            'noIcons': false,
         };
         populateSettings();
     };
@@ -1779,8 +1805,9 @@ var rngModule = (function () {
         'tabContents': '<h3>Random Number Generators</h3>' +
             '<div>' +
             '<h4>Shortcuts</h4><br />' +
-            '<p>/coinflip - Does a coin toss</p>' +
-            '<p>/roll [num]d[num] - Dice roll. If no argument is given, it rolls 1d1000. Example: /roll 2d6 will roll 2 dices with 6 sides</p>' +
+            '<p><span style="font-family: courier">/coinflip</span> - Does a coin toss</p>' +
+            '<p><span style="font-family: courier">/roll [num]d[num]</span> - Dice roll. ' + 
+            'If no argument is given, it rolls 1d1000. Example: <span style="font-family: courier">/roll 2d6</span> will roll 2 dices with 6 sides</p>' +
             '</div>' +
             '<div id="coinFlipOptions">' +
             '<h4>Coin toss</h4><br />' +
@@ -2122,11 +2149,11 @@ var blockingModule = (function () {
  */
 var moddingModule = (function () {
     var settings = {
-        'alertWords': [],
-        'kickWords': [],
-        'enableAutoKick': false,
-        'enableAutoBan': false,
+        'alertWords': '',
+        'kickWords': '',
+        'banWords': '',
         'autoKickMsg': '',
+        'floodAction': 'kick',
         'alertUrl': 'http://chat.rphaven.com/sounds/boop.mp3',
     };
 
@@ -2138,15 +2165,12 @@ var moddingModule = (function () {
         'tabContents': '<h3>Modding</h3>' +
             '<div>' +
             '<h4>Shortcuts</h4><br />' +
-            '<p><strong>Note:</strong>This must be done with the mod\'s chat tab selected.</p>' +
-            '<p>/kick [username],[reason] - Kicks a person from the chat room with the reason. Example: /kick Alice,Being rude</p>' +
-            '<p>/ban [username],[reason] - Bans a person from the chat room with the reason (optional). Example: /ban Bob,Being rude</p>' +
-            '<p>/unban [username],[reason] - Unbans a person from the chat room with the reason (optional). </p>' +
+            '<p><strong>Note:</strong> This must be done with the mod\'s chat tab selected.</p>' +
+            '<p>General form: <span style="font-family: courier;">/[action] [username],[reason]</span>. The reason is optional. Example: /kick Alice,Being rude</p>' +
+            '<p>Supported actions: kick, ban, unban, add-mod, remove-mod, add-owner, remove-owner</p>' +
             '</div>' +
             '<div>' +
             '<h4>Mod commands</h4><br />' +
-            '<p>This will only work if you\'re actually a mod and you own the user name.</p>' +
-            '<br />' +
             '<label class="rpht_labels">Room-Name pair</label>' +
             '<select style="width: 300px;" id="roomModSelect">' +
             '<option value="">&lt;Blank out fields&gt;</option>' +
@@ -2159,7 +2183,7 @@ var moddingModule = (function () {
             '<label class="rpht_labels">Message:</label><input style="width: 300px;" type="text" id="modMessageTextInput" placeholder="Message">' +
             '<br/><br/>' +
             '<p>Perform action on these users (comma separated): </p>' +
-            '<textarea name="modTargetTextInput" id="modTargetTextInput" rows=6 class="rpht_textarea"></textarea>' +
+            '<textarea name="modTargetTextInput" id="modTargetTextInput" rows=2 class="rpht_textarea"></textarea>' +
             '<br/><br/>' +
             '<button style="width: 60px;" type="button" id="kickButton">Kick</button>' +
             '<button style="margin-left: 30px; width: 60px;" type="button" id="banButton">Ban</button>' +
@@ -2172,39 +2196,27 @@ var moddingModule = (function () {
             '<button type="button" id="resetPwButton">Reset PW</button>' +
             '<br/><br/>' +
             '</div><div>' +
-            '<h4>Word Alerter</h4><br />' +
-            '<p>Words to trigger alert (comma separated, no spaces)</p>' +
-            '<textarea name="modAlertWords" id="modAlertWords" rows=6 class="rpht_textarea"></textarea>' +
+            '<h4>Message filters</h4><br />' +
+            '<p><strong>Note:</strong> Separate all entries with a pipe character ( | ). To disable, empty the textbox.</p>' +
             '<br/><br/>' +
-            '<label class="rpht_labels">Alert Sound URL: </label><input style="width: 370px;" type="text" id="modAlertUrl" name="modAlertUrl">' +
+            '<p>Alert only</p>' +
+            '<textarea name="alertTriggers" id="alertTriggers" rows=4 class="rpht_textarea"></textarea>' +
             '<br/><br/>' +
-            '</div><div>' +
-            '<h4>Auto-kick/ban</h4><br />' +
-            '<p>Triggers (separate by pipe | )</p>' +
-            '<textarea name="autoKickTriggers" id="autoKickTriggers" rows=6 class="rpht_textarea"></textarea>' +
+            '<p>Auto-Kick user</p>' +
+            '<textarea name="autoKickTriggers" id="autoKickTriggers" rows=4 class="rpht_textarea"></textarea>' +
+            '<br/><br/>' +
+            '<p>Auto-Ban user</p>' +
+            '<textarea name="autoBanTriggers" id="autoBanTriggers" rows=4 class="rpht_textarea"></textarea>' +
+            '<br/><br/>' +
+            '<label class="rpht_labels">Action on flooding</label><select style="width: 300px;" id="floodActionDroplist"></select>' +
             '<br/><br/>' +
             '<label class="rpht_labels">Message:</label><input style="width: 300px;" type="text" id="autoKickMessage" placeholder="Message">' +
-            '<br/>' +
-            '<label class="rpht_labels">Enable autokick</label><input style="width: 40px;" type="checkbox" id="autoKickEnable" name="autoKickEnable">' +
-            '<br/>' +
-            '<label class="rpht_labels">Ban instead of kick</label><input style="width: 40px;" type="checkbox" id="autoBanEnable" name="autoBanEnable">' +
             '</div>'
-
     };
 
     var alertSound = null;
 
     var roomNamePairs = {};
-
-    const actionToString = {
-        'ban': 'Banning: ',
-        'unban': 'Unbanning: ',
-        'add-mod': 'Adding mod: ',
-        'remove-mod': 'Removing mod: ',
-        'add-owner': 'Adding owner: ',
-        'remove-owner': 'Removing owner: ',
-        'kick': 'Kicking: '
-    };
 
     var init = function () {
         loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
@@ -2277,25 +2289,34 @@ var moddingModule = (function () {
             }
         });
 
-        $('#autoKickTriggers').blur(() => {
+        $('#alertTriggers').blur(function () {
+            settings.alertWords = $('#alertTriggers').val();
+            saveSettings();
+        });
+
+        $('#autoKickTriggers').blur(function () {
             settings.kickWords = $('#autoKickTriggers').val();
             saveSettings();
         });
 
-        $('#autoKickEnable').change(() => {
-            settings.enableAutoKick = getCheckBox('#autoKickEnable');
+        $('#autoBanTriggers').blur(function () {
+            settings.banWords = $('#autoBanTriggers').val();
             saveSettings();
         });
 
-        $('#autoBanEnable').change(() => {
-            settings.enableAutoBan = getCheckBox('#autoBanEnable');
-            saveSettings();
-        });
-
-        $('#autoKickMessage').blur(() => {
+        $('#autoKickMessage').blur(function () {
             settings.autoKickMsg = $('#autoKickMessage').val();
             saveSettings();
         });
+
+        addToDroplist('no-act', 'Nothing', $('#floodActionDroplist'));
+        addToDroplist('kick', 'Kick', $('#floodActionDroplist'));
+        addToDroplist('ban', 'Ban', $('#floodActionDroplist'));
+        $('#floodActionDroplist').change(function () {
+            settings.floodAction = $('#floodActionDroplist option:selected').val();
+            saveSettings();
+        });
+        $('#floodActionDroplist').val(settings.floodAction);
     };
 
     /**
@@ -2344,19 +2365,7 @@ var moddingModule = (function () {
                 addModRoomPair(userObj.props, roomname);
             }
         });
-    }
-
-    var findModOfRoom = function (roomName) {
-        var modName = '';
-        for (var key in roomNamePairs) {
-            var pair = roomNamePairs[key]
-            if (pair.roomName == roomName) {
-                modName = pair.modName;
-                break;
-            }
-        }
-        return modName;
-    }
+    };
 
     /**
      * Adds a key/value pair option to the Room-Name Pair droplist.
@@ -2377,29 +2386,23 @@ var moddingModule = (function () {
             $('#roomModSelect').append('<option value="' + roomNameValue + '">' +
                 roomNamePair + '</option>');
         }
+    };
+
+
+    var processFilterAction = function (action, modName, targetName, roomName) {
+        moddingModule.emitModAction(action, targetName, modName, roomName, settings.autoKickMsg);
     }
+
+    var processFlooding = function (modName, targetName, roomName) {
+        moddingModule.emitModAction(settings.floodAction, targetName, modName, roomName, settings.autoKickMsg);
+    };
 
     /**
      * Plays the alert sound
      */
     var playAlert = function () {
-        if (alertSound !== null) {
-            alertSound.play();
-        }
+        alertSound.play();
     };
-
-    var handleAutoKick = function (modName, targetName, roomName) {
-        if (!settings.enableAutoKick && !settings.enableAutoBan) {
-            return;
-        }
-        var action = settings.enableAutoBan ? 'ban' : 'kick';
-
-        setTimeout(() => {
-                moddingModule.emitModAction(action, targetName, modName, roomName, settings.autoKickMsg);
-            },
-            (Math.random() + 1) * 1000
-        );
-    }
 
     /**
      * Saves settings to local storage
@@ -2434,25 +2437,24 @@ var moddingModule = (function () {
      * Populates the GUI with the saved settings
      */
     var populateSettings = function () {
-        $('#modAlertWords').val(settings.alertWords);
         $('#modAlertUrl').val(settings.alertUrl);
         alertSound = new Audio(settings.alertUrl);
 
+        $('#alertTriggers').val(settings.alertWords);
         $('#autoKickTriggers').val(settings.kickWords);
+        $('#autoBanTriggers').val(settings.banWords);
         $('#autoKickMessage').val(settings.autoKickMsg);
-        $('#autoKickEnable').prop('checked', settings.enableAutoKick);
-        $('#autoBanEnable').prop('checked', settings.enableAutoBan);
     };
 
     return {
         init: init,
         emitModAction: emitModAction,
         findUserAsMod: findUserAsMod,
-        findModOfRoom: findModOfRoom,
         addModRoomPair: addModRoomPair,
         playAlert: playAlert,
-        handleAutoKick: handleAutoKick,
-        loadSettings:loadSettings,
+        processFilterAction: processFilterAction,
+        processFlooding: processFlooding,
+        loadSettings: loadSettings,
         deleteSettings: deleteSettings,
 
         getHtml: function () {
@@ -2699,7 +2701,7 @@ var rphToolsModule = (function () {
             setTimeout(function () {
                 var moddingModule = getModule('Modding Module');
                 account.users.forEach(function (userObj) {
-                    if (moddingModule){
+                    if (moddingModule) {
                         moddingModule.findUserAsMod(userObj);
                     }
                     idsToNames[userObj.props.id] = userObj.props.name;

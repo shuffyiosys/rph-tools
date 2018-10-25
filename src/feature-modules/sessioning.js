@@ -75,42 +75,42 @@ var sessionModule = (function () {
         sessionSettings.dcHappened = false;
         loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
 
-        $('#dcRefresh').click(() => {
+        $('#dcRefresh').click(function () {
             sessionSettings.autoRefresh = getCheckBox('#dcRefresh');
             saveSettings();
         });
 
-        $('#refreshTime').change(() => {
+        $('#refreshTime').change(function () {
             sessionSettings.refreshSecs = $('#refreshTime').val();
             saveSettings();
         });
 
-        $('#canCancelJoining').click(() => {
+        $('#canCancelJoining').click(function () {
             sessionSettings.canCancel = getCheckBox('#canCancelJoining');
             saveSettings();
         });
 
-        $('#roomSessioning').click(() => {
+        $('#roomSessioning').click(function () {
             sessionSettings.joinSession = getCheckBox('#roomSessioning');
             saveSettings();
         });
 
-        $('#favEnable').click(() => {
+        $('#favEnable').click(function () {
             sessionSettings.joinFavorites = getCheckBox('#favEnable');
             saveSettings();
         });
 
-        $('#favAdd').click(() => {
+        $('#favAdd').click(function () {
             parseFavoriteRoom($('#favRoom').val());
             saveSettings();
         });
 
-        $('#favRemove').click(() => {
+        $('#favRemove').click(function () {
             removeFavoriteRoom();
             saveSettings();
         });
 
-        $('#resetSession').click(() => {
+        $('#resetSession').click(function () {
             clearRoomSession();
             saveSettings();
         });
@@ -123,7 +123,7 @@ var sessionModule = (function () {
             autoJoinTimer = setInterval(autoJoiningHandler, AUTOJOIN_INTERVAL);
         }
 
-        connectionStabilityTimer = setTimeout(() => {
+        connectionStabilityTimer = setTimeout(function () {
             console.log('RPH Tools[connectionStabilityTimeout] - Connection considered stable');
             sessionSettings.autoRefreshAttempts = MAX_AUTO_REFRESH_ATTEMPTS;
             saveSettings();
@@ -132,7 +132,7 @@ var sessionModule = (function () {
         chatSocket.on('disconnect', function () {
             clearTimeout(connectionStabilityTimer);
             if (sessionSettings.autoRefresh && sessionSettings.autoRefreshAttempts > 0) {
-                setTimeout(() => {
+                setTimeout(function () {
                     sessionSettings.autoRefreshAttempts -= 1;
                     sessionSettings.dcHappened = true;
                     saveSettings();
@@ -185,7 +185,7 @@ var sessionModule = (function () {
                 '</div>'
             ).dialog({
                 open: function (event, ui) {
-                    setTimeout(() => {
+                    setTimeout(function () {
                         $('#rpht-autojoin').dialog('close');
                     }, AUTOJOIN_TIMEOUT_SEC);
                 },
@@ -213,10 +213,9 @@ var sessionModule = (function () {
             JoinFavoriteRooms();
         }
 
-        setTimeout(() => {
+        setTimeout(function () {
             if (sessionSettings.joinSession || dcHappenedShadow) {
                 dcHappenedShadow = false;
-                console.log('Joining rooms');
                 clearRoomSession();
                 JoinSessionedRooms();
             }
