@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name       RPH Tools Test
+// @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
 // @version    4.0.9
 // @description Adds extended settings to RPH

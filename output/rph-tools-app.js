@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name       RPH Tools Test
+// @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
 // @version    4.0.9
 // @description Adds extended settings to RPH
@@ -383,12 +383,11 @@ var chatModule = (function () {
             '<label class="rpht_labels">Ping preview:</label><span id="pingPreviewText"></span>' +
             '</div><div>' +
             '<h4>Flood Filtering</h4>' +
-            '<br /><br />' +
             '<label class="rpht_labels">Filter flooding </label><input style="width: 40px;" type="checkbox" id="filterFlood" name="filterFlood">' +
             '<br /><br />' +
             '<label class="rpht_labels">Filter Strength:</label><select  style="width: 300px;" id="filterStrengthDroplist"></select>' +
             '<br /><br />' +
-            '<button style="margin-left: 557px;" type="button" id="resetFilters">Reset filter</button>' +
+            '<button style="margin-left: 546px;" type="button" id="resetFilters">Reset filter</button>' +
             '</div>'
     }
 
@@ -563,7 +562,7 @@ var chatModule = (function () {
             addNameToUI(thisRoom, User);
 
             if (moddingModule !== null && isModOfRoom(thisRoom)) {
-                moddingModule.addModRoomPair(userId, thisRoom.props.name);
+                moddingModule.addModRoomPair(User.props, thisRoom.props.name);
             }
 
             if (sessionModule !== null) {
@@ -617,13 +616,13 @@ var chatModule = (function () {
             filterMsgFlag = processMsgFitler(thisRoom, data, User);
 
             /* Perform mod actions */
-            if (moddingModule !== null) {
+            if (moddingModule !== null && isModOfRoom(thisRoom)) {
                 var modSettings = moddingModule.getSettings();
                 var modName = getModForRoom(thisRoom);
                 testRegex = matchPing(msg, modSettings.alertWords, false, true);
 
                 // Process alert
-                if (modSettings.alertWords !== '') {
+                if (modSettings.alertWords) {
                     var alertRegex = new RegExp(modSettings.alertWords, 'gi');
                     if (msg.match(alertRegex)) {
                         msg = highlightPing(msg, alertRegex, "#EEE", "#E00", true, false);
@@ -631,13 +630,13 @@ var chatModule = (function () {
                         moddingModule.playAlert();
                     }
                 }
-                if (modSettings.kickWords !== '') {
+                if (modSettings.kickWords) {
                     var kickRegex = new RegExp(modSettings.kickWords, 'gi');
                     if (msg.match(kickRegex)) {
                         moddingModule.processFilterAction('kick', modName, User.props.name, thisRoom.props.name);
                     }
                 }
-                if (modSettings.banWords !== '') {
+                if (modSettings.banWords) {
                     var banRegex = new RegExp(modSettings.banWords, 'gi');
                     if (msg.match(banRegex)) {
                         moddingModule.processFilterAction('ban', modName, User.props.name, thisRoom.props.name);
@@ -1186,8 +1185,8 @@ var sessionModule = (function () {
             '<label class="rpht_labels">Refresh on Disconnect: </label><input style="width: 40px;" type="checkbox" id="dcRefresh" name="dcRefresh">' +
             '<br /><br />' +
             '<label class="rpht_labels">Auto-refresh time: </label><input style="width: 64px;" type="number" id="refreshTime" name="refreshTime" max="60" min="5" value="10"> seconds' +
-            '<br /><br /><br /><br />' +
-            '<button style="margin-left: 586px;" type="button" id="resetSession">Reset Session</button>' +
+            '<br /><br />' +
+            '<button style="margin-left: 310px;" type="button" id="resetSession">Reset Session</button>' +
             '</div><div>' +
             '<h4>Auto Joining</h4>' +
             '<label class="rpht_labels">Can Cancel: </label><input style="width: 40px;" type="checkbox" id="canCancelJoining" name="canCancelJoining">' +
@@ -2202,15 +2201,16 @@ var moddingModule = (function () {
             '<p>Alert only</p>' +
             '<textarea name="alertTriggers" id="alertTriggers" rows=4 class="rpht_textarea"></textarea>' +
             '<br/><br/>' +
-            '<p>Auto-Kick user</p>' +
+            '<p>Auto-Kick words</p>' +
             '<textarea name="autoKickTriggers" id="autoKickTriggers" rows=4 class="rpht_textarea"></textarea>' +
             '<br/><br/>' +
-            '<p>Auto-Ban user</p>' +
+            '<p>Auto-Ban words</p>' +
             '<textarea name="autoBanTriggers" id="autoBanTriggers" rows=4 class="rpht_textarea"></textarea>' +
             '<br/><br/>' +
             '<label class="rpht_labels">Action on flooding</label><select style="width: 300px;" id="floodActionDroplist"></select>' +
             '<br/><br/>' +
             '<label class="rpht_labels">Message:</label><input style="width: 300px;" type="text" id="autoKickMessage" placeholder="Message">' +
+            '<br /><br />' +
             '</div>'
     };
 

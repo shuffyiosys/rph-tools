@@ -74,12 +74,11 @@ var chatModule = (function () {
             '<label class="rpht_labels">Ping preview:</label><span id="pingPreviewText"></span>' +
             '</div><div>' +
             '<h4>Flood Filtering</h4>' +
-            '<br /><br />' +
             '<label class="rpht_labels">Filter flooding </label><input style="width: 40px;" type="checkbox" id="filterFlood" name="filterFlood">' +
             '<br /><br />' +
             '<label class="rpht_labels">Filter Strength:</label><select  style="width: 300px;" id="filterStrengthDroplist"></select>' +
             '<br /><br />' +
-            '<button style="margin-left: 557px;" type="button" id="resetFilters">Reset filter</button>' +
+            '<button style="margin-left: 546px;" type="button" id="resetFilters">Reset filter</button>' +
             '</div>'
     }
 
@@ -254,7 +253,7 @@ var chatModule = (function () {
             addNameToUI(thisRoom, User);
 
             if (moddingModule !== null && isModOfRoom(thisRoom)) {
-                moddingModule.addModRoomPair(userId, thisRoom.props.name);
+                moddingModule.addModRoomPair(User.props, thisRoom.props.name);
             }
 
             if (sessionModule !== null) {
@@ -308,13 +307,13 @@ var chatModule = (function () {
             filterMsgFlag = processMsgFitler(thisRoom, data, User);
 
             /* Perform mod actions */
-            if (moddingModule !== null) {
+            if (moddingModule !== null && isModOfRoom(thisRoom)) {
                 var modSettings = moddingModule.getSettings();
                 var modName = getModForRoom(thisRoom);
                 testRegex = matchPing(msg, modSettings.alertWords, false, true);
 
                 // Process alert
-                if (modSettings.alertWords !== '') {
+                if (modSettings.alertWords) {
                     var alertRegex = new RegExp(modSettings.alertWords, 'gi');
                     if (msg.match(alertRegex)) {
                         msg = highlightPing(msg, alertRegex, "#EEE", "#E00", true, false);
@@ -322,13 +321,13 @@ var chatModule = (function () {
                         moddingModule.playAlert();
                     }
                 }
-                if (modSettings.kickWords !== '') {
+                if (modSettings.kickWords) {
                     var kickRegex = new RegExp(modSettings.kickWords, 'gi');
                     if (msg.match(kickRegex)) {
                         moddingModule.processFilterAction('kick', modName, User.props.name, thisRoom.props.name);
                     }
                 }
-                if (modSettings.banWords !== '') {
+                if (modSettings.banWords) {
                     var banRegex = new RegExp(modSettings.banWords, 'gi');
                     if (msg.match(banRegex)) {
                         moddingModule.processFilterAction('ban', modName, User.props.name, thisRoom.props.name);

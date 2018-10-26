@@ -58,15 +58,16 @@ var moddingModule = (function () {
             '<p>Alert only</p>' +
             '<textarea name="alertTriggers" id="alertTriggers" rows=4 class="rpht_textarea"></textarea>' +
             '<br/><br/>' +
-            '<p>Auto-Kick user</p>' +
+            '<p>Auto-Kick words</p>' +
             '<textarea name="autoKickTriggers" id="autoKickTriggers" rows=4 class="rpht_textarea"></textarea>' +
             '<br/><br/>' +
-            '<p>Auto-Ban user</p>' +
+            '<p>Auto-Ban words</p>' +
             '<textarea name="autoBanTriggers" id="autoBanTriggers" rows=4 class="rpht_textarea"></textarea>' +
             '<br/><br/>' +
             '<label class="rpht_labels">Action on flooding</label><select style="width: 300px;" id="floodActionDroplist"></select>' +
             '<br/><br/>' +
             '<label class="rpht_labels">Message:</label><input style="width: 300px;" type="text" id="autoKickMessage" placeholder="Message">' +
+            '<br /><br />' +
             '</div>'
     };
 
