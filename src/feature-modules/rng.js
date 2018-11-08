@@ -109,9 +109,9 @@ var rngModule = (function () {
     var genCoinFlip = function () {
         var coinMsg = '(( Coin toss: ';
         if (Math.ceil(Math.random() * 2) == 2) {
-            coinMsg += '**heads!**))';
+            coinMsg += 'heads!))';
         } else {
-            coinMsg += '**tails!**))';
+            coinMsg += 'tails!))';
         }
 
         return attachIntegrity(coinMsg);
@@ -156,9 +156,9 @@ var rngModule = (function () {
      */
     var genRandomNum = function (minNum, maxNum) {
         var ranNumMsg = '(( Random number generated (' + minNum + ' to ' +
-            maxNum + '): **';
+            maxNum + '): ';
         ranNumMsg += Math.floor((Math.random() * (maxNum - minNum) + minNum)) +
-            '** ))';
+            ' ))';
         return attachIntegrity(ranNumMsg);
     };
 
@@ -176,12 +176,7 @@ var rngModule = (function () {
 
         /* Populate room name based on if showing usernames is checked. */
         if (chatModule) {
-            var chatSettings = chatModule.getSettings();
-            if (chatSettings.chatSettings.showNames) {
-                room_name = $('li.active').find("span:first").text();
-            } else {
-                room_name = $('li.active')[0].textContent.slice(0, -1);
-            }
+            room_name = $('li.active').find("span:first").text();
         } else {
             room_name = $('li.active')[0].textContent.slice(0, -1);
         }

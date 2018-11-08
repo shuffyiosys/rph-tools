@@ -346,7 +346,7 @@ var chatModule = (function () {
         classes = getClasses(User, thisRoom);
 
         /* If there's a verification mark, check to see if it's good */
-        if (msg[msg.length - 1] === '\u200b') {
+        if (msg.indexOf('\u200b') > -1) {
             var verifiedMsg = verifyMessage(msg);
             msg = stripVerification(msg);
             if (verifiedMsg){
@@ -521,7 +521,7 @@ var chatModule = (function () {
             case '/coinflip':
                 var rngModule = rphToolsModule.getModule('RNG Module');
                 if (rngModule) {
-                    inputTextBox.val(rngModule.genCoinFlip() + '\u200b');
+                    inputTextBox.val(rngModule.genCoinFlip());
                     sendChatMessage(inputTextBox, Room, User);
                 }
                 break;
@@ -538,7 +538,7 @@ var chatModule = (function () {
                     if (isNaN(die) || isNaN(sides)) {
                         error = true;
                     } else {
-                        inputTextBox.val(rngModule.getDiceRoll(die, sides, true) + '\u200b');
+                        inputTextBox.val(rngModule.getDiceRoll(die, sides, true));
                         sendChatMessage(inputTextBox, Room, User);
                     }
                 }

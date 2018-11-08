@@ -655,7 +655,7 @@ var chatModule = (function () {
         classes = getClasses(User, thisRoom);
 
         /* If there's a verification mark, check to see if it's good */
-        if (msg[msg.length - 1] === '\u200b') {
+        if (msg.indexOf('\u200b') > -1) {
             var verifiedMsg = verifyMessage(msg);
             msg = stripVerification(msg);
             if (verifiedMsg){
@@ -772,6 +772,9 @@ var chatModule = (function () {
         var recvdHash = message.substring(delimitChar + 1);
         var origMsg = message.substring(0, delimitChar);
 
+        console.log("Original message:", origMsg);
+        console.log("Received hash:", parseInt(recvdHash));
+        console.log("Computed hash:", origMsg.hashCode())
         return (origMsg.hashCode() == parseInt(recvdHash));
     };
 
@@ -830,7 +833,7 @@ var chatModule = (function () {
             case '/coinflip':
                 var rngModule = rphToolsModule.getModule('RNG Module');
                 if (rngModule) {
-                    inputTextBox.val(rngModule.genCoinFlip() + '\u200b');
+                    inputTextBox.val(rngModule.genCoinFlip());
                     sendChatMessage(inputTextBox, Room, User);
                 }
                 break;
@@ -847,7 +850,7 @@ var chatModule = (function () {
                     if (isNaN(die) || isNaN(sides)) {
                         error = true;
                     } else {
-                        inputTextBox.val(rngModule.getDiceRoll(die, sides, true) + '\u200b');
+                        inputTextBox.val(rngModule.getDiceRoll(die, sides, true));
                         sendChatMessage(inputTextBox, Room, User);
                     }
                 }
@@ -1942,9 +1945,9 @@ var rngModule = (function () {
     var genCoinFlip = function () {
         var coinMsg = '(( Coin toss: ';
         if (Math.ceil(Math.random() * 2) == 2) {
-            coinMsg += '**heads!**))';
+            coinMsg += 'heads!))';
         } else {
-            coinMsg += '**tails!**))';
+            coinMsg += 'tails!))';
         }
 
         return attachIntegrity(coinMsg);
@@ -1989,9 +1992,9 @@ var rngModule = (function () {
      */
     var genRandomNum = function (minNum, maxNum) {
         var ranNumMsg = '(( Random number generated (' + minNum + ' to ' +
-            maxNum + '): **';
+            maxNum + '): ';
         ranNumMsg += Math.floor((Math.random() * (maxNum - minNum) + minNum)) +
-            '** ))';
+            ' ))';
         return attachIntegrity(ranNumMsg);
     };
 
@@ -2009,12 +2012,7 @@ var rngModule = (function () {
 
         /* Populate room name based on if showing usernames is checked. */
         if (chatModule) {
-            var chatSettings = chatModule.getSettings();
-            if (chatSettings.chatSettings.showNames) {
-                room_name = $('li.active').find("span:first").text();
-            } else {
-                room_name = $('li.active')[0].textContent.slice(0, -1);
-            }
+            room_name = $('li.active').find("span:first").text();
         } else {
             room_name = $('li.active')[0].textContent.slice(0, -1);
         }
