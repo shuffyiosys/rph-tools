@@ -16,9 +16,8 @@ This will play an audio cue plus highlight the text color when a message with a 
 5. Add matching options to taste. "Exact Match" will only match whole words (e.g., "Mel" only pings on "Mel" and not "Melody"). Case sensitive will take into account using uppercase letters or not (e.g., "Mel" only pings on "Mel" and not "mel")
 6. You can enter words in the "Ping Tester" section. Focus away (i.e., click out of it) to test if it triggers a ping or not.
 
-### Other Settings
-* "No image icons" prevents links to small images from being replaced by said image.
-* "Show username in tabs & textbox" shows the username of the current selected tab in the tab itself and the textbox input. If this setting is changed, it requires the user rejoin the room.
+### Flood Filtering
+This will monitor user messages and filter them out if the script detects they are attempting to flood/spam the room. Various strength levels can be used.
 
 ## Sessions
 ### Auto-Refresh
@@ -78,8 +77,17 @@ A set of tools to aid in moderating a room. Note this only works if you are actu
 
 ### Word Alerter
 This is to help mods track certain words that people in the chatroom shouldn't say. To use:
-1. Enter the words or phrases in the text field, separated by commas without spaces in between.
-2. Set the URL where the alert sound file is. It must be a .wav, .mp3, or .ogg.
+1. Enter the words or phrases in the text field, separated by a pipe (|) without spaces in between.
+2. To disable this feature, empty out the text box.
+
+### Auto-kick and Auto-Ban
+This will automatically kick or ban a user based on the phrases in the text box.
+1. Enter the words or phrases in the text field, separated by a pipe (|) without spaces in between.
+2. To disable this feature, empty out the text box.
+
+### Perform mod action on flooding
+If filter flooding is enabled, then when flooding is detected, an action can be performed as well.
+1. Set the action to do when flooding is detected.
 
 ## Settings
 This allows you to import or export your settings.

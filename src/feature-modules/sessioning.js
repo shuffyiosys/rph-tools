@@ -20,11 +20,7 @@ var sessionModule = (function () {
 
     var waitForDialog = true;
 
-    var dcHappenedShadow = false;
-
     var sessionShadow = [];
-
-    var connectionStabilityTimer = null;
 
     var MAX_ROOMS = 30;
 
@@ -72,7 +68,6 @@ var sessionModule = (function () {
 
     var init = function () {
         rphToolsModule.registerDroplist($('#favUserDropList'));
-        sessionSettings.dcHappened = false;
         loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
 
         $('#dcRefresh').click(function () {
@@ -115,22 +110,22 @@ var sessionModule = (function () {
             saveSettings();
         });
 
-        dcHappenedShadow = sessionSettings.dcHappened;
-        sessionShadow = sessionSettings.roomSession;
-
         if (determineAutojoin()) {
-            waitForDialog = sessionSettings.canCancel;
             autoJoinTimer = setInterval(autoJoiningHandler, AUTOJOIN_INTERVAL);
+            sessionSettings.dcHappened = false;
+            saveSettings();
+        }
+        else {
+            clearRoomSession();
         }
 
-        connectionStabilityTimer = setTimeout(function () {
+        setTimeout(function () {
             console.log('RPH Tools[connectionStabilityTimeout] - Connection considered stable');
             sessionSettings.autoRefreshAttempts = MAX_AUTO_REFRESH_ATTEMPTS;
             saveSettings();
         }, REFRESH_ATTEMPTS_TIMEOUT);
 
         chatSocket.on('disconnect', function () {
-            clearTimeout(connectionStabilityTimer);
             if (sessionSettings.autoRefresh && sessionSettings.autoRefreshAttempts > 0) {
                 setTimeout(function () {
                     sessionSettings.autoRefreshAttempts -= 1;
@@ -140,7 +135,6 @@ var sessionModule = (function () {
                     window.location.reload(true);
                 }, sessionSettings.refreshSecs * 1000);
             } else if (sessionSettings.autoRefresh) {
-                console.log(sessionSettings.autoRefresh, sessionSettings.autoRefreshAttempts);
                 $('<div id="rpht-max-refresh" class="inner">' +
                     '<p>Max auto refresh attempts tried. You will need to manually refresh.</p>' +
                     '</div>'
@@ -156,16 +150,34 @@ var sessionModule = (function () {
         });
     }
 
+    /**
+     * Determining auto-joining should be done
+     * 1. Joining favorites & there are favorite rooms
+     * 2. Join last session & there are rooms in the session
+     * 3. Auto refresh & disconnect happened & there are refresh attempts left
+     */
     var determineAutojoin = function () {
-        var hasRooms = false;
-        var autoJoin = sessionSettings.joinFavorites;
-        autoJoin |= sessionSettings.joinSession;
-        autoJoin |= sessionSettings.dcHappened;
+        var autoJoin = false;
 
-        hasRooms |= (sessionSettings.favRooms.length > 0);
-        hasRooms |= (sessionSettings.roomSession.length > 0);
+        if (sessionSettings.joinFavorites === true &&
+            sessionSettings.favRooms.length > 0) {
+            autoJoin = true;
+        }
 
-        return autoJoin && hasRooms && (sessionSettings.autoRefreshAttempts > 0);
+        if (sessionSettings.joinSession === true &&
+            sessionSettings.roomSession.length > 0) {
+            sessionShadow.push(sessionSettings.roomSession);
+            autoJoin = true;
+        }
+
+        if (sessionSettings.autoRefresh &&
+            sessionSettings.dcHappened &&
+            sessionSettings.autoRefreshAttempts > 0) {
+            sessionShadow.push(sessionSettings.roomSession);
+            autoJoin = true;
+        }
+
+        return autoJoin;
     }
 
     /**
@@ -178,7 +190,7 @@ var sessionModule = (function () {
             return;
         }
 
-        if (waitForDialog === true) {
+        if (sessionSettings.canCancel === true) {
             $('<div id="rpht-autojoin" class="inner">' +
                 '<p>Autojoining or restoring session.</p>' +
                 '<p>Press "Cancel" to stop autojoin or session restore.</p>' +
@@ -197,7 +209,6 @@ var sessionModule = (function () {
                 },
             }).dialog('open');
 
-            waitForDialog = false;
             clearTimeout(autoJoinTimer);
             autoJoinTimer = setTimeout(JoinRooms, AUTOJOIN_TIMEOUT_SEC);
         } else {
@@ -214,8 +225,8 @@ var sessionModule = (function () {
         }
 
         setTimeout(function () {
-            if (sessionSettings.joinSession || dcHappenedShadow) {
-                dcHappenedShadow = false;
+            if ( sessionSettings.autoRefresh || sessionSettings.joinSession ) {
+                console.log('Joining sessioned rooms', sessionShadow);
                 clearRoomSession();
                 JoinSessionedRooms();
             }
@@ -273,6 +284,7 @@ var sessionModule = (function () {
                 'roomname': roomname,
                 'user': userid
             });
+            saveSettings();
         }
     };
 
@@ -283,6 +295,7 @@ var sessionModule = (function () {
             if (room.roomname == roomname && room.user == userid) {
                 console.log('RPH Tools[removeRoomFromSession]: Removing room -', room);
                 sessionSettings.roomSession.splice(i, 1);
+                saveSettings();
             }
         }
     };

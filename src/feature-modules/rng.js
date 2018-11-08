@@ -114,7 +114,7 @@ var rngModule = (function () {
             coinMsg += '**tails!**))';
         }
 
-        return coinMsg;
+        return attachIntegrity(coinMsg);
     };
 
     /**
@@ -145,7 +145,7 @@ var rngModule = (function () {
         if (showTotals) {
             dieMsg += " (Total amount: " + totals + ")";
         }
-        return dieMsg;
+        return attachIntegrity(dieMsg);
     };
 
     /**
@@ -159,7 +159,7 @@ var rngModule = (function () {
             maxNum + '): **';
         ranNumMsg += Math.floor((Math.random() * (maxNum - minNum) + minNum)) +
             '** ))';
-        return ranNumMsg;
+        return attachIntegrity(ranNumMsg);
     };
 
     /**
@@ -172,6 +172,7 @@ var rngModule = (function () {
         var this_room = null;
         var userID = parseInt(class_name[2].substring(0, 6));
         var chatModule = rphToolsModule.getModule('Chat Module');
+        
 
         /* Populate room name based on if showing usernames is checked. */
         if (chatModule) {
@@ -186,9 +187,14 @@ var rngModule = (function () {
         }
 
         this_room = getRoom(room_name);
-        outcomeMsg += '\u200b';
         this_room.sendMessage(outcomeMsg, userID);
     };
+
+    function attachIntegrity (outcomeMsg) {
+        var outcomeHash = outcomeMsg.hashCode();
+        outcomeMsg += '\u200b' + outcomeHash;
+        return outcomeMsg;
+    }
 
     /**
      * Public members of the module exposed to others.

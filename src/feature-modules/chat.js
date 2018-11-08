@@ -345,9 +345,17 @@ var chatModule = (function () {
 
         classes = getClasses(User, thisRoom);
 
-        /* Check if this is a valid RNG */
+        /* If there's a verification mark, check to see if it's good */
         if (msg[msg.length - 1] === '\u200b') {
-            msg += '&nbsp;<span style="background:#4A4; color: #000;">&#9745;</span>';
+            var verifiedMsg = verifyMessage(msg);
+            msg = stripVerification(msg);
+            if (verifiedMsg){
+                msg += ' <span style="background:#4A4; color: #000;">&#9745;</span>';
+            }
+            else {
+                msg += ' <span style="background:#A44; color: #000;">&#x1f6c7;</span>';
+            }
+            
         }
 
         /* Add pinging higlights */
@@ -445,6 +453,30 @@ var chatModule = (function () {
     }
 
     /**
+     * If a verification mark (Unicode 200B) was in the message, check to see
+     * if it's valid by comparing the hash received vs. the original message.
+     * 
+     * @param {String} message - Incoming message
+     */
+    function verifyMessage(message){
+        var delimitChar = message.indexOf('\u200b');
+        var recvdHash = message.substring(delimitChar + 1);
+        var origMsg = message.substring(0, delimitChar);
+
+        return (origMsg.hashCode() == parseInt(recvdHash));
+    };
+
+    /**
+     * Strips off the verification stuff from the text so it's not posted.
+     * @param {String} message - Incoming message
+     */
+    function stripVerification(message){
+        var delimitChar = message.indexOf('\u200b');
+        var origMsg = message.substring(0, delimitChar);
+        return origMsg;
+    }
+
+    /**
      * Parses a slash command from an input source.
      * @param {object} inputTextBox HTML element that holds the input textbox
      * @param {object} Room Room data
@@ -456,13 +488,6 @@ var chatModule = (function () {
         var cmdArgs = newMessage.split(/ (.+)/);
 
         switch (cmdArgs[0]) {
-            case '/coinflip':
-                var rngModule = rphToolsModule.getModule('RNG Module');
-                if (rngModule) {
-                    inputTextBox.val(rngModule.genCoinFlip() + '\u200b');
-                    sendChatMessage(inputTextBox, Room, User);
-                }
-                break;
             case '/status':
             case '/away':
                 if (cmdArgs.length < 2) {
@@ -491,6 +516,13 @@ var chatModule = (function () {
                     inputTextBox.css('color', cmdArgs[1]);
                 } else {
                     error = true;
+                }
+                break;
+            case '/coinflip':
+                var rngModule = rphToolsModule.getModule('RNG Module');
+                if (rngModule) {
+                    inputTextBox.val(rngModule.genCoinFlip() + '\u200b');
+                    sendChatMessage(inputTextBox, Room, User);
                 }
                 break;
             case '/roll':

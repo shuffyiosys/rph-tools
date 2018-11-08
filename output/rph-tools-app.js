@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.0.9
+// @version    4.0.10
 // @description Adds extended settings to RPH
 // @match      http://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-var VERSION_STRING = '4.0.9';
+var VERSION_STRING = '4.0.10';
 /**
  * Gets the value from an input element.
  * @param {string} settingId Full selector of the input to get its value
@@ -654,9 +654,17 @@ var chatModule = (function () {
 
         classes = getClasses(User, thisRoom);
 
-        /* Check if this is a valid RNG */
+        /* If there's a verification mark, check to see if it's good */
         if (msg[msg.length - 1] === '\u200b') {
-            msg += '&nbsp;<span style="background:#4A4; color: #000;">&#9745;</span>';
+            var verifiedMsg = verifyMessage(msg);
+            msg = stripVerification(msg);
+            if (verifiedMsg){
+                msg += ' <span style="background:#4A4; color: #000;">&#9745;</span>';
+            }
+            else {
+                msg += ' <span style="background:#A44; color: #000;">&#x1f6c7;</span>';
+            }
+            
         }
 
         /* Add pinging higlights */
@@ -754,6 +762,30 @@ var chatModule = (function () {
     }
 
     /**
+     * If a verification mark (Unicode 200B) was in the message, check to see
+     * if it's valid by comparing the hash received vs. the original message.
+     * 
+     * @param {String} message - Incoming message
+     */
+    function verifyMessage(message){
+        var delimitChar = message.indexOf('\u200b');
+        var recvdHash = message.substring(delimitChar + 1);
+        var origMsg = message.substring(0, delimitChar);
+
+        return (origMsg.hashCode() == parseInt(recvdHash));
+    };
+
+    /**
+     * Strips off the verification stuff from the text so it's not posted.
+     * @param {String} message - Incoming message
+     */
+    function stripVerification(message){
+        var delimitChar = message.indexOf('\u200b');
+        var origMsg = message.substring(0, delimitChar);
+        return origMsg;
+    }
+
+    /**
      * Parses a slash command from an input source.
      * @param {object} inputTextBox HTML element that holds the input textbox
      * @param {object} Room Room data
@@ -765,13 +797,6 @@ var chatModule = (function () {
         var cmdArgs = newMessage.split(/ (.+)/);
 
         switch (cmdArgs[0]) {
-            case '/coinflip':
-                var rngModule = rphToolsModule.getModule('RNG Module');
-                if (rngModule) {
-                    inputTextBox.val(rngModule.genCoinFlip() + '\u200b');
-                    sendChatMessage(inputTextBox, Room, User);
-                }
-                break;
             case '/status':
             case '/away':
                 if (cmdArgs.length < 2) {
@@ -800,6 +825,13 @@ var chatModule = (function () {
                     inputTextBox.css('color', cmdArgs[1]);
                 } else {
                     error = true;
+                }
+                break;
+            case '/coinflip':
+                var rngModule = rphToolsModule.getModule('RNG Module');
+                if (rngModule) {
+                    inputTextBox.val(rngModule.genCoinFlip() + '\u200b');
+                    sendChatMessage(inputTextBox, Room, User);
                 }
                 break;
             case '/roll':
@@ -1159,11 +1191,7 @@ var sessionModule = (function () {
 
     var waitForDialog = true;
 
-    var dcHappenedShadow = false;
-
     var sessionShadow = [];
-
-    var connectionStabilityTimer = null;
 
     var MAX_ROOMS = 30;
 
@@ -1211,7 +1239,6 @@ var sessionModule = (function () {
 
     var init = function () {
         rphToolsModule.registerDroplist($('#favUserDropList'));
-        sessionSettings.dcHappened = false;
         loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
 
         $('#dcRefresh').click(function () {
@@ -1254,22 +1281,22 @@ var sessionModule = (function () {
             saveSettings();
         });
 
-        dcHappenedShadow = sessionSettings.dcHappened;
-        sessionShadow = sessionSettings.roomSession;
-
         if (determineAutojoin()) {
-            waitForDialog = sessionSettings.canCancel;
             autoJoinTimer = setInterval(autoJoiningHandler, AUTOJOIN_INTERVAL);
+            sessionSettings.dcHappened = false;
+            saveSettings();
+        }
+        else {
+            clearRoomSession();
         }
 
-        connectionStabilityTimer = setTimeout(function () {
+        setTimeout(function () {
             console.log('RPH Tools[connectionStabilityTimeout] - Connection considered stable');
             sessionSettings.autoRefreshAttempts = MAX_AUTO_REFRESH_ATTEMPTS;
             saveSettings();
         }, REFRESH_ATTEMPTS_TIMEOUT);
 
         chatSocket.on('disconnect', function () {
-            clearTimeout(connectionStabilityTimer);
             if (sessionSettings.autoRefresh && sessionSettings.autoRefreshAttempts > 0) {
                 setTimeout(function () {
                     sessionSettings.autoRefreshAttempts -= 1;
@@ -1279,7 +1306,6 @@ var sessionModule = (function () {
                     window.location.reload(true);
                 }, sessionSettings.refreshSecs * 1000);
             } else if (sessionSettings.autoRefresh) {
-                console.log(sessionSettings.autoRefresh, sessionSettings.autoRefreshAttempts);
                 $('<div id="rpht-max-refresh" class="inner">' +
                     '<p>Max auto refresh attempts tried. You will need to manually refresh.</p>' +
                     '</div>'
@@ -1295,16 +1321,34 @@ var sessionModule = (function () {
         });
     }
 
+    /**
+     * Determining auto-joining should be done
+     * 1. Joining favorites & there are favorite rooms
+     * 2. Join last session & there are rooms in the session
+     * 3. Auto refresh & disconnect happened & there are refresh attempts left
+     */
     var determineAutojoin = function () {
-        var hasRooms = false;
-        var autoJoin = sessionSettings.joinFavorites;
-        autoJoin |= sessionSettings.joinSession;
-        autoJoin |= sessionSettings.dcHappened;
+        var autoJoin = false;
 
-        hasRooms |= (sessionSettings.favRooms.length > 0);
-        hasRooms |= (sessionSettings.roomSession.length > 0);
+        if (sessionSettings.joinFavorites === true &&
+            sessionSettings.favRooms.length > 0) {
+            autoJoin = true;
+        }
 
-        return autoJoin && hasRooms && (sessionSettings.autoRefreshAttempts > 0);
+        if (sessionSettings.joinSession === true &&
+            sessionSettings.roomSession.length > 0) {
+            sessionShadow.push(sessionSettings.roomSession);
+            autoJoin = true;
+        }
+
+        if (sessionSettings.autoRefresh &&
+            sessionSettings.dcHappened &&
+            sessionSettings.autoRefreshAttempts > 0) {
+            sessionShadow.push(sessionSettings.roomSession);
+            autoJoin = true;
+        }
+
+        return autoJoin;
     }
 
     /**
@@ -1317,7 +1361,7 @@ var sessionModule = (function () {
             return;
         }
 
-        if (waitForDialog === true) {
+        if (sessionSettings.canCancel === true) {
             $('<div id="rpht-autojoin" class="inner">' +
                 '<p>Autojoining or restoring session.</p>' +
                 '<p>Press "Cancel" to stop autojoin or session restore.</p>' +
@@ -1336,7 +1380,6 @@ var sessionModule = (function () {
                 },
             }).dialog('open');
 
-            waitForDialog = false;
             clearTimeout(autoJoinTimer);
             autoJoinTimer = setTimeout(JoinRooms, AUTOJOIN_TIMEOUT_SEC);
         } else {
@@ -1353,8 +1396,8 @@ var sessionModule = (function () {
         }
 
         setTimeout(function () {
-            if (sessionSettings.joinSession || dcHappenedShadow) {
-                dcHappenedShadow = false;
+            if ( sessionSettings.autoRefresh || sessionSettings.joinSession ) {
+                console.log('Joining sessioned rooms', sessionShadow);
                 clearRoomSession();
                 JoinSessionedRooms();
             }
@@ -1412,6 +1455,7 @@ var sessionModule = (function () {
                 'roomname': roomname,
                 'user': userid
             });
+            saveSettings();
         }
     };
 
@@ -1422,6 +1466,7 @@ var sessionModule = (function () {
             if (room.roomname == roomname && room.user == userid) {
                 console.log('RPH Tools[removeRoomFromSession]: Removing room -', room);
                 sessionSettings.roomSession.splice(i, 1);
+                saveSettings();
             }
         }
     };
@@ -1902,7 +1947,7 @@ var rngModule = (function () {
             coinMsg += '**tails!**))';
         }
 
-        return coinMsg;
+        return attachIntegrity(coinMsg);
     };
 
     /**
@@ -1933,7 +1978,7 @@ var rngModule = (function () {
         if (showTotals) {
             dieMsg += " (Total amount: " + totals + ")";
         }
-        return dieMsg;
+        return attachIntegrity(dieMsg);
     };
 
     /**
@@ -1947,7 +1992,7 @@ var rngModule = (function () {
             maxNum + '): **';
         ranNumMsg += Math.floor((Math.random() * (maxNum - minNum) + minNum)) +
             '** ))';
-        return ranNumMsg;
+        return attachIntegrity(ranNumMsg);
     };
 
     /**
@@ -1960,6 +2005,7 @@ var rngModule = (function () {
         var this_room = null;
         var userID = parseInt(class_name[2].substring(0, 6));
         var chatModule = rphToolsModule.getModule('Chat Module');
+        
 
         /* Populate room name based on if showing usernames is checked. */
         if (chatModule) {
@@ -1974,9 +2020,14 @@ var rngModule = (function () {
         }
 
         this_room = getRoom(room_name);
-        outcomeMsg += '\u200b';
         this_room.sendMessage(outcomeMsg, userID);
     };
+
+    function attachIntegrity (outcomeMsg) {
+        var outcomeHash = outcomeMsg.hashCode();
+        outcomeMsg += '\u200b' + outcomeHash;
+        return outcomeMsg;
+    }
 
     /**
      * Public members of the module exposed to others.
