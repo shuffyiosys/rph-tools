@@ -5,20 +5,21 @@ var sessionModule = (function () {
     var sessionSettings = {
         'autoRefreshAttempts': 5,
         'dcHappened': false,
-        'autoRefresh': true,
-        'refreshSecs': 10,
-        'canCancel': true,
+        'autoRefresh': false,
+        'chatTextboxSave': false,
+        'pmTextboxSave': false,
+        'refreshSecs': 15,
         'joinFavorites': false,
         'joinSession': false,
         'roomSession': [],
         'favRooms': [],
+        'chatTextboxes': [],
+        'pmTextboxes': []
     };
 
-    var localStorageName = "rpht_SessionModule";
+    var localStorageName = "sessionSettings";
 
     var autoJoinTimer = null;
-
-    var waitForDialog = true;
 
     var sessionShadow = [];
 
@@ -37,20 +38,26 @@ var sessionModule = (function () {
         'tabName': 'Sessions',
         'tabContents': '<h3>Sessions</h3>' +
             '<div>' +
-            '<h4>Auto Refresh</h4> <strong>Note:</strong> This will not save your text inputs or re-join rooms with passwords.' +
+            '<h4>Auto Refresh</h4> <strong>Note:</strong> This will not re-join rooms with passwords.' +
             '<br /><br />' +
             '<label class="rpht_labels">Refresh on Disconnect: </label><input style="width: 40px;" type="checkbox" id="dcRefresh" name="dcRefresh">' +
             '<br /><br />' +
             '<label class="rpht_labels">Auto-refresh time: </label><input style="width: 64px;" type="number" id="refreshTime" name="refreshTime" max="60" min="5" value="10"> seconds' +
             '<br /><br />' +
+            '<label class="rpht_labels">Save Chatbox Inputs: </label><input style="width: 40px;" type="checkbox" id="chatTextboxSave" name="roomSessioning">' +
+            '<br /><br />' +
+            '<label class="rpht_labels">Save PM Inputs: </label><input style="width: 40px;" type="checkbox" id="pmTextboxSave" name="roomSessioning">' +
+            '<br />' +
+            '<label class="rpht_labels" style="font-size: 12px; text-align: left;">This may not restore the inputs correctly if you have a PM open, but not an active session with the person.' + 
+            '<br />' +
+            'e.g., you\'ve started a new PM, but did not send one yet.</label>' +
+            '<br /><br />' +
             '<button style="margin-left: 310px;" type="button" id="resetSession">Reset Session</button>' +
             '</div><div>' +
             '<h4>Auto Joining</h4>' +
-            '<label class="rpht_labels">Can Cancel: </label><input style="width: 40px;" type="checkbox" id="canCancelJoining" name="canCancelJoining">' +
-            '<br /><br />' +
             '<label class="rpht_labels">Join favorites: </label><input style="width: 40px;" type="checkbox" id="favEnable" name="favEnable">' +
             '<br /><br />' +
-            '<label class="rpht_labels">Always join last session: </label><input style="width: 40px;" type="checkbox" id="roomSessioning" name="roomSessioning">' +
+            '<label class="rpht_labels">Restore last session: </label><input style="width: 40px;" type="checkbox" id="roomSessioning" name="roomSessioning">' +
             '<br /><br />' +
             '<label class="rpht_labels">Username: </label><select style="width: 300px;" id="favUserDropList"></select>' +
             '<br /><br />' +
@@ -66,71 +73,102 @@ var sessionModule = (function () {
             '</div><div>'
     };
 
-    var init = function () {
-        rphToolsModule.registerDroplist($('#favUserDropList'));
-        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
+    function init() {
+        loadSettings();
 
-        $('#dcRefresh').click(function () {
+        $('#dcRefresh').click(() => {
             sessionSettings.autoRefresh = getCheckBox('#dcRefresh');
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         });
 
-        $('#refreshTime').change(function () {
+        $('#refreshTime').change(() => {
             sessionSettings.refreshSecs = $('#refreshTime').val();
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         });
 
-        $('#canCancelJoining').click(function () {
-            sessionSettings.canCancel = getCheckBox('#canCancelJoining');
-            saveSettings();
+        $('#chatTextboxSave').click( () => {
+            sessionSettings.chatTextboxSave = getCheckBox('#chatTextboxSave');
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         });
 
-        $('#roomSessioning').click(function () {
+        $('#pmTextboxSave').click( () => {
+            sessionSettings.pmTextboxSave = getCheckBox('#pmTextboxSave');
+            settingsModule.saveSettings(localStorageName, sessionSettings);
+        });
+
+        $('#roomSessioning').click(() => {
             sessionSettings.joinSession = getCheckBox('#roomSessioning');
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         });
 
-        $('#favEnable').click(function () {
+        $('#favEnable').click(() => {
             sessionSettings.joinFavorites = getCheckBox('#favEnable');
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         });
 
-        $('#favAdd').click(function () {
+        $('#favAdd').click(() => {
             parseFavoriteRoom($('#favRoom').val());
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         });
 
-        $('#favRemove').click(function () {
+        $('#favRemove').click(() => {
             removeFavoriteRoom();
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         });
 
-        $('#resetSession').click(function () {
+        $('#resetSession').click(() => {
             clearRoomSession();
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         });
 
         if (determineAutojoin()) {
             autoJoinTimer = setInterval(autoJoiningHandler, AUTOJOIN_INTERVAL);
             sessionSettings.dcHappened = false;
-            saveSettings();
-        }
-        else {
+            settingsModule.saveSettings(localStorageName, sessionSettings);
+        } else {
             clearRoomSession();
         }
 
-        setTimeout(function () {
+        setTimeout(() => {
             console.log('RPH Tools[connectionStabilityTimeout] - Connection considered stable');
             sessionSettings.autoRefreshAttempts = MAX_AUTO_REFRESH_ATTEMPTS;
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         }, REFRESH_ATTEMPTS_TIMEOUT);
 
-        chatSocket.on('disconnect', function () {
+        socket.on('restore-pms', () => {
+            if (sessionSettings.pmTextboxSave){
+                setTimeout(() => {
+                    var pmTextBoxes = $("#pm-bottom .textarea textarea");
+                    for (var i = 0; i < pmTextBoxes.length; i++){
+                        pmTextBoxes[i].value =  sessionSettings.pmTextboxes[i];
+                    }
+                }, 1000);
+            }
+        });
+
+        chatSocket.on('disconnect', () => {
+            var chatTextBoxes = $("#chat-bottom .textarea textarea");
+            var pmTextBoxes = $("#pm-bottom .textarea textarea");
+            sessionSettings.chatTextboxes = [];
+            sessionSettings.pmTextboxes = [];
+            for (var i = 0; i < chatTextBoxes.length; i++){
+                var textboxInfo = {
+                    value: chatTextBoxes[i].value,
+                    className: chatTextBoxes[i].className,
+                }
+                sessionSettings.chatTextboxes.push(textboxInfo);
+            }
+
+            for (var i = 0; i < pmTextBoxes.length; i++){
+                sessionSettings.pmTextboxes.push(pmTextBoxes[i].value);
+            }
+            settingsModule.saveSettings(localStorageName, sessionSettings);
+
             if (sessionSettings.autoRefresh && sessionSettings.autoRefreshAttempts > 0) {
-                setTimeout(function () {
+                setTimeout(() => {
                     sessionSettings.autoRefreshAttempts -= 1;
                     sessionSettings.dcHappened = true;
-                    saveSettings();
+                    settingsModule.saveSettings(localStorageName, sessionSettings);
                     window.onbeforeunload = null;
                     window.location.reload(true);
                 }, sessionSettings.refreshSecs * 1000);
@@ -141,12 +179,22 @@ var sessionModule = (function () {
                 ).dialog({
                     open: function (event, ui) {},
                     buttons: {
-                        Cancel: function () {
+                        Cancel: () => {
                             $(this).dialog("close");
                         }
                     },
                 }).dialog('open');
             }
+        });
+
+        socket.on('accounts', () => {
+            setTimeout(() => {
+                $('#favUserDropList').empty();
+                var namesToIds = getSortedNames();
+                for (var name in namesToIds) {
+                    addToDroplist(namesToIds[name], name, "#favUserDropList");
+                }
+            }, 3000);
         });
     }
 
@@ -156,7 +204,7 @@ var sessionModule = (function () {
      * 2. Join last session & there are rooms in the session
      * 3. Auto refresh & disconnect happened & there are refresh attempts left
      */
-    var determineAutojoin = function () {
+    function determineAutojoin() {
         var autoJoin = false;
 
         if (sessionSettings.joinFavorites === true &&
@@ -184,51 +232,47 @@ var sessionModule = (function () {
      * Handler for the auto-joining mechanism.
      **/
 
-    var autoJoiningHandler = function () {
+    function autoJoiningHandler() {
         /* Don't run this if there's no rooms yet. */
         if (roomnames.length === 0) {
             return;
         }
 
-        if (sessionSettings.canCancel === true) {
-            $('<div id="rpht-autojoin" class="inner">' +
-                '<p>Autojoining or restoring session.</p>' +
-                '<p>Press "Cancel" to stop autojoin or session restore.</p>' +
-                '</div>'
-            ).dialog({
-                open: function (event, ui) {
-                    setTimeout(function () {
-                        $('#rpht-autojoin').dialog('close');
-                    }, AUTOJOIN_TIMEOUT_SEC);
-                },
-                buttons: {
-                    Cancel: function () {
-                        clearTimeout(autoJoinTimer);
-                        $(this).dialog("close");
-                    }
-                },
-            }).dialog('open');
+        $('<div id="rpht-autojoin" class="inner">' +
+            '<p>Autojoining or restoring session.</p>' +
+            '<p>Press "Cancel" to stop autojoin or session restore.</p>' +
+            '</div>'
+        ).dialog({
+            open: function (event, ui) {
+                setTimeout(() => {
+                    $('#rpht-autojoin').dialog('close');
+                }, AUTOJOIN_TIMEOUT_SEC);
+            },
+            buttons: {
+                Cancel: () => {
+                    clearTimeout(autoJoinTimer);
+                    $(this).dialog("close");
+                }
+            },
+        }).dialog('open');
 
-            clearTimeout(autoJoinTimer);
-            autoJoinTimer = setTimeout(JoinRooms, AUTOJOIN_TIMEOUT_SEC);
-        } else {
-            JoinRooms();
-        }
+        clearTimeout(autoJoinTimer);
+        autoJoinTimer = setTimeout(joinRooms, AUTOJOIN_TIMEOUT_SEC);
     };
 
     /**
      * Join rooms in the favorites and what was in the session.
      */
-    var JoinRooms = function () {
+    function joinRooms() {
         if (sessionSettings.joinFavorites === true) {
-            JoinFavoriteRooms();
+            joinFavoriteRooms();
         }
 
-        setTimeout(function () {
-            if ( sessionSettings.autoRefresh || sessionSettings.joinSession ) {
+        setTimeout(() => {
+            if (sessionSettings.autoRefresh || sessionSettings.joinSession) {
                 console.log('Joining sessioned rooms', sessionShadow);
                 clearRoomSession();
-                JoinSessionedRooms();
+                joinSessionedRooms();
             }
         }, 1000);
         clearTimeout(autoJoinTimer);
@@ -237,7 +281,7 @@ var sessionModule = (function () {
     /**
      * Join rooms that were in the last session.
      */
-    var JoinSessionedRooms = function () {
+    function joinSessionedRooms() {
         for (var i = 0; i < sessionShadow.length; i++) {
             var room = sessionShadow[i];
             var roomJoined = arrayObjectIndexOf(rph.roomsJoined, 'roomname', room.roomname) > -1;
@@ -250,13 +294,17 @@ var sessionModule = (function () {
                 });
             }
         }
+
         delete sessionShadow;
+        if (sessionSettings.chatTextboxSave){
+            populateChatTextboxes();
+        }
     }
 
     /** 
      * Joins all the rooms in the favorite rooms list
      */
-    var JoinFavoriteRooms = function () {
+    function joinFavoriteRooms() {
         for (var i = 0; i < sessionSettings.favRooms.length; i++) {
             var favRoom = sessionSettings.favRooms[i];
             chatSocket.emit('join', {
@@ -265,9 +313,25 @@ var sessionModule = (function () {
                 pw: favRoom.roomPw
             });
         }
+
+        if (sessionSettings.chatTextboxSave){
+            populateChatTextboxes();
+        }
     };
 
-    var addRoomToSession = function (roomname, userid) {
+    function populateChatTextboxes () {
+        setTimeout(() => {
+            var chatTextBoxes = $("#chat-bottom .textarea textarea");
+            for (var i = 0; i < chatTextBoxes.length; i++){
+                var idx = arrayObjectIndexOf(sessionSettings.chatTextboxes, 'className', chatTextBoxes[i].className);
+                if (idx > -1) {
+                    chatTextBoxes[i].value = sessionSettings.chatTextboxes[idx].value;
+                }
+            }
+        }, 250);
+    }
+
+    function addRoomToSession(roomname, userid) {
         var alreadyInSession = false
         var roomSession = sessionSettings.roomSession
         for (var i = 0; i < roomSession.length; i++) {
@@ -284,18 +348,18 @@ var sessionModule = (function () {
                 'roomname': roomname,
                 'user': userid
             });
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         }
     };
 
-    var removeRoomFromSession = function (roomname, userid) {
+    function removeRoomFromSession(roomname, userid) {
         var roomSession = sessionSettings.roomSession
         for (var i = 0; i < roomSession.length; i++) {
             var room = roomSession[i]
             if (room.roomname == roomname && room.user == userid) {
                 console.log('RPH Tools[removeRoomFromSession]: Removing room -', room);
                 sessionSettings.roomSession.splice(i, 1);
-                saveSettings();
+                settingsModule.saveSettings(localStorageName, sessionSettings);
             }
         }
     };
@@ -303,16 +367,16 @@ var sessionModule = (function () {
     /**
      * Clear the room session.
      */
-    var clearRoomSession = function () {
+    function clearRoomSession() {
         sessionSettings.roomSession = []
-        saveSettings();
+        settingsModule.saveSettings(localStorageName, sessionSettings);
     };
 
     /** 
      * Adds an entry to the Favorite Chat Rooms list from an input
      * @param {string} roomname - Name of the room
      */
-    var parseFavoriteRoom = function (roomname) {
+    function parseFavoriteRoom(roomname) {
         var room = getRoom(roomname);
 
         if (room === undefined) {
@@ -339,7 +403,7 @@ var sessionModule = (function () {
      * Adds a favorite room to the settings list
      * @param {Object} favRoomObj - Object containing the favorite room parameters.
      */
-    var addFavoriteRoom = function (favRoomObj) {
+    function addFavoriteRoom(favRoomObj) {
         if (arrayObjectIndexOf(sessionSettings.favRooms, "_id", favRoomObj._id) === -1) {
             $('#favRoomsList').append(
                 '<option value="' + favRoomObj._id + '">' +
@@ -357,7 +421,7 @@ var sessionModule = (function () {
     /** 
      * Removes an entry to the Favorite Chat Rooms list
      */
-    var removeFavoriteRoom = function () {
+    function removeFavoriteRoom() {
         var favItem = document.getElementById("favRoomsList");
         var favItemId = $('#favRoomsList option:selected').val();
         favItem.remove(favItem.selectedIndex);
@@ -375,41 +439,33 @@ var sessionModule = (function () {
         }
     };
 
-    var saveSettings = function () {
-        localStorage.setItem(localStorageName, JSON.stringify(sessionSettings));
-    };
+    function loadSettings() {
+        var storedSettings = settingsModule.getSettings(localStorageName);
 
-    var loadSettings = function (storedSettings) {
-        if (storedSettings !== null) {
+        if (storedSettings) {
             for (var key in storedSettings) {
                 sessionSettings[key] = storedSettings[key];
             }
-            populateSettings();
         }
-    };
+        else {
+            sessionSettings = {
+                'autoRefreshAttempts': 5,
+                'dcHappened': false,
+                'autoRefresh': false,
+                'refreshSecs': 15,
+                'joinFavorites': false,
+                'joinSession': false,
+                'roomSession': [],
+                'favRooms': [],
+            };
+        }
 
-    var deleteSettings = function () {
-        sessionSettings = {
-            'autoRefreshAttempts': 5,
-            'dcHappened': false,
-            'autoRefresh': true,
-            'refreshSecs': 10,
-            'canCancel': true,
-            'joinFavorites': false,
-            'joinSession': false,
-            'roomSession': [],
-            'favRooms': [],
-        };
-
-        populateSettings();
-    }
-
-    var populateSettings = function () {
-        $('#favUserDropList').empty();
+        $('#favRoomsList').empty();
 
         $('#dcRefresh').prop("checked", sessionSettings.autoRefresh);
         $('#refreshTime').val(sessionSettings.refreshSecs);
-        $('#canCancelJoining').prop("checked", sessionSettings.canCancel);
+        $('#chatTextboxSave').prop("checked", sessionSettings.chatTextboxSave);
+        $('#pmTextboxSave').prop("checked", sessionSettings.pmTextboxSave);
         $('input#favEnable').prop("checked", sessionSettings.joinFavorites);
         $('#roomSessioning').prop("checked", sessionSettings.joinSession);
 
@@ -425,23 +481,22 @@ var sessionModule = (function () {
             $('#favAdd').text("Favorites Full");
             $('#favAdd')[0].disabled = true;
         }
-    };
+    }
+
+    function getHtml() {
+        return html;
+    }
+
+    function toString() {
+        return 'Session Module';
+    }
 
     return {
         init: init,
-        loadSettings: loadSettings,
-        deleteSettings: deleteSettings,
         addRoomToSession: addRoomToSession,
         removeRoomFromSession: removeRoomFromSession,
-
-        getHtml: function () {
-            return html;
-        },
-        toString: function () {
-            return 'Session Module';
-        },
-        getSettings: function () {
-            return sessionSettings;
-        },
+        loadSettings: loadSettings,
+        getHtml: getHtml,
+        toString: toString
     };
 }());

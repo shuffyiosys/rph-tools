@@ -6,14 +6,10 @@
 var moddingModule = (function () {
     var settings = {
         'alertWords': '',
-        'kickWords': '',
-        'banWords': '',
-        'autoKickMsg': '',
-        'floodAction': 'kick',
         'alertUrl': 'http://chat.rphaven.com/sounds/boop.mp3',
     };
 
-    var localStorageName = "rpht_modSettings";
+    var localStorageName = "modSettings";
 
     var html = {
         'tabId': 'modding-module',
@@ -52,22 +48,11 @@ var moddingModule = (function () {
             '<button type="button" id="resetPwButton">Reset PW</button>' +
             '<br/><br/>' +
             '</div><div>' +
-            '<h4>Message filters</h4><br />' +
+            '<h4>Word alerter</h4><br />' +
             '<p><strong>Note:</strong> Separate all entries with a pipe character ( | ). To disable, empty the textbox.</p>' +
             '<br/><br/>' +
-            '<p>Alert only</p>' +
             '<textarea name="alertTriggers" id="alertTriggers" rows=4 class="rpht_textarea"></textarea>' +
             '<br/><br/>' +
-            '<p>Auto-Kick words</p>' +
-            '<textarea name="autoKickTriggers" id="autoKickTriggers" rows=4 class="rpht_textarea"></textarea>' +
-            '<br/><br/>' +
-            '<p>Auto-Ban words</p>' +
-            '<textarea name="autoBanTriggers" id="autoBanTriggers" rows=4 class="rpht_textarea"></textarea>' +
-            '<br/><br/>' +
-            '<label class="rpht_labels">Action on flooding</label><select style="width: 300px;" id="floodActionDroplist"></select>' +
-            '<br/><br/>' +
-            '<label class="rpht_labels">Message:</label><input style="width: 300px;" type="text" id="autoKickMessage" placeholder="Message">' +
-            '<br /><br />' +
             '</div>'
     };
 
@@ -75,9 +60,9 @@ var moddingModule = (function () {
 
     var roomNamePairs = {};
 
-    var init = function () {
-        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
-
+    function init() {
+        loadSettings();
+        
         $('#roomModSelect').change(function () {
             var roomModeIdx = $('#roomModSelect')[0].selectedIndex;
             var roomModVal = $('#roomModSelect')[0].options[roomModeIdx].value;
@@ -135,52 +120,28 @@ var moddingModule = (function () {
 
         $('#modAlertWords').blur(function () {
             settings.alertWords = $('#modAlertWords').val().replace(/\r?\n|\r/, '');
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, settings);
         });
 
         $('#modAlertUrl').blur(function () {
             if (validateSetting('modAlertUrl', 'url')) {
                 settings.alertUrl = getInput('#modAlertUrl');
-                saveSettings();
+                settingsModule.saveSettings(localStorageName, settings);
                 alertSound = new Audio(settings.alertUrl);
             }
         });
 
         $('#alertTriggers').blur(function () {
             settings.alertWords = $('#alertTriggers').val();
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, settings);
         });
-
-        $('#autoKickTriggers').blur(function () {
-            settings.kickWords = $('#autoKickTriggers').val();
-            saveSettings();
-        });
-
-        $('#autoBanTriggers').blur(function () {
-            settings.banWords = $('#autoBanTriggers').val();
-            saveSettings();
-        });
-
-        $('#autoKickMessage').blur(function () {
-            settings.autoKickMsg = $('#autoKickMessage').val();
-            saveSettings();
-        });
-
-        addToDroplist('no-act', 'Nothing', $('#floodActionDroplist'));
-        addToDroplist('kick', 'Kick', $('#floodActionDroplist'));
-        addToDroplist('ban', 'Ban', $('#floodActionDroplist'));
-        $('#floodActionDroplist').change(function () {
-            settings.floodAction = $('#floodActionDroplist option:selected').val();
-            saveSettings();
-        });
-        $('#floodActionDroplist').val(settings.floodAction);
     };
 
     /**
      * Performs a modding action
      * @param {string} action Name of the action being performed
      */
-    var modAction = function (action) {
+    function modAction(action) {
         var targets = $('#modTargetTextInput').val().replace(/\r?\n|\r/, '');
         targets = targets.split(',');
         console.log('RPH Tools[modAction]: Performing', action, 'on', targets);
@@ -197,7 +158,7 @@ var moddingModule = (function () {
      * @param {string} action Name of the action being performed
      * @param {string} targetName User name of the recipient of the action
      */
-    var emitModAction = function (action, targetName, modName, roomName, reasonMsg) {
+    function emitModAction(action, targetName, modName, roomName, reasonMsg) {
         getUserByName(targetName, function (target) {
             getUserByName(modName, function (user) {
                 var modMessage = '';
@@ -214,7 +175,7 @@ var moddingModule = (function () {
         });
     };
 
-    var findUserAsMod = function (userObj) {
+    function findUserAsMod(userObj) {
         roomnames.forEach((roomname) => {
             var roomObj = getRoom(roomname);
             if (roomObj.props.mods.indexOf(userObj.props.id) > -1 ||
@@ -229,7 +190,7 @@ var moddingModule = (function () {
      * @param {number} userId User ID of the mod
      * @param {object} thisRoom Object containing the room data.
      */
-    var addModRoomPair = function (userProps, roomName) {
+    function addModRoomPair(userProps, roomName) {
         var roomNamePair = roomName + ': ' + userProps.name;
         var roomNameValue = roomName + '.' + userProps.id;
         var roomNameObj = {
@@ -245,63 +206,46 @@ var moddingModule = (function () {
         }
     };
 
-
-    var processFilterAction = function (action, modName, targetName, roomName) {
+    function processFilterAction(action, modName, targetName, roomName) {
         moddingModule.emitModAction(action, targetName, modName, roomName, settings.autoKickMsg);
     }
-
-    var processFlooding = function (modName, targetName, roomName) {
-        moddingModule.emitModAction(settings.floodAction, targetName, modName, roomName, settings.autoKickMsg);
-    };
 
     /**
      * Plays the alert sound
      */
-    var playAlert = function () {
+    function playAlert() {
         alertSound.play();
     };
 
-    /**
-     * Saves settings to local storage
-     */
-    var saveSettings = function () {
-        localStorage.setItem(localStorageName, JSON.stringify(settings));
-    };
-
-    /** 
-     * Loads saved settings if they exist
-     */
-    var loadSettings = function (storedSettings) {
+    function loadSettings() {
+        var storedSettings = settingsModule.getSettings(localStorageName);
         if (storedSettings) {
             settings = storedSettings;
-            populateSettings();
         }
-    };
+        else {
+            settings = {
+                'alertWords': '',
+                'alertUrl': 'http://chat.rphaven.com/sounds/boop.mp3',
+            };
+        }
 
-    /**
-     * Deleting saved settings.
-     */
-    var deleteSettings = function () {
-        localStorage.removeItem(localStorageName);
-        settings = {
-            'alertWords': [],
-            'alertUrl': 'http://chat.rphaven.com/sounds/boop.mp3',
-        };
-        populateSettings();
-    };
-
-    /**
-     * Populates the GUI with the saved settings
-     */
-    var populateSettings = function () {
         $('#modAlertUrl').val(settings.alertUrl);
         alertSound = new Audio(settings.alertUrl);
 
         $('#alertTriggers').val(settings.alertWords);
-        $('#autoKickTriggers').val(settings.kickWords);
-        $('#autoBanTriggers').val(settings.banWords);
-        $('#autoKickMessage').val(settings.autoKickMsg);
-    };
+    }
+
+    function getAlertWords() {
+        return settings.alertWords;
+    }
+
+    function getHtml() {
+        return html;
+    }
+
+    function toString() {
+        return 'Modding Module';
+    }
 
     return {
         init: init,
@@ -309,19 +253,9 @@ var moddingModule = (function () {
         findUserAsMod: findUserAsMod,
         addModRoomPair: addModRoomPair,
         playAlert: playAlert,
-        processFilterAction: processFilterAction,
-        processFlooding: processFlooding,
         loadSettings: loadSettings,
-        deleteSettings: deleteSettings,
-
-        getHtml: function () {
-            return html;
-        },
-        toString: function () {
-            return 'Modding Module';
-        },
-        getSettings: function () {
-            return settings;
-        },
+        getAlertWords: getAlertWords,
+        getHtml: getHtml,
+        toString: toString
     };
 }());

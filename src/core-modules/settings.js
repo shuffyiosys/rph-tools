@@ -22,7 +22,7 @@ var settingsModule = (function () {
     /** 
      * Initializes the GUI components of the module.
      */
-    var init = function () {
+    function init() {
         $('#importButton').click(function () {
             importSettingsHanlder();
         });
@@ -44,57 +44,34 @@ var settingsModule = (function () {
      * Handles the initial portion of importing settings. This checks the input
      * to see if it's a valid JSON formatted string.
      */
-    var importSettingsHanlder = function () {
-        settings = $('textarea#importExportTextarea').val().split("\n");
-        for (var i = 0; i < settings.length - 1; i++) {
-            try {
-                var settingsObj = JSON.parse(settings[i]);
-                console.log('RPHT [Setting Module]: Importing...', settingsObj);
-                importSettings(settingsObj);
-            } catch (err) {
-                console.log('RPH Tools[importSettings]: Error importing settings', err);
-                markProblem("importExportTextarea", true);
-            }
+    function importSettingsHanlder() {
+        try {
+            var newSettings = JSON.parse($('textarea#importExportTextarea').val());
+            localStorage.setItem(SETTINGS_NAME, JSON.stringify(newSettings));
+            rphToolsModule.getAllModules().forEach((module) => {
+                if (module.loadSettings){
+                    module.loadSettings();
+                }
+            });
+        }
+        catch {
+            console.log('[RPHT.Settings]: There was a problem with importing settings');
+            markProblem('textarea#importExportTextarea', true)
         }
     }
-    /**
-     * Takes the object from the JSON formatted string and imports it into the
-     * relevant modules
-     * @param {Object} settingsObj 
-     */
-    var importSettings = function (settingsObj) {
-        var module = rphToolsModule.getModule(settingsObj.name);
-        if (!module) {
-            return;
-        } else if (!module.loadSettings) {
-            return;
-        }
-        module.loadSettings(settingsObj.settings);
-    };
 
     /**
      * Exports settings into a JSON formatted string
      */
-    var exportSettings = function () {
-        var settingsString = "";
-        var modules = rphToolsModule.getModules();
-        for (var i = 0; i < modules.length; i++) {
-            if (modules[i].getSettings !== undefined) {
-                var modSettings = {
-                    name: modules[i].toString(),
-                    settings: modules[i].getSettings(),
-                };
-                settingsString += JSON.stringify(modSettings) + "\n";
-            }
-        }
-        return settingsString;
-    };
+    function exportSettings() {
+        return localStorage.getItem(SETTINGS_NAME);
+    }
 
     /** 
      * Logic to confirm deleting settings. The button needs to be pressed twice
      * within 10 seconds for the settings to be deleted.
      */
-    var deleteSettingsHanlder = function () {
+    function deleteSettingsHanlder() {
         if (confirmDelete === false) {
             $('#deleteSettingsButton').text('Press again to delete');
             confirmDelete = true;
@@ -105,38 +82,53 @@ var settingsModule = (function () {
                 $('#deleteSettingsButton').text('Delete Settings');
             }, 10 * 1000);
         } else if (confirmDelete === true) {
+            clearTimeout(deleteTimer);
             console.log('RPH Tools[Settings Module]: Deleting settings');
             $('#deleteSettingsButton').text('Delete Settings');
             confirmDelete = false;
-            deleteAllSettings();
-            clearTimeout(deleteTimer);
+            localStorage.removeItem(SETTINGS_NAME);
+            localStorage.setItem(SETTINGS_NAME, JSON.stringify({}));
+            rphToolsModule.getAllModules().forEach((module) => {
+                if (module.loadSettings){
+                    console.log("Reloading", module.toString());
+                    module.loadSettings();
+                }
+            });
         }
-    };
+    }
 
-    /** 
-     * Deletes all of the settings of the modules that have settings.
-     */
-    var deleteAllSettings = function () {
-        var modules = rphToolsModule.getModules();
-        for (var i = 0; i < modules.length; i++) {
-            if (modules[i].deleteSettings) {
-                modules[i].deleteSettings();
-            }
+    function saveSettings(moduleName, moduleSettings) {
+        var settings = JSON.parse(localStorage.getItem(SETTINGS_NAME));
+        settings[moduleName] = {};
+        settings[moduleName] = moduleSettings;
+        localStorage.setItem(SETTINGS_NAME, JSON.stringify(settings));
+    }
+
+    function getSettings(moduleName) {
+        var settings = JSON.parse(localStorage.getItem(SETTINGS_NAME));
+        var moduleSettings = null;
+        if (settings[moduleName]) {
+            moduleSettings = settings[moduleName];
         }
-    };
+        return moduleSettings;
+    }
+
+    function getHtml() {
+        return html;
+    }
+
+    function toString() {
+        return 'Settings Module';
+    }
 
     /** 
      * Public members of the module
      */
     return {
         init: init,
-
-        getHtml: function () {
-            return html;
-        },
-
-        toString: function () {
-            return 'Settings Module';
-        },
+        saveSettings: saveSettings,
+        getSettings: getSettings,
+        getHtml: getHtml,
+        toString: toString
     };
 }());

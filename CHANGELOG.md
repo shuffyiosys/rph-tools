@@ -1,3 +1,19 @@
+RPH Tools (4.1.0)
+--------------
+* Redid the settings store system. Everything is now under the same localstore key, rather than each module having its own key. This should help simplify settings management. However, this makes it incompatible with settings before this version.
+* Added PM and Chat textbox input saving and restoring. There are some caveats:
+  * Chatbox textbox inputs will only be restored if both the character rejoins the room. 
+  * PM textbox inputs will be out of sync if a PM session was started but the PM was not sent. It depends on what the RPH servers send over.
+
+RPH Tools (4.0.10)
+--------------
+* Added a verification check to RNG rolls. It now includes a basic hashing function that gets verified on clients that receive it. This however, invalidates the older RNG verification method.
+
+RPH Tools (4.0.9)
+--------------
+* Fixed the auto-kick and ban if-conditions. 
+* Straightened out the GUI
+
 RPH Tools (4.0.8)
 --------------
 * Defaulted all unsupported slash commands to RPH's handler.

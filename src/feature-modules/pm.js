@@ -4,6 +4,7 @@
 var pmModule = (function () {
     var pmSettings = {
         'audioUrl': 'http://chat.rphaven.com/sounds/imsound.mp3',
+        'pmMute': false,
     };
 
     var localStorageName = "rpht_PmModule";
@@ -30,11 +31,10 @@ var pmModule = (function () {
 
     var awayMessages = {};
 
-    var init = function () {
-        rphToolsModule.registerDroplist($('#pmNamesDroplist'));
-        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
-
-        $('#pmNamesDroplist').change(function () {
+    function init() {
+        loadSettings();
+        
+        $('#pmNamesDroplist').change(() => {
             var userId = $('#pmNamesDroplist option:selected').val();
             var message = '';
 
@@ -44,28 +44,31 @@ var pmModule = (function () {
             $('input#awayMessageTextbox').val(message);
         });
 
-        $('#setAwayButton').click(function () {
+        $('#setAwayButton').click(() => {
             setPmAway();
         });
 
-        $('#removeAwayButton').click(function () {
+        $('#removeAwayButton').click(() => {
             removePmAway();
         });
 
-        $('#pmPingURL').change(function () {
+        $('#pmPingURL').change(() => {
             if (validateSetting('pmPingURL', 'url')) {
                 pmSettings.audioUrl = getInput('pmPingURL');
                 $('#im-sound').children("audio").attr('src', pmSettings.audioUrl);
-                saveSettings();
+                settingsModule.saveSettings(localStorageName, pmSettings);
             }
         });
 
-        $('#pmMute').change(function () {
+        $('#pmMute').change(() => {
             if ($('#pmMute').is(":checked")) {
                 $('#im-sound').children("audio").attr('src', '');
+                pmSettings.pmMute = true;
             } else {
                 $('#im-sound').children("audio").attr('src', pmSettings.audioUrl);
+                pmSettings.pmMute = false;
             }
+            settingsModule.saveSettings(localStorageName, pmSettings);
         });
 
         socket.on('pm', function (data) {
@@ -75,13 +78,23 @@ var pmModule = (function () {
         socket.on('outgoing-pm', function (data) {
             handleOutgoingPm(data);
         });
+
+        socket.on('accounts', () => {
+            setTimeout(() => {
+                $('#pmNamesDroplist').empty();
+                var namesToIds = getSortedNames();
+                for (var name in namesToIds) {
+                    addToDroplist(namesToIds[name], name, "#pmNamesDroplist");
+                }
+            }, 3000);
+        });
     }
 
     /**
      * Handler for PMs that are incoming
      * @param {object } data Data containing the PM.
      */
-    var handleIncomingPm = function (data) {
+    function handleIncomingPm(data) {
         if (!awayMessages[data.from]) {
             return;
         }
@@ -101,7 +114,7 @@ var pmModule = (function () {
      * Handler for PMs that are outgoing
      * @param {object } data Data containing the PM.
      */
-    var handleOutgoingPm = function (data) {
+    function handleOutgoingPm(data) {
         if (!awayMessages[data.from]) {
             return;
         }
@@ -118,7 +131,7 @@ var pmModule = (function () {
     /**
      * Adds an away status to a character
      */
-    var setPmAway = function () {
+    function setPmAway() {
         var userId = $('#pmNamesDroplist option:selected').val();
         var name = $("#pmNamesDroplist option:selected").html();
         if (!awayMessages[userId]) {
@@ -145,7 +158,7 @@ var pmModule = (function () {
     /**
      * Removes an away status for a character
      */
-    var removePmAway = function () {
+    function removePmAway() {
         var userId = $('#pmNamesDroplist option:selected').val();
 
         if (!awayMessages[userId]) {
@@ -162,56 +175,33 @@ var pmModule = (function () {
         }
     };
 
-    /**
-     * Save current settings
-     */
-    var saveSettings = function () {
-        localStorage.setItem(localStorageName, JSON.stringify(pmSettings));
-    };
-
-    /**
-     * Loads settings from local storage
-     * @param {object} storedSettings Object containing the settings
-     */
-    var loadSettings = function (storedSettings) {
-        if (storedSettings !== null) {
+    function loadSettings() {
+        var storedSettings = settingsModule.getSettings(localStorageName);
+        if (storedSettings) {
             pmSettings = storedSettings;
+        } 
+        else {
+            pmSettings = {
+                'audioUrl': 'http://chat.rphaven.com/sounds/imsound.mp3',
+                'pmMute': false,
+            };
         }
-        populateSettings();
-    };
-
-    /**
-     * Deletes the current settings and resets them to defaults.
-     */
-    var deleteSettings = function () {
-        localStorage.removeItem(localStorageName);
-        pmSettings = {
-            'audioUrl': 'http://chat.rphaven.com/sounds/imsound.mp3',
-        };
-        populateSettings();
-    };
-
-    /**
-     * Populate the GUI with settings from the browser's local storage
-     */
-    var populateSettings = function () {
         $('#pmPingURL').val(pmSettings.audioUrl);
-        $('input#pmIconsDisable').prop("checked", pmSettings.noIcons);
-    };
+        $('#pmMute').prop("checked", pmSettings.pmMute);
+    }
+
+    function getHtml() {
+        return html;
+    }
+
+    function toString() {
+        return 'PM Module';
+    }
 
     return {
         init: init,
         loadSettings: loadSettings,
-        deleteSettings: deleteSettings,
-
-        getHtml: function () {
-            return html;
-        },
-        toString: function () {
-            return 'PM Module';
-        },
-        getSettings: function () {
-            return pmSettings;
-        },
+        getHtml: getHtml,
+        toString: toString
     };
 }());

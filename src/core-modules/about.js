@@ -2,7 +2,6 @@
  * This module handles the "About" section for information on RPH Tools.
  */
 var aboutModule = (function () {
-
     var html = {
         'tabId': 'about-module',
         'tabName': 'About',
@@ -16,15 +15,21 @@ var aboutModule = (function () {
             '<p>If the script isn\'t working, try some <a href="https://openuserjs.org/scripts/shuffyiosys/RPH_Tools#troubleshooting" target="_blank">Troubleshooting Tips</a></p><br />'
     };
 
+    function init() {
+        return;
+    }
+
+    function getHtml() {
+        return html;
+    }
+
+    function toString() {
+        return 'About Module';
+    }
+
     return {
-        init: function () {
-            return;
-        },
-        getHtml: function () {
-            return html;
-        },
-        toString: function () {
-            return 'About Module';
-        },
+        init: init,
+        getHtml: getHtml,
+        toString: toString
     };
 }());

@@ -2,13 +2,7 @@
  * Main RPH Tools module
  */
 var rphToolsModule = (function () {
-    var namesToIds = {};
-
-    var idsToNames = {};
-
     var modules = [];
-
-    var moduleDroplists = [];
 
     var rpht_css =
         '<style>' +
@@ -27,15 +21,22 @@ var rphToolsModule = (function () {
      * Initializes the modules and the HTML elements it handles.
      * @param {Array} addonModules Modules to add into the system.
      */
-    var init = function (addonModules) {
-        var i;
+    function init (addonModules) {
         var $settingsDialog = $('#settings-dialog')
         modules = addonModules;
 
         $('head').append(rpht_css);
         $('#settings-dialog .inner ul.tabs').append('<h3>RPH Tools</h3>')
+        
+        /* Checks to see if there's a local store for settings and creates one
+         * if there isn't. */
+        var settings = localStorage.getItem(SETTINGS_NAME);
+        if (!settings) {
+            settings = {};
+            localStorage.setItem(SETTINGS_NAME, JSON.stringify(settings));
+        }
 
-        modules.forEach(function (module, index) {
+        modules.forEach(function (module) {
             if (module.getHtml) {
                 html = module.getHtml();
                 $('#settings-dialog .inner ul.tabs')
@@ -51,29 +52,9 @@ var rphToolsModule = (function () {
                         $settingsDialog.find($(this).attr('href')).show();
                         ev.preventDefault();
                     });
-            }
-        });
 
-        /* When the account data receive event happens, delay some time before 
-           initializing the modules because the relevant data isn't immediately
-           available.  */
-        socket.on('accounts', function () {
-            console.log('RPH Tools[_on.accounts]: Account data blob received');
-            setTimeout(function () {
-                var moddingModule = getModule('Modding Module');
-                account.users.forEach(function (userObj) {
-                    if (moddingModule) {
-                        moddingModule.findUserAsMod(userObj);
-                    }
-                    idsToNames[userObj.props.id] = userObj.props.name;
-                    namesToIds[userObj.props.name] = userObj.props.id;
-                });
-                namesToIds = sortOnKeys(namesToIds);
-                for (i = 0; i < modules.length; i++) {
-                    modules[i].init();
-                }
-                populateDroplists();
-            }, 1500);
+                module.init();
+            }
         });
     }
 
@@ -93,44 +74,23 @@ var rphToolsModule = (function () {
         return module;
     };
 
-    /**
-     * Returns all modules that RPH Tools has loaded
-     * @returns A list of all modules that have been loaded into the script.
-     */
-    var getModules = function () {
+    function getAllModules() {
         return modules;
-    };
+    }
 
-    var registerDroplist = function (droplist) {
-        moduleDroplists.push(droplist);
-    };
+    function getHtml() {
+        return html;
+    }
 
-    var populateDroplists = function () {
-        moduleDroplists.forEach((droplist, index) => {
-            droplist.empty();
-            for (var name in namesToIds) {
-                addToDroplist(namesToIds[name], name, droplist);
-            }
-        });
-    };
+    function toString() {
+        return 'RPH Tools Module';
+    }
 
     return {
         init: init,
         getModule: getModule,
-        getModules: getModules,
-        registerDroplist: registerDroplist,
-
-        getHtml: function () {
-            return html;
-        },
-        toString: function () {
-            return 'RPH Tools Module';
-        },
-        getNamesToIds: function () {
-            return namesToIds;
-        },
-        getIdsToNames: function () {
-            return idsToNames;
-        },
+        getAllModules: getAllModules,
+        getHtml: getHtml,
+        toString: toString,
     };
 }());

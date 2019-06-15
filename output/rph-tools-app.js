@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.0.10
+// @version    4.1.0
 // @description Adds extended settings to RPH
 // @match      http://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,13 +9,15 @@
 // @license    MIT
 // ==/UserScript==
 
-var VERSION_STRING = '4.0.10';
+const VERSION_STRING = '4.1.0';
+
+const SETTINGS_NAME = "rph_tools_settings";
 /**
  * Gets the value from an input element.
  * @param {string} settingId Full selector of the input to get its value
  * @return The extracted HTML's value
  */
-var getInput = function (settingId) {
+function getInput(settingId) {
     return $(settingId).val();
 };
 
@@ -24,7 +26,7 @@ var getInput = function (settingId) {
  * @param {string} settingId Full selector of the checkbox to get the value
  * @return The extracted HTML's value
  */
-var getCheckBox = function (settingId) {
+function getCheckBox(settingId) {
     return $(settingId).is(':checked');
 };
 
@@ -33,7 +35,7 @@ var getCheckBox = function (settingId) {
  * @param {string} element Full selector of the HTML element to mark
  * @param {boolean} mark If the mark is for good or bad
  */
-var markProblem = function (element, mark) {
+function markProblem(element, mark) {
     if (mark === true) {
         $(element).css('background', '#FF7F7F');
     } else {
@@ -47,7 +49,7 @@ var markProblem = function (element, mark) {
  * @param {string} setting What kind of setting is being checked
  * @return If the input is valid or not
  */
-var validateSetting = function (settingId, setting) {
+function validateSetting(settingId, setting) {
     var validInput = false;
     var input = $(settingId).val();
 
@@ -70,7 +72,7 @@ var validateSetting = function (settingId, setting) {
  * @param {string} color Color input
  * @returns If the color input is valid
  */
-var validateColor = function (color) {
+function validateColor(color) {
     var pattern = new RegExp(/(^#[0-9A-Fa-f]{6}$)|(^#[0-9A-Fa-f]{3}$)/i);
     return pattern.test(color);
 };
@@ -101,7 +103,7 @@ var validateUrl = function (url) {
  * @param {string} TextColor String representation of the color.
  * @return True if the color is within range, false otherwise.
  */
-var validateColorRange = function (TextColor) {
+function validateColorRange(TextColor) {
     var rawHex = TextColor.substring(1, TextColor.length);
     var validColor = false;
     var red = 255;
@@ -136,8 +138,9 @@ var validateColorRange = function (TextColor) {
  * @param {string} label Label of the option element
  * @param {object} droplist Which select element to add option to
  */
-var addToDroplist = function (value, label, droplist) {
-    droplist.append($('<option>', {
+function addToDroplist(value, label, droplist) {
+    var droplist_elem = $(droplist);
+    droplist_elem.append($('<option>', {
         value: value,
         text: label
     }));
@@ -152,7 +155,7 @@ var addToDroplist = function (value, label, droplist) {
  * @return Index of the first instance where the key matches the value, -1 
  *         otherwise.
  */
-var arrayObjectIndexOf = function (objArray, key, value) {
+function arrayObjectIndexOf(objArray, key, value) {
     for (var i = 0; i < objArray.length; i++) {
         if (objArray[i][key] === value) {
             return i;
@@ -167,7 +170,7 @@ var arrayObjectIndexOf = function (objArray, key, value) {
  * @param {string} msg The string being looked at
  * @returns True or false if there's a match.
  */
-var isInLink = function (searchTerm, msg) {
+function isInLink(searchTerm, msg) {
     var regexp = new RegExp('href=".*?' + searchTerm + '.*?"', '');
     return regexp.test(msg);
 };
@@ -176,7 +179,7 @@ var isInLink = function (searchTerm, msg) {
  * Checks if the current account is a mod of the room.
  * @param {object} room Object containing room data
  */
-var isModOfRoom = function (room) {
+function isModOfRoom(room) {
     var isMod = false;
     for (var idx = 0; idx < account.userids.length && !isMod; idx++) {
         if (room.props.mods.indexOf(account.userids[idx]) > -1 ||
@@ -187,7 +190,7 @@ var isModOfRoom = function (room) {
     return isMod;
 };
 
-var getModForRoom = function (room){
+function getModForRoom(room){
     var modName = '';
     var users = account.users;
     for (var idx = 0; idx < users.length; idx++) {
@@ -205,7 +208,7 @@ var getModForRoom = function (room){
  * @param {object} dict Dictionary to be sorted
  * @returns Sorted dictionary
  */
-var sortOnKeys = function (dict) {
+function sortOnKeys (dict) {
     var sorted = [];
     for (var key in dict) {
         sorted[sorted.length] = key;
@@ -220,15 +223,23 @@ var sortOnKeys = function (dict) {
     return tempDict;
 }
 
-var makeFullTimeStamp = function(){
-    var timeObj = new Date();
+function makeFullTimeStamp(timestamp){
+    var timeObj = new Date(timestamp);
     var timestamp = timeObj.getHours().toString().padStart(2, '0') + ':';
     timestamp += timeObj.getMinutes().toString().padStart(2, '0') + ':';
     timestamp += timeObj.getSeconds().toString().padStart(2, '0');
 
     return timestamp
 }
-/**
+
+function getSortedNames() {
+    var namesToIds = {};
+    account.users.forEach(function (userObj) {
+        namesToIds[userObj.props.name] = userObj.props.id;
+    });
+    namesToIds = sortOnKeys(namesToIds);
+    return namesToIds;
+}/**
  * Generates a hash value for a string
  * This was modified from https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
  */
@@ -322,28 +333,11 @@ var chatModule = (function () {
         'case': false,
     };
 
-    var chatSettings = {
-        'filterFlood': true,
-        'spamThreshold': 1000,
-    };
-
-    var localStorageName = "rpht_ChatModule";
+    var localStorageName = "chatSettings";
 
     var pingSound = null;
 
     var autoDismissTimer = null;
-
-    var spamFilter = {};
-
-    var spamLenModifier = 3;
-
-    var spamBufPadding = 250;
-
-    var filterSuppressTimer = null;
-
-    var filterSuppressed = false;
-
-    var FILTER_SUPPRESS_TIME = 2000;
 
     var html = {
         'tabId': 'chat-module',
@@ -381,19 +375,11 @@ var chatModule = (function () {
             '<label class="rpht_labels">Ping Tester: </label><input type="text" id="pingPreviewInput" name="pingPreviewInput">' +
             '<br /><br />' +
             '<label class="rpht_labels">Ping preview:</label><span id="pingPreviewText"></span>' +
-            '</div><div>' +
-            '<h4>Flood Filtering</h4>' +
-            '<label class="rpht_labels">Filter flooding </label><input style="width: 40px;" type="checkbox" id="filterFlood" name="filterFlood">' +
-            '<br /><br />' +
-            '<label class="rpht_labels">Filter Strength:</label><select  style="width: 300px;" id="filterStrengthDroplist"></select>' +
-            '<br /><br />' +
-            '<button style="margin-left: 546px;" type="button" id="resetFilters">Reset filter</button>' +
-            '</div>'
+            '</div><div>'
     }
 
-    var init = function () {
-        rphToolsModule.registerDroplist($('#userColorDroplist'));
-        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
+    function init() {
+        loadSettings();
 
         $('#userNameTextColorButton').click(function () {
             changeTextColor();
@@ -474,41 +460,42 @@ var chatModule = (function () {
             }
         });
 
-        $('#showUsername').change(function () {
+        $('#showUsername').change(() => {
             pingSettings.case = getCheckBox('#pingCaseSense');
             saveSettings();
         });
 
-        $('#filterFlood').change(function () {
-            chatSettings.filterFlood = getCheckBox('#filterFlood');
-            saveSettings();
-        });
-
-        /* Setting up the filter droplist. */
-        addToDroplist(800, 'Strongest', $('#filterStrengthDroplist'));
-        addToDroplist(1000, 'Stronger', $('#filterStrengthDroplist'));
-        addToDroplist(1250, 'Strong', $('#filterStrengthDroplist'));
-        addToDroplist(1500, 'Normal', $('#filterStrengthDroplist'));
-        addToDroplist(1750, 'Default (RPH)', $('#filterStrengthDroplist'));
-        $('#filterStrengthDroplist').val(1000);
-
-        $('#filterStrengthDroplist').change(function () {
-            chatSettings.spamThreshold = $('#filterStrengthDroplist option:selected').val();
-            saveSettings();
-        });
-
-        $('#resetFilters').click(function () {
-            spamFilter = {};
-        });
-
         $(window).resize(resizeChatTabs);
+
+        socket.on('accounts', () => {
+            setTimeout(function () {
+                var namesToIds = [];
+                account.users.forEach(function (userObj) {
+                    namesToIds[userObj.props.name] = userObj.props.id;
+                });
+                namesToIds = sortOnKeys(namesToIds);
+                $('#userColorDroplist').empty();
+                for (var name in namesToIds) {
+                    addToDroplist(namesToIds[name], name, "#userColorDroplist");
+                }
+            }, 3000);
+        });
 
         chatSocket.on('confirm-room-join', function (data) {
             roomSetup(data);
         });
 
         chatSocket.on('room-users-leave', function (data) {
-            handleRoomLeave(data);
+            var sessionModule = rphToolsModule.getModule('Session Module');
+            if (sessionModule === null) {
+                return;
+            }
+    
+            data.users.forEach((userId) => {
+                if (account.userids.indexOf(userId) > -1) {
+                    sessionModule.removeRoomFromSession(data.room, userId);
+                }
+            });
         });
 
         /* Setup the timer for automatically dismissing the opening dialog once
@@ -519,7 +506,7 @@ var chatModule = (function () {
             }
             $("button span:contains('Continue')").trigger('click');
             clearTimeout(autoDismissTimer);
-        }, 1000);
+        }, 500);
     }
 
     /**
@@ -530,22 +517,11 @@ var chatModule = (function () {
      * - Add the room the session.
      * @param {object} room Room that the user has joined
      */
-    var roomSetup = function (room) {
+    function roomSetup(room) {
         var thisRoom = getRoom(room.room);
         var userId = getIdFromChatTab(thisRoom);
         var moddingModule = rphToolsModule.getModule('Modding Module');
         var sessionModule = rphToolsModule.getModule('Session Module');
-
-        if (filterSuppressed === true) {
-            clearTimeout(filterSuppressTimer);
-        }
-
-        filterSuppressTimer = setTimeout(function () {
-            filterSuppressed = false;
-        }, FILTER_SUPPRESS_TIME);
-        filterSuppressed = true;
-
-        spamFilter[room.room] = {};
 
         thisRoom.onMessage = function (data) {
             var thisRoom = this;
@@ -579,46 +555,26 @@ var chatModule = (function () {
     };
 
     /**
-     * Handle actions needed when a user leaves a room.
-     * @param {Object} data - Data blob containing room info.
-     */
-    var handleRoomLeave = function (data) {
-        data.users.forEach(function (userId) {
-            if (account.userids.indexOf(userId) > -1) {
-                var sessionModule = rphToolsModule.getModule('Session Module');
-                if (sessionModule !== null) {
-                    sessionModule.removeRoomFromSession(data.room, userId);
-                }
-            }
-        });
-    }
-
-    /**
      * Takes a message received in the chat and processes it for pinging or 
      * otherwise
      * @param {object} thisRoom The room that the message is for.
      * @param {object} data The message for the room
      */
-    var postMessage = function (thisRoom, data, User) {
-        var timestamp = makeFullTimeStamp();
+    function postMessage(thisRoom, data, User) {
+        var timestamp = makeFullTimeStamp(data.time);
         var msg = parseMsg(data.msg);
         var classes = '';
         var $el = '';
         var msgHtml = '';
         var ownMessage = account.userids.includes(User.props.id);
-        var filterMsgFlag = false;
 
         /* Process only if not own message */
         if (ownMessage === false) {
             var moddingModule = rphToolsModule.getModule('Modding Module');
 
-            /* Check if needs filtering */
-            filterMsgFlag = processMsgFitler(thisRoom, data, User);
-
             /* Perform mod actions */
             if (moddingModule !== null && isModOfRoom(thisRoom)) {
-                var modSettings = moddingModule.getSettings();
-                var modName = getModForRoom(thisRoom);
+                var modSettings = moddingModule.getAlertWords();
                 testRegex = matchPing(msg, modSettings.alertWords, false, true);
 
                 // Process alert
@@ -630,41 +586,19 @@ var chatModule = (function () {
                         moddingModule.playAlert();
                     }
                 }
-                if (modSettings.kickWords) {
-                    var kickRegex = new RegExp(modSettings.kickWords, 'gi');
-                    if (msg.match(kickRegex)) {
-                        moddingModule.processFilterAction('kick', modName, User.props.name, thisRoom.props.name);
-                    }
-                }
-                if (modSettings.banWords) {
-                    var banRegex = new RegExp(modSettings.banWords, 'gi');
-                    if (msg.match(banRegex)) {
-                        moddingModule.processFilterAction('ban', modName, User.props.name, thisRoom.props.name);
-                    }
-                }
-                if (filterMsgFlag) {
-                    moddingModule.processFlooding(modName, User.props.name, thisRoom.props.name);
-                }
             }
         }
-
-        if (filterMsgFlag === true) {
-            return;
-        }
-
-        classes = getClasses(User, thisRoom);
 
         /* If there's a verification mark, check to see if it's good */
         if (msg.indexOf('\u200b') > -1) {
             var verifiedMsg = verifyMessage(msg);
-            msg = stripVerification(msg);
-            if (verifiedMsg){
+            msg = message.substring(0, message.indexOf('\u200b'));
+            if (verifiedMsg) {
                 msg += ' <span style="background:#4A4; color: #000;">&#9745;</span>';
-            }
-            else {
+            } else {
                 msg += ' <span style="background:#A44; color: #000;">&#x1f6c7;</span>';
             }
-            
+
         }
 
         /* Add pinging higlights */
@@ -704,89 +638,19 @@ var chatModule = (function () {
         $el.find('br:gt(7)').remove();
     };
 
-    var processMsgFitler = function (thisRoom, data, User) {
-        var filterMsg = false;
-        /* Exit if the following is true: filter is not on, filter is being suppressed*/
-        if (chatSettings.filterFlood === false ||
-            filterSuppressed === true) {
-            return filterMsg;
-        }
-
-        if (User.blocked) {
-            filterMsg = true;
-        } else if (filterSpam(thisRoom, data, User)) {
-            filterMsg = true;
-        }
-
-        return filterMsg;
-    }
-
-    var filterSpam = function (thisRoom, data, user) {
-        var roomName = thisRoom.props.name;
-        var msgAuthor = user.props.name;
-        var filterMsg = false;
-
-        if (!spamFilter[roomName]) {
-            spamFilter[roomName] = {};
-        }
-
-        if (!spamFilter[roomName][msgAuthor]) {
-            spamFilter[roomName][msgAuthor] = {};
-            spamFilter[roomName][msgAuthor].bufferLength = 0;
-            spamFilter[roomName][msgAuthor].lastTime = 0;
-            spamFilter[roomName][msgAuthor].offenses = 0;
-        }
-
-        var tempBufferLength = spamFilter[roomName][msgAuthor].bufferLength;
-        var tempLastTime = spamFilter[roomName][msgAuthor].lastTime;
-        var curTime = Math.round(new Date().getTime() / 1000);
-        if (data.msg.match(/\n/gi)) {
-            data.msg.length = data.msg.length + (data.msg.match(/\n/gi).length * 250);
-        }
-        tempBufferLength = (tempBufferLength / (curTime - tempLastTime + 1)) + ((data.msg.length + tempBufferLength) / spamLenModifier) + spamBufPadding;
-        tempLastTime = curTime;
-        if (tempBufferLength > chatSettings.spamThreshold) {
-            spamFilter[roomName][msgAuthor].offenses += 1;
-            if (spamFilter[roomName][msgAuthor].offenses > 1) {
-                console.log('Spam filter triggered:', roomName, msgAuthor, data.msg);
-                filterMsg = true;
-            }
-        } else {
-            spamFilter[roomName][msgAuthor].offenses = 0;
-        }
-
-        spamFilter[roomName][msgAuthor].bufferLength = tempBufferLength;
-        spamFilter[roomName][msgAuthor].lastTime = tempLastTime;
-
-        return filterMsg;
-    }
-
     /**
      * If a verification mark (Unicode 200B) was in the message, check to see
      * if it's valid by comparing the hash received vs. the original message.
      * 
      * @param {String} message - Incoming message
      */
-    function verifyMessage(message){
+    function verifyMessage(message) {
         var delimitChar = message.indexOf('\u200b');
         var recvdHash = message.substring(delimitChar + 1);
         var origMsg = message.substring(0, delimitChar);
 
-        console.log("Original message:", origMsg);
-        console.log("Received hash:", parseInt(recvdHash));
-        console.log("Computed hash:", origMsg.hashCode())
         return (origMsg.hashCode() == parseInt(recvdHash));
     };
-
-    /**
-     * Strips off the verification stuff from the text so it's not posted.
-     * @param {String} message - Incoming message
-     */
-    function stripVerification(message){
-        var delimitChar = message.indexOf('\u200b');
-        var origMsg = message.substring(0, delimitChar);
-        return origMsg;
-    }
 
     /**
      * Parses a slash command from an input source.
@@ -879,16 +743,6 @@ var chatModule = (function () {
                     inputTextBox.val('');
                 }
                 break;
-            case '/russian':
-                if (Math.floor(Math.random() * 6 + 1) == 1) {
-                    inputTextBox.val('/me played Russian Roulette and... *BLAM* ...lost D:')
-                    sendChatMessage(inputTextBox, Room, User);
-                    chatSocket.disconnect();
-                } else {
-                    inputTextBox.val('/me played Russian Roulette and... *click* ...won :D')
-                    sendChatMessage(inputTextBox, Room, User);
-                }
-                break;
             default:
                 sendChatMessage(inputTextBox, Room, User);
                 break;
@@ -903,37 +757,11 @@ var chatModule = (function () {
     }
 
     /**
-     * Gets the user name's classes that are applicable to it
-     * @param {object} User - User of the message
-     * @param {object} thisRoom - Room that the message is being sent to
-     * @returns All the classes found
-     */
-    var getClasses = function (User, thisRoom) {
-        var classes = '';
-        if (User.friendOf) {
-            classes += 'friend ';
-        }
-        if (isOwnUser(User)) {
-            classes += 'self ';
-        }
-        if (isOwnerOf(thisRoom, User)) {
-            classes += 'owner ';
-        } else if (isModOf(thisRoom, User)) {
-            classes += 'mod ';
-        }
-        if (isInGroup(thisRoom, User)) {
-            classes += 'group-member ';
-        }
-
-        return classes;
-    };
-
-    /**
      * Checks if the message has any ping terms
      * @param {string} msg - The message for the chat
      * @returns Returns the match or null
      */
-    var matchPing = function (msg, triggers, caseSensitive, exactMatch) {
+    function matchPing(msg, triggers, caseSensitive, exactMatch) {
         if (!triggers) {
             return null;
         } else if (triggers.length === 0) {
@@ -972,7 +800,7 @@ var chatModule = (function () {
      * @param {regex} testRegex - Regular expression to use to match the term.
      * @returns Modified message
      */
-    var highlightPing = function (msg, testRegex, color, highlight, bold, italicize) {
+    function highlightPing(msg, testRegex, color, highlight, bold, italicize) {
         var boldStyle = "";
         var italicsStyle = "";
 
@@ -992,7 +820,7 @@ var chatModule = (function () {
      * Adds a highlight to the room's tab
      * @param {object} thisRoom - Room where the ping happened.
      */
-    var highlightRoom = function (thisRoom, color, highlight) {
+    function highlightRoom(thisRoom, color, highlight) {
         if (!thisRoom.isActive()) {
             thisRoom.$tabs[0].css('background-color', highlight);
             thisRoom.$tabs[0].css('color', color);
@@ -1017,7 +845,7 @@ var chatModule = (function () {
      * @param {object} thisRoom - Room that was entered
      * @param {number} userId - ID of the user that entered
      **/
-    var addNameToUI = function (thisRoom, User) {
+    function addNameToUI(thisRoom, User) {
         var tabsLen = thisRoom.$tabs.length;
         var idRoomName = thisRoom.$tabs[tabsLen - 1][0].className.split(' ')[2];
         var newTabHtml = '<span>' + thisRoom.props.name +
@@ -1039,7 +867,7 @@ var chatModule = (function () {
      * Gets the user's ID from the chat tab (it's in the class)
      * @param {} thisRoom - Room to get the ID from
      **/
-    var getIdFromChatTab = function (thisRoom) {
+    function getIdFromChatTab(thisRoom) {
         var tabsLen = thisRoom.$tabs.length;
         var className = thisRoom.$tabs[tabsLen - 1][0].className;
         var charID = className.match(new RegExp(' [0-9]+', ''))[0];
@@ -1050,7 +878,7 @@ var chatModule = (function () {
     /**
      * Resizes chat tabs based on the width of the tabs vs. the screen size.
      */
-    var resizeChatTabs = function () {
+    function resizeChatTabs() {
         $('#chat-tabs').addClass('rpht_chat_tab');
         /* Window is smaller than the tabs width */
         if ($('#chat-tabs')[0].clientWidth < $('#chat-tabs')[0].scrollWidth ||
@@ -1063,17 +891,15 @@ var chatModule = (function () {
         }
         // Debouce the function.
         $(window).off("resize", resizeChatTabs);
-        setTimeout(enableResizing, (100));
-    };
-
-    var enableResizing = function () {
-        $(window).resize(resizeChatTabs);
+        setTimeout(() => {
+            $(window).resize(resizeChatTabs);
+        }, 100);
     };
 
     /**
      * Handlers for text color changing
      */
-    var changeTextColor = function () {
+    function changeTextColor() {
         var textColor = $('input#userNameTextColor').val();
         if (validateSetting('input#userNameTextColor', 'color') === true) {
             var userId = $('#userColorDroplist option:selected').val();
@@ -1085,64 +911,34 @@ var chatModule = (function () {
         }
     };
 
-    /*
-     * Handlers for saving, loading, and populating data for the module.
-     **/
-
     /**
      * Save current settings
      */
-    var saveSettings = function () {
-        localStorage.setItem(localStorageName, JSON.stringify(getSettings()));
+    function saveSettings() {
+        settingsModule.saveSettings(localStorageName, pingSettings);
     };
-
-    var getSettings = function () {
-        return {
-            'chatSettings': chatSettings,
-            'pingSettings': pingSettings
-        };
-    };
-
     /**
      * Loads settings from local storage
      * @param {object} storedSettings Object containing the settings
      */
-    var loadSettings = function (storedSettings) {
-        if (storedSettings !== null) {
-            chatSettings = storedSettings.chatSettings;
-            pingSettings = storedSettings.pingSettings;
+    function loadSettings () {
+        var storedSettings = settingsModule.getSettings(localStorageName);
+        if (storedSettings) {
+            pingSettings = storedSettings;
         }
-        populateSettings();
-    };
+        else {
+            pingSettings = {
+                'triggers': [],
+                'audioUrl': 'http://chat.rphaven.com/sounds/boop.mp3',
+                'color': '#000',
+                'highlight': '#FFA',
+                'bold': false,
+                'italics': false,
+                'exact': false,
+                'case': false,
+            };
+        }
 
-    /**
-     * Deletes the current settings and resets them to defaults.
-     */
-    var deleteSettings = function () {
-        localStorage.removeItem(localStorageName);
-        pingSettings = {
-            'triggers': [],
-            'audioUrl': 'http://chat.rphaven.com/sounds/boop.mp3',
-            'color': '#000',
-            'highlight': '#FFA',
-            'bold': false,
-            'italics': false,
-            'exact': false,
-            'case': false,
-        };
-
-        chatSettings = {
-            'filterFlood': true,
-            'spamThreshold': 1000,
-        };
-
-        populateSettings();
-    };
-
-    /**
-     * Populate the GUI with settings from the browser's local storage
-     */
-    var populateSettings = function () {
         $('#pingNames').val(pingSettings.triggers);
         $('#pingURL').val(pingSettings.audioUrl);
         $('#pingTextColor').val(pingSettings.color);
@@ -1151,26 +947,23 @@ var chatModule = (function () {
         $('input#pingItalicsEnable').prop("checked", pingSettings.italics);
         $('input#pingExactMatch').prop("checked", pingSettings.exact);
         $('input#pingCaseSense').prop("checked", pingSettings.case);
-
-        $('#filterFlood').prop("checked", chatSettings.filterFlood);
-        $('#spamThresh').val(chatSettings.spamThreshold);
         pingSound = new Audio(pingSettings.audioUrl);
-    };
+    }
+
+    function getHtml() {
+        return html;
+    }
+
+    function toString() {
+        return 'Chat Module';
+    }
 
     return {
         init: init,
         parseSlashCommand: parseSlashCommand,
-        getSettings: getSettings,
         loadSettings: loadSettings,
-        deleteSettings: deleteSettings,
-
-        getHtml: function () {
-            return html;
-        },
-        toString: function () {
-            return 'Chat Module';
-        },
-
+        getHtml: getHtml,
+        toString: toString
     };
 }());/**
  * This module handles the "Session" section in RPH Tools
@@ -1179,20 +972,21 @@ var sessionModule = (function () {
     var sessionSettings = {
         'autoRefreshAttempts': 5,
         'dcHappened': false,
-        'autoRefresh': true,
-        'refreshSecs': 10,
-        'canCancel': true,
+        'autoRefresh': false,
+        'chatTextboxSave': false,
+        'pmTextboxSave': false,
+        'refreshSecs': 15,
         'joinFavorites': false,
         'joinSession': false,
         'roomSession': [],
         'favRooms': [],
+        'chatTextboxes': [],
+        'pmTextboxes': []
     };
 
-    var localStorageName = "rpht_SessionModule";
+    var localStorageName = "sessionSettings";
 
     var autoJoinTimer = null;
-
-    var waitForDialog = true;
 
     var sessionShadow = [];
 
@@ -1211,20 +1005,26 @@ var sessionModule = (function () {
         'tabName': 'Sessions',
         'tabContents': '<h3>Sessions</h3>' +
             '<div>' +
-            '<h4>Auto Refresh</h4> <strong>Note:</strong> This will not save your text inputs or re-join rooms with passwords.' +
+            '<h4>Auto Refresh</h4> <strong>Note:</strong> This will not re-join rooms with passwords.' +
             '<br /><br />' +
             '<label class="rpht_labels">Refresh on Disconnect: </label><input style="width: 40px;" type="checkbox" id="dcRefresh" name="dcRefresh">' +
             '<br /><br />' +
             '<label class="rpht_labels">Auto-refresh time: </label><input style="width: 64px;" type="number" id="refreshTime" name="refreshTime" max="60" min="5" value="10"> seconds' +
             '<br /><br />' +
+            '<label class="rpht_labels">Save Chatbox Inputs: </label><input style="width: 40px;" type="checkbox" id="chatTextboxSave" name="roomSessioning">' +
+            '<br /><br />' +
+            '<label class="rpht_labels">Save PM Inputs: </label><input style="width: 40px;" type="checkbox" id="pmTextboxSave" name="roomSessioning">' +
+            '<br />' +
+            '<label class="rpht_labels" style="font-size: 12px; text-align: left;">This may not restore the inputs correctly if you have a PM open, but not an active session with the person.' + 
+            '<br />' +
+            'e.g., you\'ve started a new PM, but did not send one yet.</label>' +
+            '<br /><br />' +
             '<button style="margin-left: 310px;" type="button" id="resetSession">Reset Session</button>' +
             '</div><div>' +
             '<h4>Auto Joining</h4>' +
-            '<label class="rpht_labels">Can Cancel: </label><input style="width: 40px;" type="checkbox" id="canCancelJoining" name="canCancelJoining">' +
-            '<br /><br />' +
             '<label class="rpht_labels">Join favorites: </label><input style="width: 40px;" type="checkbox" id="favEnable" name="favEnable">' +
             '<br /><br />' +
-            '<label class="rpht_labels">Always join last session: </label><input style="width: 40px;" type="checkbox" id="roomSessioning" name="roomSessioning">' +
+            '<label class="rpht_labels">Restore last session: </label><input style="width: 40px;" type="checkbox" id="roomSessioning" name="roomSessioning">' +
             '<br /><br />' +
             '<label class="rpht_labels">Username: </label><select style="width: 300px;" id="favUserDropList"></select>' +
             '<br /><br />' +
@@ -1240,71 +1040,102 @@ var sessionModule = (function () {
             '</div><div>'
     };
 
-    var init = function () {
-        rphToolsModule.registerDroplist($('#favUserDropList'));
-        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
+    function init() {
+        loadSettings();
 
-        $('#dcRefresh').click(function () {
+        $('#dcRefresh').click(() => {
             sessionSettings.autoRefresh = getCheckBox('#dcRefresh');
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         });
 
-        $('#refreshTime').change(function () {
+        $('#refreshTime').change(() => {
             sessionSettings.refreshSecs = $('#refreshTime').val();
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         });
 
-        $('#canCancelJoining').click(function () {
-            sessionSettings.canCancel = getCheckBox('#canCancelJoining');
-            saveSettings();
+        $('#chatTextboxSave').click( () => {
+            sessionSettings.chatTextboxSave = getCheckBox('#chatTextboxSave');
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         });
 
-        $('#roomSessioning').click(function () {
+        $('#pmTextboxSave').click( () => {
+            sessionSettings.pmTextboxSave = getCheckBox('#pmTextboxSave');
+            settingsModule.saveSettings(localStorageName, sessionSettings);
+        });
+
+        $('#roomSessioning').click(() => {
             sessionSettings.joinSession = getCheckBox('#roomSessioning');
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         });
 
-        $('#favEnable').click(function () {
+        $('#favEnable').click(() => {
             sessionSettings.joinFavorites = getCheckBox('#favEnable');
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         });
 
-        $('#favAdd').click(function () {
+        $('#favAdd').click(() => {
             parseFavoriteRoom($('#favRoom').val());
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         });
 
-        $('#favRemove').click(function () {
+        $('#favRemove').click(() => {
             removeFavoriteRoom();
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         });
 
-        $('#resetSession').click(function () {
+        $('#resetSession').click(() => {
             clearRoomSession();
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         });
 
         if (determineAutojoin()) {
             autoJoinTimer = setInterval(autoJoiningHandler, AUTOJOIN_INTERVAL);
             sessionSettings.dcHappened = false;
-            saveSettings();
-        }
-        else {
+            settingsModule.saveSettings(localStorageName, sessionSettings);
+        } else {
             clearRoomSession();
         }
 
-        setTimeout(function () {
+        setTimeout(() => {
             console.log('RPH Tools[connectionStabilityTimeout] - Connection considered stable');
             sessionSettings.autoRefreshAttempts = MAX_AUTO_REFRESH_ATTEMPTS;
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         }, REFRESH_ATTEMPTS_TIMEOUT);
 
-        chatSocket.on('disconnect', function () {
+        socket.on('restore-pms', () => {
+            if (sessionSettings.pmTextboxSave){
+                setTimeout(() => {
+                    var pmTextBoxes = $("#pm-bottom .textarea textarea");
+                    for (var i = 0; i < pmTextBoxes.length; i++){
+                        pmTextBoxes[i].value =  sessionSettings.pmTextboxes[i];
+                    }
+                }, 1000);
+            }
+        });
+
+        chatSocket.on('disconnect', () => {
+            var chatTextBoxes = $("#chat-bottom .textarea textarea");
+            var pmTextBoxes = $("#pm-bottom .textarea textarea");
+            sessionSettings.chatTextboxes = [];
+            sessionSettings.pmTextboxes = [];
+            for (var i = 0; i < chatTextBoxes.length; i++){
+                var textboxInfo = {
+                    value: chatTextBoxes[i].value,
+                    className: chatTextBoxes[i].className,
+                }
+                sessionSettings.chatTextboxes.push(textboxInfo);
+            }
+
+            for (var i = 0; i < pmTextBoxes.length; i++){
+                sessionSettings.pmTextboxes.push(pmTextBoxes[i].value);
+            }
+            settingsModule.saveSettings(localStorageName, sessionSettings);
+
             if (sessionSettings.autoRefresh && sessionSettings.autoRefreshAttempts > 0) {
-                setTimeout(function () {
+                setTimeout(() => {
                     sessionSettings.autoRefreshAttempts -= 1;
                     sessionSettings.dcHappened = true;
-                    saveSettings();
+                    settingsModule.saveSettings(localStorageName, sessionSettings);
                     window.onbeforeunload = null;
                     window.location.reload(true);
                 }, sessionSettings.refreshSecs * 1000);
@@ -1315,12 +1146,22 @@ var sessionModule = (function () {
                 ).dialog({
                     open: function (event, ui) {},
                     buttons: {
-                        Cancel: function () {
+                        Cancel: () => {
                             $(this).dialog("close");
                         }
                     },
                 }).dialog('open');
             }
+        });
+
+        socket.on('accounts', () => {
+            setTimeout(() => {
+                $('#favUserDropList').empty();
+                var namesToIds = getSortedNames();
+                for (var name in namesToIds) {
+                    addToDroplist(namesToIds[name], name, "#favUserDropList");
+                }
+            }, 3000);
         });
     }
 
@@ -1330,7 +1171,7 @@ var sessionModule = (function () {
      * 2. Join last session & there are rooms in the session
      * 3. Auto refresh & disconnect happened & there are refresh attempts left
      */
-    var determineAutojoin = function () {
+    function determineAutojoin() {
         var autoJoin = false;
 
         if (sessionSettings.joinFavorites === true &&
@@ -1358,51 +1199,47 @@ var sessionModule = (function () {
      * Handler for the auto-joining mechanism.
      **/
 
-    var autoJoiningHandler = function () {
+    function autoJoiningHandler() {
         /* Don't run this if there's no rooms yet. */
         if (roomnames.length === 0) {
             return;
         }
 
-        if (sessionSettings.canCancel === true) {
-            $('<div id="rpht-autojoin" class="inner">' +
-                '<p>Autojoining or restoring session.</p>' +
-                '<p>Press "Cancel" to stop autojoin or session restore.</p>' +
-                '</div>'
-            ).dialog({
-                open: function (event, ui) {
-                    setTimeout(function () {
-                        $('#rpht-autojoin').dialog('close');
-                    }, AUTOJOIN_TIMEOUT_SEC);
-                },
-                buttons: {
-                    Cancel: function () {
-                        clearTimeout(autoJoinTimer);
-                        $(this).dialog("close");
-                    }
-                },
-            }).dialog('open');
+        $('<div id="rpht-autojoin" class="inner">' +
+            '<p>Autojoining or restoring session.</p>' +
+            '<p>Press "Cancel" to stop autojoin or session restore.</p>' +
+            '</div>'
+        ).dialog({
+            open: function (event, ui) {
+                setTimeout(() => {
+                    $('#rpht-autojoin').dialog('close');
+                }, AUTOJOIN_TIMEOUT_SEC);
+            },
+            buttons: {
+                Cancel: () => {
+                    clearTimeout(autoJoinTimer);
+                    $(this).dialog("close");
+                }
+            },
+        }).dialog('open');
 
-            clearTimeout(autoJoinTimer);
-            autoJoinTimer = setTimeout(JoinRooms, AUTOJOIN_TIMEOUT_SEC);
-        } else {
-            JoinRooms();
-        }
+        clearTimeout(autoJoinTimer);
+        autoJoinTimer = setTimeout(joinRooms, AUTOJOIN_TIMEOUT_SEC);
     };
 
     /**
      * Join rooms in the favorites and what was in the session.
      */
-    var JoinRooms = function () {
+    function joinRooms() {
         if (sessionSettings.joinFavorites === true) {
-            JoinFavoriteRooms();
+            joinFavoriteRooms();
         }
 
-        setTimeout(function () {
-            if ( sessionSettings.autoRefresh || sessionSettings.joinSession ) {
+        setTimeout(() => {
+            if (sessionSettings.autoRefresh || sessionSettings.joinSession) {
                 console.log('Joining sessioned rooms', sessionShadow);
                 clearRoomSession();
-                JoinSessionedRooms();
+                joinSessionedRooms();
             }
         }, 1000);
         clearTimeout(autoJoinTimer);
@@ -1411,7 +1248,7 @@ var sessionModule = (function () {
     /**
      * Join rooms that were in the last session.
      */
-    var JoinSessionedRooms = function () {
+    function joinSessionedRooms() {
         for (var i = 0; i < sessionShadow.length; i++) {
             var room = sessionShadow[i];
             var roomJoined = arrayObjectIndexOf(rph.roomsJoined, 'roomname', room.roomname) > -1;
@@ -1424,13 +1261,17 @@ var sessionModule = (function () {
                 });
             }
         }
+
         delete sessionShadow;
+        if (sessionSettings.chatTextboxSave){
+            populateChatTextboxes();
+        }
     }
 
     /** 
      * Joins all the rooms in the favorite rooms list
      */
-    var JoinFavoriteRooms = function () {
+    function joinFavoriteRooms() {
         for (var i = 0; i < sessionSettings.favRooms.length; i++) {
             var favRoom = sessionSettings.favRooms[i];
             chatSocket.emit('join', {
@@ -1439,9 +1280,25 @@ var sessionModule = (function () {
                 pw: favRoom.roomPw
             });
         }
+
+        if (sessionSettings.chatTextboxSave){
+            populateChatTextboxes();
+        }
     };
 
-    var addRoomToSession = function (roomname, userid) {
+    function populateChatTextboxes () {
+        setTimeout(() => {
+            var chatTextBoxes = $("#chat-bottom .textarea textarea");
+            for (var i = 0; i < chatTextBoxes.length; i++){
+                var idx = arrayObjectIndexOf(sessionSettings.chatTextboxes, 'className', chatTextBoxes[i].className);
+                if (idx > -1) {
+                    chatTextBoxes[i].value = sessionSettings.chatTextboxes[idx].value;
+                }
+            }
+        }, 250);
+    }
+
+    function addRoomToSession(roomname, userid) {
         var alreadyInSession = false
         var roomSession = sessionSettings.roomSession
         for (var i = 0; i < roomSession.length; i++) {
@@ -1458,18 +1315,18 @@ var sessionModule = (function () {
                 'roomname': roomname,
                 'user': userid
             });
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, sessionSettings);
         }
     };
 
-    var removeRoomFromSession = function (roomname, userid) {
+    function removeRoomFromSession(roomname, userid) {
         var roomSession = sessionSettings.roomSession
         for (var i = 0; i < roomSession.length; i++) {
             var room = roomSession[i]
             if (room.roomname == roomname && room.user == userid) {
                 console.log('RPH Tools[removeRoomFromSession]: Removing room -', room);
                 sessionSettings.roomSession.splice(i, 1);
-                saveSettings();
+                settingsModule.saveSettings(localStorageName, sessionSettings);
             }
         }
     };
@@ -1477,16 +1334,16 @@ var sessionModule = (function () {
     /**
      * Clear the room session.
      */
-    var clearRoomSession = function () {
+    function clearRoomSession() {
         sessionSettings.roomSession = []
-        saveSettings();
+        settingsModule.saveSettings(localStorageName, sessionSettings);
     };
 
     /** 
      * Adds an entry to the Favorite Chat Rooms list from an input
      * @param {string} roomname - Name of the room
      */
-    var parseFavoriteRoom = function (roomname) {
+    function parseFavoriteRoom(roomname) {
         var room = getRoom(roomname);
 
         if (room === undefined) {
@@ -1513,7 +1370,7 @@ var sessionModule = (function () {
      * Adds a favorite room to the settings list
      * @param {Object} favRoomObj - Object containing the favorite room parameters.
      */
-    var addFavoriteRoom = function (favRoomObj) {
+    function addFavoriteRoom(favRoomObj) {
         if (arrayObjectIndexOf(sessionSettings.favRooms, "_id", favRoomObj._id) === -1) {
             $('#favRoomsList').append(
                 '<option value="' + favRoomObj._id + '">' +
@@ -1531,7 +1388,7 @@ var sessionModule = (function () {
     /** 
      * Removes an entry to the Favorite Chat Rooms list
      */
-    var removeFavoriteRoom = function () {
+    function removeFavoriteRoom() {
         var favItem = document.getElementById("favRoomsList");
         var favItemId = $('#favRoomsList option:selected').val();
         favItem.remove(favItem.selectedIndex);
@@ -1549,41 +1406,33 @@ var sessionModule = (function () {
         }
     };
 
-    var saveSettings = function () {
-        localStorage.setItem(localStorageName, JSON.stringify(sessionSettings));
-    };
+    function loadSettings() {
+        var storedSettings = settingsModule.getSettings(localStorageName);
 
-    var loadSettings = function (storedSettings) {
-        if (storedSettings !== null) {
+        if (storedSettings) {
             for (var key in storedSettings) {
                 sessionSettings[key] = storedSettings[key];
             }
-            populateSettings();
         }
-    };
+        else {
+            sessionSettings = {
+                'autoRefreshAttempts': 5,
+                'dcHappened': false,
+                'autoRefresh': false,
+                'refreshSecs': 15,
+                'joinFavorites': false,
+                'joinSession': false,
+                'roomSession': [],
+                'favRooms': [],
+            };
+        }
 
-    var deleteSettings = function () {
-        sessionSettings = {
-            'autoRefreshAttempts': 5,
-            'dcHappened': false,
-            'autoRefresh': true,
-            'refreshSecs': 10,
-            'canCancel': true,
-            'joinFavorites': false,
-            'joinSession': false,
-            'roomSession': [],
-            'favRooms': [],
-        };
-
-        populateSettings();
-    }
-
-    var populateSettings = function () {
-        $('#favUserDropList').empty();
+        $('#favRoomsList').empty();
 
         $('#dcRefresh').prop("checked", sessionSettings.autoRefresh);
         $('#refreshTime').val(sessionSettings.refreshSecs);
-        $('#canCancelJoining').prop("checked", sessionSettings.canCancel);
+        $('#chatTextboxSave').prop("checked", sessionSettings.chatTextboxSave);
+        $('#pmTextboxSave').prop("checked", sessionSettings.pmTextboxSave);
         $('input#favEnable').prop("checked", sessionSettings.joinFavorites);
         $('#roomSessioning').prop("checked", sessionSettings.joinSession);
 
@@ -1599,24 +1448,23 @@ var sessionModule = (function () {
             $('#favAdd').text("Favorites Full");
             $('#favAdd')[0].disabled = true;
         }
-    };
+    }
+
+    function getHtml() {
+        return html;
+    }
+
+    function toString() {
+        return 'Session Module';
+    }
 
     return {
         init: init,
-        loadSettings: loadSettings,
-        deleteSettings: deleteSettings,
         addRoomToSession: addRoomToSession,
         removeRoomFromSession: removeRoomFromSession,
-
-        getHtml: function () {
-            return html;
-        },
-        toString: function () {
-            return 'Session Module';
-        },
-        getSettings: function () {
-            return sessionSettings;
-        },
+        loadSettings: loadSettings,
+        getHtml: getHtml,
+        toString: toString
     };
 }());/**
  * This module handles features for the PM system.
@@ -1624,6 +1472,7 @@ var sessionModule = (function () {
 var pmModule = (function () {
     var pmSettings = {
         'audioUrl': 'http://chat.rphaven.com/sounds/imsound.mp3',
+        'pmMute': false,
     };
 
     var localStorageName = "rpht_PmModule";
@@ -1650,11 +1499,10 @@ var pmModule = (function () {
 
     var awayMessages = {};
 
-    var init = function () {
-        rphToolsModule.registerDroplist($('#pmNamesDroplist'));
-        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
-
-        $('#pmNamesDroplist').change(function () {
+    function init() {
+        loadSettings();
+        
+        $('#pmNamesDroplist').change(() => {
             var userId = $('#pmNamesDroplist option:selected').val();
             var message = '';
 
@@ -1664,28 +1512,31 @@ var pmModule = (function () {
             $('input#awayMessageTextbox').val(message);
         });
 
-        $('#setAwayButton').click(function () {
+        $('#setAwayButton').click(() => {
             setPmAway();
         });
 
-        $('#removeAwayButton').click(function () {
+        $('#removeAwayButton').click(() => {
             removePmAway();
         });
 
-        $('#pmPingURL').change(function () {
+        $('#pmPingURL').change(() => {
             if (validateSetting('pmPingURL', 'url')) {
                 pmSettings.audioUrl = getInput('pmPingURL');
                 $('#im-sound').children("audio").attr('src', pmSettings.audioUrl);
-                saveSettings();
+                settingsModule.saveSettings(localStorageName, pmSettings);
             }
         });
 
-        $('#pmMute').change(function () {
+        $('#pmMute').change(() => {
             if ($('#pmMute').is(":checked")) {
                 $('#im-sound').children("audio").attr('src', '');
+                pmSettings.pmMute = true;
             } else {
                 $('#im-sound').children("audio").attr('src', pmSettings.audioUrl);
+                pmSettings.pmMute = false;
             }
+            settingsModule.saveSettings(localStorageName, pmSettings);
         });
 
         socket.on('pm', function (data) {
@@ -1695,13 +1546,23 @@ var pmModule = (function () {
         socket.on('outgoing-pm', function (data) {
             handleOutgoingPm(data);
         });
+
+        socket.on('accounts', () => {
+            setTimeout(() => {
+                $('#pmNamesDroplist').empty();
+                var namesToIds = getSortedNames();
+                for (var name in namesToIds) {
+                    addToDroplist(namesToIds[name], name, "#pmNamesDroplist");
+                }
+            }, 3000);
+        });
     }
 
     /**
      * Handler for PMs that are incoming
      * @param {object } data Data containing the PM.
      */
-    var handleIncomingPm = function (data) {
+    function handleIncomingPm(data) {
         if (!awayMessages[data.from]) {
             return;
         }
@@ -1721,7 +1582,7 @@ var pmModule = (function () {
      * Handler for PMs that are outgoing
      * @param {object } data Data containing the PM.
      */
-    var handleOutgoingPm = function (data) {
+    function handleOutgoingPm(data) {
         if (!awayMessages[data.from]) {
             return;
         }
@@ -1738,7 +1599,7 @@ var pmModule = (function () {
     /**
      * Adds an away status to a character
      */
-    var setPmAway = function () {
+    function setPmAway() {
         var userId = $('#pmNamesDroplist option:selected').val();
         var name = $("#pmNamesDroplist option:selected").html();
         if (!awayMessages[userId]) {
@@ -1765,7 +1626,7 @@ var pmModule = (function () {
     /**
      * Removes an away status for a character
      */
-    var removePmAway = function () {
+    function removePmAway() {
         var userId = $('#pmNamesDroplist option:selected').val();
 
         if (!awayMessages[userId]) {
@@ -1782,57 +1643,34 @@ var pmModule = (function () {
         }
     };
 
-    /**
-     * Save current settings
-     */
-    var saveSettings = function () {
-        localStorage.setItem(localStorageName, JSON.stringify(pmSettings));
-    };
-
-    /**
-     * Loads settings from local storage
-     * @param {object} storedSettings Object containing the settings
-     */
-    var loadSettings = function (storedSettings) {
-        if (storedSettings !== null) {
+    function loadSettings() {
+        var storedSettings = settingsModule.getSettings(localStorageName);
+        if (storedSettings) {
             pmSettings = storedSettings;
+        } 
+        else {
+            pmSettings = {
+                'audioUrl': 'http://chat.rphaven.com/sounds/imsound.mp3',
+                'pmMute': false,
+            };
         }
-        populateSettings();
-    };
-
-    /**
-     * Deletes the current settings and resets them to defaults.
-     */
-    var deleteSettings = function () {
-        localStorage.removeItem(localStorageName);
-        pmSettings = {
-            'audioUrl': 'http://chat.rphaven.com/sounds/imsound.mp3',
-        };
-        populateSettings();
-    };
-
-    /**
-     * Populate the GUI with settings from the browser's local storage
-     */
-    var populateSettings = function () {
         $('#pmPingURL').val(pmSettings.audioUrl);
-        $('input#pmIconsDisable').prop("checked", pmSettings.noIcons);
-    };
+        $('#pmMute').prop("checked", pmSettings.pmMute);
+    }
+
+    function getHtml() {
+        return html;
+    }
+
+    function toString() {
+        return 'PM Module';
+    }
 
     return {
         init: init,
         loadSettings: loadSettings,
-        deleteSettings: deleteSettings,
-
-        getHtml: function () {
-            return html;
-        },
-        toString: function () {
-            return 'PM Module';
-        },
-        getSettings: function () {
-            return pmSettings;
-        },
+        getHtml: getHtml,
+        toString: toString
     };
 }());/** 
  * Random number generator module. This is mostly used for chance games that
@@ -1883,7 +1721,7 @@ var rngModule = (function () {
     /** 
      * Initializes the GUI components of the module.
      */
-    var init = function () {
+    function init() {
         $('#diceNum').blur(function () {
             var dieNum = parseInt($('#diceNum').val());
             if (dieNum < DIE_MIN) {
@@ -1942,7 +1780,7 @@ var rngModule = (function () {
      * Generates a coin flip
      * @returns String contaning the coin flip results.
      */
-    var genCoinFlip = function () {
+    function genCoinFlip() {
         var coinMsg = '(( Coin toss: ';
         if (Math.ceil(Math.random() * 2) == 2) {
             coinMsg += 'heads!))';
@@ -1960,7 +1798,7 @@ var rngModule = (function () {
      * @param {boolean} showTotals Flag to show the total value of the roll
      * @returns String containing the dice roll result
      */
-    var getDiceRoll = function (dieNum, dieSides, showTotals) {
+    function getDiceRoll(dieNum, dieSides, showTotals) {
         /* Cap the values, just in case. */
         dieNum = (dieNum > DIE_MAX) ? DIE_MAX : dieNum;
         dieNum = (dieNum < DIE_MIN) ? DIE_MIN : dieNum;
@@ -1990,7 +1828,7 @@ var rngModule = (function () {
      * @param {number} maxNum Maximum end of the range
      * @returns String containing the random number result.
      */
-    var genRandomNum = function (minNum, maxNum) {
+    function genRandomNum(minNum, maxNum) {
         var ranNumMsg = '(( Random number generated (' + minNum + ' to ' +
             maxNum + '): ';
         ranNumMsg += Math.floor((Math.random() * (maxNum - minNum) + minNum)) +
@@ -2002,7 +1840,7 @@ var rngModule = (function () {
      * Sends the result of a random number generated to the server
      * @param {string} outcomeMsg A built string to show up on the chat.
      */
-    var sendResult = function (outcomeMsg) {
+    function sendResult(outcomeMsg) {
         var class_name = $('li.active')[0].className.split(" ");
         var room_name = "";
         var this_room = null;
@@ -2027,6 +1865,15 @@ var rngModule = (function () {
         return outcomeMsg;
     }
 
+    
+    function getHtml() {
+        return html;
+    };
+
+    function toString() {
+        return 'RNG Module';
+    };
+
     /**
      * Public members of the module exposed to others.
      */
@@ -2034,14 +1881,8 @@ var rngModule = (function () {
         init: init,
         genCoinFlip: genCoinFlip,
         getDiceRoll: getDiceRoll,
-
-        getHtml: function () {
-            return html;
-        },
-
-        toString: function () {
-            return 'RNG Module';
-        },
+        getHtml: getHtml,
+        toString: toString
     };
 }());/**
  * This module handles adding blocking of users. This is meant to supersede
@@ -2050,7 +1891,7 @@ var rngModule = (function () {
 var blockingModule = (function () {
     var blockedUsers = [];
 
-    var localStorageName = 'rpht_BlockingModule';
+    var localStorageName = 'blockingSettings';
 
     var html = {
         'tabId': 'blocking-module',
@@ -2066,14 +1907,16 @@ var blockingModule = (function () {
             '<button style="margin-left: 561px;" type="button" id="unblockButton">Unblock</button>'
     };
 
-    var init = function () {
+    function init() {
+        loadSettings();
+
         $('#blockButton').click(function () {
             var username = $('#nameCheckTextbox').val();
             if (username) {
                 getUserByName(username, function (user) {
                     addToBlockList(user);
                     user.blocked = true;
-                    saveSettings();
+                    settingsModule.saveSettings(localStorageName, blockedUsers);
                 });
             }
         });
@@ -2088,7 +1931,7 @@ var blockingModule = (function () {
                 names.remove(names.selectedIndex);
                 user.blocked = false;
                 blockedUsers.splice(blockedUsers.indexOf(userId), 1);
-                saveSettings();
+                settingsModule.saveSettings(localStorageName, blockedUsers);
             });
         });
 
@@ -2096,20 +1939,27 @@ var blockingModule = (function () {
             getUserById(data.ids[0], function (user) {
                 addToBlockList(user);
                 user.blocked = true;
-                saveSettings();
+                settingsModule.saveSettings(localStorageName, blockedUsers);
             });
         });
 
-        loadSettings();
+        $('#blockedDropList').empty();
+        blockedUsers.forEach(function (blockedUser) {
+            $('#blockedDropList').append('<option value="' + blockedUser.id + '">' +
+                blockedUser.name + '</option>');
+        });
 
-        setInterval(reblockList, 30 * 1000);
+        reblockList();
+
+        /* Applies blocking every minute, just to be sure. */
+        setInterval(reblockList, 60 * 1000);
     };
 
     /**
      * Adds a user to the native and RPHT block list.
      * @param {object} User object for the username being blocked
      */
-    var addToBlockList = function (user) {
+    function addToBlockList(user) {
         var inList = false;
 
         for (var i = 0; i < blockedUsers.length && !inList; i++) {
@@ -2131,8 +1981,8 @@ var blockingModule = (function () {
     /**
      * Blocks everyone on the list. Used to refresh blocking.
      */
-    var reblockList = function () {
-        blockedUsers.forEach(function (blockedUser, index) {
+    function reblockList() {
+        blockedUsers.forEach(function (blockedUser) {
             getUserById(blockedUser.id, function (user) {
                 addToBlockList(user);
                 user.blocked = true;
@@ -2140,55 +1990,31 @@ var blockingModule = (function () {
         });
     };
 
-    /** 
-     * Saves settings into the browser's local storage
-     */
-    var saveSettings = function () {
-        localStorage.setItem(localStorageName, JSON.stringify(blockedUsers));
-    };
-
-    /**
-     * Loads settings from the browser's local storage
-     */
-    var loadSettings = function () {
-        var storedSettings = JSON.parse(localStorage.getItem(localStorageName));
-        if (storedSettings !== null) {
+    function loadSettings() {
+        var storedSettings = settingsModule.getSettings(localStorageName);
+        if (storedSettings) {
             blockedUsers = storedSettings;
         }
-
+        else {
+            blockedUsers = [];
+        }
         $('#blockedDropList').empty();
-        blockedUsers.forEach(function (blockedUser, index) {
-            $('#blockedDropList').append('<option value="' + blockedUser.id + '">' +
-                blockedUser.name + '</option>');
-        });
         reblockList();
-    };
+    }
 
-    /**
-     * Deletes settings from the browser's local storage
-     */
-    var deleteSettings = function () {
-        localStorage.removeItem(localStorageName);
-        blockedUsers = [];
-        $('#blockedDropList').empty();
-    };
+    function getHtml() {
+        return html;
+    }
+
+    function toString() {
+        return 'Blocking Module';
+    }
 
     return {
         init: init,
         loadSettings: loadSettings,
-        deleteSettings: deleteSettings,
-
-        getHtml: function () {
-            return html;
-        },
-
-        toString: function () {
-            return 'Blocking Module';
-        },
-
-        getSettings: function () {
-            return blockedUsers;
-        },
+        getHtml: getHtml,
+        toString: toString,
     };
 }());/**
  * This module handles chat modding features. These include an easier way to
@@ -2198,14 +2024,10 @@ var blockingModule = (function () {
 var moddingModule = (function () {
     var settings = {
         'alertWords': '',
-        'kickWords': '',
-        'banWords': '',
-        'autoKickMsg': '',
-        'floodAction': 'kick',
         'alertUrl': 'http://chat.rphaven.com/sounds/boop.mp3',
     };
 
-    var localStorageName = "rpht_modSettings";
+    var localStorageName = "modSettings";
 
     var html = {
         'tabId': 'modding-module',
@@ -2244,22 +2066,11 @@ var moddingModule = (function () {
             '<button type="button" id="resetPwButton">Reset PW</button>' +
             '<br/><br/>' +
             '</div><div>' +
-            '<h4>Message filters</h4><br />' +
+            '<h4>Word alerter</h4><br />' +
             '<p><strong>Note:</strong> Separate all entries with a pipe character ( | ). To disable, empty the textbox.</p>' +
             '<br/><br/>' +
-            '<p>Alert only</p>' +
             '<textarea name="alertTriggers" id="alertTriggers" rows=4 class="rpht_textarea"></textarea>' +
             '<br/><br/>' +
-            '<p>Auto-Kick words</p>' +
-            '<textarea name="autoKickTriggers" id="autoKickTriggers" rows=4 class="rpht_textarea"></textarea>' +
-            '<br/><br/>' +
-            '<p>Auto-Ban words</p>' +
-            '<textarea name="autoBanTriggers" id="autoBanTriggers" rows=4 class="rpht_textarea"></textarea>' +
-            '<br/><br/>' +
-            '<label class="rpht_labels">Action on flooding</label><select style="width: 300px;" id="floodActionDroplist"></select>' +
-            '<br/><br/>' +
-            '<label class="rpht_labels">Message:</label><input style="width: 300px;" type="text" id="autoKickMessage" placeholder="Message">' +
-            '<br /><br />' +
             '</div>'
     };
 
@@ -2267,9 +2078,9 @@ var moddingModule = (function () {
 
     var roomNamePairs = {};
 
-    var init = function () {
-        loadSettings(JSON.parse(localStorage.getItem(localStorageName)));
-
+    function init() {
+        loadSettings();
+        
         $('#roomModSelect').change(function () {
             var roomModeIdx = $('#roomModSelect')[0].selectedIndex;
             var roomModVal = $('#roomModSelect')[0].options[roomModeIdx].value;
@@ -2327,52 +2138,28 @@ var moddingModule = (function () {
 
         $('#modAlertWords').blur(function () {
             settings.alertWords = $('#modAlertWords').val().replace(/\r?\n|\r/, '');
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, settings);
         });
 
         $('#modAlertUrl').blur(function () {
             if (validateSetting('modAlertUrl', 'url')) {
                 settings.alertUrl = getInput('#modAlertUrl');
-                saveSettings();
+                settingsModule.saveSettings(localStorageName, settings);
                 alertSound = new Audio(settings.alertUrl);
             }
         });
 
         $('#alertTriggers').blur(function () {
             settings.alertWords = $('#alertTriggers').val();
-            saveSettings();
+            settingsModule.saveSettings(localStorageName, settings);
         });
-
-        $('#autoKickTriggers').blur(function () {
-            settings.kickWords = $('#autoKickTriggers').val();
-            saveSettings();
-        });
-
-        $('#autoBanTriggers').blur(function () {
-            settings.banWords = $('#autoBanTriggers').val();
-            saveSettings();
-        });
-
-        $('#autoKickMessage').blur(function () {
-            settings.autoKickMsg = $('#autoKickMessage').val();
-            saveSettings();
-        });
-
-        addToDroplist('no-act', 'Nothing', $('#floodActionDroplist'));
-        addToDroplist('kick', 'Kick', $('#floodActionDroplist'));
-        addToDroplist('ban', 'Ban', $('#floodActionDroplist'));
-        $('#floodActionDroplist').change(function () {
-            settings.floodAction = $('#floodActionDroplist option:selected').val();
-            saveSettings();
-        });
-        $('#floodActionDroplist').val(settings.floodAction);
     };
 
     /**
      * Performs a modding action
      * @param {string} action Name of the action being performed
      */
-    var modAction = function (action) {
+    function modAction(action) {
         var targets = $('#modTargetTextInput').val().replace(/\r?\n|\r/, '');
         targets = targets.split(',');
         console.log('RPH Tools[modAction]: Performing', action, 'on', targets);
@@ -2389,7 +2176,7 @@ var moddingModule = (function () {
      * @param {string} action Name of the action being performed
      * @param {string} targetName User name of the recipient of the action
      */
-    var emitModAction = function (action, targetName, modName, roomName, reasonMsg) {
+    function emitModAction(action, targetName, modName, roomName, reasonMsg) {
         getUserByName(targetName, function (target) {
             getUserByName(modName, function (user) {
                 var modMessage = '';
@@ -2406,7 +2193,7 @@ var moddingModule = (function () {
         });
     };
 
-    var findUserAsMod = function (userObj) {
+    function findUserAsMod(userObj) {
         roomnames.forEach((roomname) => {
             var roomObj = getRoom(roomname);
             if (roomObj.props.mods.indexOf(userObj.props.id) > -1 ||
@@ -2421,7 +2208,7 @@ var moddingModule = (function () {
      * @param {number} userId User ID of the mod
      * @param {object} thisRoom Object containing the room data.
      */
-    var addModRoomPair = function (userProps, roomName) {
+    function addModRoomPair(userProps, roomName) {
         var roomNamePair = roomName + ': ' + userProps.name;
         var roomNameValue = roomName + '.' + userProps.id;
         var roomNameObj = {
@@ -2437,63 +2224,46 @@ var moddingModule = (function () {
         }
     };
 
-
-    var processFilterAction = function (action, modName, targetName, roomName) {
+    function processFilterAction(action, modName, targetName, roomName) {
         moddingModule.emitModAction(action, targetName, modName, roomName, settings.autoKickMsg);
     }
-
-    var processFlooding = function (modName, targetName, roomName) {
-        moddingModule.emitModAction(settings.floodAction, targetName, modName, roomName, settings.autoKickMsg);
-    };
 
     /**
      * Plays the alert sound
      */
-    var playAlert = function () {
+    function playAlert() {
         alertSound.play();
     };
 
-    /**
-     * Saves settings to local storage
-     */
-    var saveSettings = function () {
-        localStorage.setItem(localStorageName, JSON.stringify(settings));
-    };
-
-    /** 
-     * Loads saved settings if they exist
-     */
-    var loadSettings = function (storedSettings) {
+    function loadSettings() {
+        var storedSettings = settingsModule.getSettings(localStorageName);
         if (storedSettings) {
             settings = storedSettings;
-            populateSettings();
         }
-    };
+        else {
+            settings = {
+                'alertWords': '',
+                'alertUrl': 'http://chat.rphaven.com/sounds/boop.mp3',
+            };
+        }
 
-    /**
-     * Deleting saved settings.
-     */
-    var deleteSettings = function () {
-        localStorage.removeItem(localStorageName);
-        settings = {
-            'alertWords': [],
-            'alertUrl': 'http://chat.rphaven.com/sounds/boop.mp3',
-        };
-        populateSettings();
-    };
-
-    /**
-     * Populates the GUI with the saved settings
-     */
-    var populateSettings = function () {
         $('#modAlertUrl').val(settings.alertUrl);
         alertSound = new Audio(settings.alertUrl);
 
         $('#alertTriggers').val(settings.alertWords);
-        $('#autoKickTriggers').val(settings.kickWords);
-        $('#autoBanTriggers').val(settings.banWords);
-        $('#autoKickMessage').val(settings.autoKickMsg);
-    };
+    }
+
+    function getAlertWords() {
+        return settings.alertWords;
+    }
+
+    function getHtml() {
+        return html;
+    }
+
+    function toString() {
+        return 'Modding Module';
+    }
 
     return {
         init: init,
@@ -2501,20 +2271,10 @@ var moddingModule = (function () {
         findUserAsMod: findUserAsMod,
         addModRoomPair: addModRoomPair,
         playAlert: playAlert,
-        processFilterAction: processFilterAction,
-        processFlooding: processFlooding,
         loadSettings: loadSettings,
-        deleteSettings: deleteSettings,
-
-        getHtml: function () {
-            return html;
-        },
-        toString: function () {
-            return 'Modding Module';
-        },
-        getSettings: function () {
-            return settings;
-        },
+        getAlertWords: getAlertWords,
+        getHtml: getHtml,
+        toString: toString
     };
 }());/**
  * Handles importing, exporting, and deleting of settings.
@@ -2540,7 +2300,7 @@ var settingsModule = (function () {
     /** 
      * Initializes the GUI components of the module.
      */
-    var init = function () {
+    function init() {
         $('#importButton').click(function () {
             importSettingsHanlder();
         });
@@ -2562,57 +2322,34 @@ var settingsModule = (function () {
      * Handles the initial portion of importing settings. This checks the input
      * to see if it's a valid JSON formatted string.
      */
-    var importSettingsHanlder = function () {
-        settings = $('textarea#importExportTextarea').val().split("\n");
-        for (var i = 0; i < settings.length - 1; i++) {
-            try {
-                var settingsObj = JSON.parse(settings[i]);
-                console.log('RPHT [Setting Module]: Importing...', settingsObj);
-                importSettings(settingsObj);
-            } catch (err) {
-                console.log('RPH Tools[importSettings]: Error importing settings', err);
-                markProblem("importExportTextarea", true);
-            }
+    function importSettingsHanlder() {
+        try {
+            var newSettings = JSON.parse($('textarea#importExportTextarea').val());
+            localStorage.setItem(SETTINGS_NAME, JSON.stringify(newSettings));
+            rphToolsModule.getAllModules().forEach((module) => {
+                if (module.loadSettings){
+                    module.loadSettings();
+                }
+            });
+        }
+        catch {
+            console.log('[RPHT.Settings]: There was a problem with importing settings');
+            markProblem('textarea#importExportTextarea', true)
         }
     }
-    /**
-     * Takes the object from the JSON formatted string and imports it into the
-     * relevant modules
-     * @param {Object} settingsObj 
-     */
-    var importSettings = function (settingsObj) {
-        var module = rphToolsModule.getModule(settingsObj.name);
-        if (!module) {
-            return;
-        } else if (!module.loadSettings) {
-            return;
-        }
-        module.loadSettings(settingsObj.settings);
-    };
 
     /**
      * Exports settings into a JSON formatted string
      */
-    var exportSettings = function () {
-        var settingsString = "";
-        var modules = rphToolsModule.getModules();
-        for (var i = 0; i < modules.length; i++) {
-            if (modules[i].getSettings !== undefined) {
-                var modSettings = {
-                    name: modules[i].toString(),
-                    settings: modules[i].getSettings(),
-                };
-                settingsString += JSON.stringify(modSettings) + "\n";
-            }
-        }
-        return settingsString;
-    };
+    function exportSettings() {
+        return localStorage.getItem(SETTINGS_NAME);
+    }
 
     /** 
      * Logic to confirm deleting settings. The button needs to be pressed twice
      * within 10 seconds for the settings to be deleted.
      */
-    var deleteSettingsHanlder = function () {
+    function deleteSettingsHanlder() {
         if (confirmDelete === false) {
             $('#deleteSettingsButton').text('Press again to delete');
             confirmDelete = true;
@@ -2623,45 +2360,59 @@ var settingsModule = (function () {
                 $('#deleteSettingsButton').text('Delete Settings');
             }, 10 * 1000);
         } else if (confirmDelete === true) {
+            clearTimeout(deleteTimer);
             console.log('RPH Tools[Settings Module]: Deleting settings');
             $('#deleteSettingsButton').text('Delete Settings');
             confirmDelete = false;
-            deleteAllSettings();
-            clearTimeout(deleteTimer);
+            localStorage.removeItem(SETTINGS_NAME);
+            localStorage.setItem(SETTINGS_NAME, JSON.stringify({}));
+            rphToolsModule.getAllModules().forEach((module) => {
+                if (module.loadSettings){
+                    console.log("Reloading", module.toString());
+                    module.loadSettings();
+                }
+            });
         }
-    };
+    }
 
-    /** 
-     * Deletes all of the settings of the modules that have settings.
-     */
-    var deleteAllSettings = function () {
-        var modules = rphToolsModule.getModules();
-        for (var i = 0; i < modules.length; i++) {
-            if (modules[i].deleteSettings) {
-                modules[i].deleteSettings();
-            }
+    function saveSettings(moduleName, moduleSettings) {
+        var settings = JSON.parse(localStorage.getItem(SETTINGS_NAME));
+        settings[moduleName] = {};
+        settings[moduleName] = moduleSettings;
+        localStorage.setItem(SETTINGS_NAME, JSON.stringify(settings));
+    }
+
+    function getSettings(moduleName) {
+        var settings = JSON.parse(localStorage.getItem(SETTINGS_NAME));
+        var moduleSettings = null;
+        if (settings[moduleName]) {
+            moduleSettings = settings[moduleName];
         }
-    };
+        return moduleSettings;
+    }
+
+    function getHtml() {
+        return html;
+    }
+
+    function toString() {
+        return 'Settings Module';
+    }
 
     /** 
      * Public members of the module
      */
     return {
         init: init,
-
-        getHtml: function () {
-            return html;
-        },
-
-        toString: function () {
-            return 'Settings Module';
-        },
+        saveSettings: saveSettings,
+        getSettings: getSettings,
+        getHtml: getHtml,
+        toString: toString
     };
 }());/**
  * This module handles the "About" section for information on RPH Tools.
  */
 var aboutModule = (function () {
-
     var html = {
         'tabId': 'about-module',
         'tabName': 'About',
@@ -2675,28 +2426,28 @@ var aboutModule = (function () {
             '<p>If the script isn\'t working, try some <a href="https://openuserjs.org/scripts/shuffyiosys/RPH_Tools#troubleshooting" target="_blank">Troubleshooting Tips</a></p><br />'
     };
 
+    function init() {
+        return;
+    }
+
+    function getHtml() {
+        return html;
+    }
+
+    function toString() {
+        return 'About Module';
+    }
+
     return {
-        init: function () {
-            return;
-        },
-        getHtml: function () {
-            return html;
-        },
-        toString: function () {
-            return 'About Module';
-        },
+        init: init,
+        getHtml: getHtml,
+        toString: toString
     };
 }());/**
  * Main RPH Tools module
  */
 var rphToolsModule = (function () {
-    var namesToIds = {};
-
-    var idsToNames = {};
-
     var modules = [];
-
-    var moduleDroplists = [];
 
     var rpht_css =
         '<style>' +
@@ -2715,15 +2466,22 @@ var rphToolsModule = (function () {
      * Initializes the modules and the HTML elements it handles.
      * @param {Array} addonModules Modules to add into the system.
      */
-    var init = function (addonModules) {
-        var i;
+    function init (addonModules) {
         var $settingsDialog = $('#settings-dialog')
         modules = addonModules;
 
         $('head').append(rpht_css);
         $('#settings-dialog .inner ul.tabs').append('<h3>RPH Tools</h3>')
+        
+        /* Checks to see if there's a local store for settings and creates one
+         * if there isn't. */
+        var settings = localStorage.getItem(SETTINGS_NAME);
+        if (!settings) {
+            settings = {};
+            localStorage.setItem(SETTINGS_NAME, JSON.stringify(settings));
+        }
 
-        modules.forEach(function (module, index) {
+        modules.forEach(function (module) {
             if (module.getHtml) {
                 html = module.getHtml();
                 $('#settings-dialog .inner ul.tabs')
@@ -2739,29 +2497,9 @@ var rphToolsModule = (function () {
                         $settingsDialog.find($(this).attr('href')).show();
                         ev.preventDefault();
                     });
-            }
-        });
 
-        /* When the account data receive event happens, delay some time before 
-           initializing the modules because the relevant data isn't immediately
-           available.  */
-        socket.on('accounts', function () {
-            console.log('RPH Tools[_on.accounts]: Account data blob received');
-            setTimeout(function () {
-                var moddingModule = getModule('Modding Module');
-                account.users.forEach(function (userObj) {
-                    if (moddingModule) {
-                        moddingModule.findUserAsMod(userObj);
-                    }
-                    idsToNames[userObj.props.id] = userObj.props.name;
-                    namesToIds[userObj.props.name] = userObj.props.id;
-                });
-                namesToIds = sortOnKeys(namesToIds);
-                for (i = 0; i < modules.length; i++) {
-                    modules[i].init();
-                }
-                populateDroplists();
-            }, 1500);
+                module.init();
+            }
         });
     }
 
@@ -2781,45 +2519,24 @@ var rphToolsModule = (function () {
         return module;
     };
 
-    /**
-     * Returns all modules that RPH Tools has loaded
-     * @returns A list of all modules that have been loaded into the script.
-     */
-    var getModules = function () {
+    function getAllModules() {
         return modules;
-    };
+    }
 
-    var registerDroplist = function (droplist) {
-        moduleDroplists.push(droplist);
-    };
+    function getHtml() {
+        return html;
+    }
 
-    var populateDroplists = function () {
-        moduleDroplists.forEach((droplist, index) => {
-            droplist.empty();
-            for (var name in namesToIds) {
-                addToDroplist(namesToIds[name], name, droplist);
-            }
-        });
-    };
+    function toString() {
+        return 'RPH Tools Module';
+    }
 
     return {
         init: init,
         getModule: getModule,
-        getModules: getModules,
-        registerDroplist: registerDroplist,
-
-        getHtml: function () {
-            return html;
-        },
-        toString: function () {
-            return 'RPH Tools Module';
-        },
-        getNamesToIds: function () {
-            return namesToIds;
-        },
-        getIdsToNames: function () {
-            return idsToNames;
-        },
+        getAllModules: getAllModules,
+        getHtml: getHtml,
+        toString: toString,
     };
 }());/****************************************************************************
  * Script initializations to execute after the page loads

@@ -3,7 +3,7 @@
  * @param {string} settingId Full selector of the input to get its value
  * @return The extracted HTML's value
  */
-var getInput = function (settingId) {
+function getInput(settingId) {
     return $(settingId).val();
 };
 
@@ -12,7 +12,7 @@ var getInput = function (settingId) {
  * @param {string} settingId Full selector of the checkbox to get the value
  * @return The extracted HTML's value
  */
-var getCheckBox = function (settingId) {
+function getCheckBox(settingId) {
     return $(settingId).is(':checked');
 };
 
@@ -21,7 +21,7 @@ var getCheckBox = function (settingId) {
  * @param {string} element Full selector of the HTML element to mark
  * @param {boolean} mark If the mark is for good or bad
  */
-var markProblem = function (element, mark) {
+function markProblem(element, mark) {
     if (mark === true) {
         $(element).css('background', '#FF7F7F');
     } else {
@@ -35,7 +35,7 @@ var markProblem = function (element, mark) {
  * @param {string} setting What kind of setting is being checked
  * @return If the input is valid or not
  */
-var validateSetting = function (settingId, setting) {
+function validateSetting(settingId, setting) {
     var validInput = false;
     var input = $(settingId).val();
 
@@ -58,7 +58,7 @@ var validateSetting = function (settingId, setting) {
  * @param {string} color Color input
  * @returns If the color input is valid
  */
-var validateColor = function (color) {
+function validateColor(color) {
     var pattern = new RegExp(/(^#[0-9A-Fa-f]{6}$)|(^#[0-9A-Fa-f]{3}$)/i);
     return pattern.test(color);
 };
@@ -89,7 +89,7 @@ var validateUrl = function (url) {
  * @param {string} TextColor String representation of the color.
  * @return True if the color is within range, false otherwise.
  */
-var validateColorRange = function (TextColor) {
+function validateColorRange(TextColor) {
     var rawHex = TextColor.substring(1, TextColor.length);
     var validColor = false;
     var red = 255;
@@ -124,8 +124,9 @@ var validateColorRange = function (TextColor) {
  * @param {string} label Label of the option element
  * @param {object} droplist Which select element to add option to
  */
-var addToDroplist = function (value, label, droplist) {
-    droplist.append($('<option>', {
+function addToDroplist(value, label, droplist) {
+    var droplist_elem = $(droplist);
+    droplist_elem.append($('<option>', {
         value: value,
         text: label
     }));
@@ -140,7 +141,7 @@ var addToDroplist = function (value, label, droplist) {
  * @return Index of the first instance where the key matches the value, -1 
  *         otherwise.
  */
-var arrayObjectIndexOf = function (objArray, key, value) {
+function arrayObjectIndexOf(objArray, key, value) {
     for (var i = 0; i < objArray.length; i++) {
         if (objArray[i][key] === value) {
             return i;
@@ -155,7 +156,7 @@ var arrayObjectIndexOf = function (objArray, key, value) {
  * @param {string} msg The string being looked at
  * @returns True or false if there's a match.
  */
-var isInLink = function (searchTerm, msg) {
+function isInLink(searchTerm, msg) {
     var regexp = new RegExp('href=".*?' + searchTerm + '.*?"', '');
     return regexp.test(msg);
 };
@@ -164,7 +165,7 @@ var isInLink = function (searchTerm, msg) {
  * Checks if the current account is a mod of the room.
  * @param {object} room Object containing room data
  */
-var isModOfRoom = function (room) {
+function isModOfRoom(room) {
     var isMod = false;
     for (var idx = 0; idx < account.userids.length && !isMod; idx++) {
         if (room.props.mods.indexOf(account.userids[idx]) > -1 ||
@@ -175,7 +176,7 @@ var isModOfRoom = function (room) {
     return isMod;
 };
 
-var getModForRoom = function (room){
+function getModForRoom(room){
     var modName = '';
     var users = account.users;
     for (var idx = 0; idx < users.length; idx++) {
@@ -193,7 +194,7 @@ var getModForRoom = function (room){
  * @param {object} dict Dictionary to be sorted
  * @returns Sorted dictionary
  */
-var sortOnKeys = function (dict) {
+function sortOnKeys (dict) {
     var sorted = [];
     for (var key in dict) {
         sorted[sorted.length] = key;
@@ -208,11 +209,20 @@ var sortOnKeys = function (dict) {
     return tempDict;
 }
 
-var makeFullTimeStamp = function(){
-    var timeObj = new Date();
+function makeFullTimeStamp(timestamp){
+    var timeObj = new Date(timestamp);
     var timestamp = timeObj.getHours().toString().padStart(2, '0') + ':';
     timestamp += timeObj.getMinutes().toString().padStart(2, '0') + ':';
     timestamp += timeObj.getSeconds().toString().padStart(2, '0');
 
     return timestamp
+}
+
+function getSortedNames() {
+    var namesToIds = {};
+    account.users.forEach(function (userObj) {
+        namesToIds[userObj.props.name] = userObj.props.id;
+    });
+    namesToIds = sortOnKeys(namesToIds);
+    return namesToIds;
 }

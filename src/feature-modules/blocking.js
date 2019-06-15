@@ -5,7 +5,7 @@
 var blockingModule = (function () {
     var blockedUsers = [];
 
-    var localStorageName = 'rpht_BlockingModule';
+    var localStorageName = 'blockingSettings';
 
     var html = {
         'tabId': 'blocking-module',
@@ -21,14 +21,16 @@ var blockingModule = (function () {
             '<button style="margin-left: 561px;" type="button" id="unblockButton">Unblock</button>'
     };
 
-    var init = function () {
+    function init() {
+        loadSettings();
+
         $('#blockButton').click(function () {
             var username = $('#nameCheckTextbox').val();
             if (username) {
                 getUserByName(username, function (user) {
                     addToBlockList(user);
                     user.blocked = true;
-                    saveSettings();
+                    settingsModule.saveSettings(localStorageName, blockedUsers);
                 });
             }
         });
@@ -43,7 +45,7 @@ var blockingModule = (function () {
                 names.remove(names.selectedIndex);
                 user.blocked = false;
                 blockedUsers.splice(blockedUsers.indexOf(userId), 1);
-                saveSettings();
+                settingsModule.saveSettings(localStorageName, blockedUsers);
             });
         });
 
@@ -51,20 +53,27 @@ var blockingModule = (function () {
             getUserById(data.ids[0], function (user) {
                 addToBlockList(user);
                 user.blocked = true;
-                saveSettings();
+                settingsModule.saveSettings(localStorageName, blockedUsers);
             });
         });
 
-        loadSettings();
+        $('#blockedDropList').empty();
+        blockedUsers.forEach(function (blockedUser) {
+            $('#blockedDropList').append('<option value="' + blockedUser.id + '">' +
+                blockedUser.name + '</option>');
+        });
 
-        setInterval(reblockList, 30 * 1000);
+        reblockList();
+
+        /* Applies blocking every minute, just to be sure. */
+        setInterval(reblockList, 60 * 1000);
     };
 
     /**
      * Adds a user to the native and RPHT block list.
      * @param {object} User object for the username being blocked
      */
-    var addToBlockList = function (user) {
+    function addToBlockList(user) {
         var inList = false;
 
         for (var i = 0; i < blockedUsers.length && !inList; i++) {
@@ -86,8 +95,8 @@ var blockingModule = (function () {
     /**
      * Blocks everyone on the list. Used to refresh blocking.
      */
-    var reblockList = function () {
-        blockedUsers.forEach(function (blockedUser, index) {
+    function reblockList() {
+        blockedUsers.forEach(function (blockedUser) {
             getUserById(blockedUser.id, function (user) {
                 addToBlockList(user);
                 user.blocked = true;
@@ -95,54 +104,30 @@ var blockingModule = (function () {
         });
     };
 
-    /** 
-     * Saves settings into the browser's local storage
-     */
-    var saveSettings = function () {
-        localStorage.setItem(localStorageName, JSON.stringify(blockedUsers));
-    };
-
-    /**
-     * Loads settings from the browser's local storage
-     */
-    var loadSettings = function () {
-        var storedSettings = JSON.parse(localStorage.getItem(localStorageName));
-        if (storedSettings !== null) {
+    function loadSettings() {
+        var storedSettings = settingsModule.getSettings(localStorageName);
+        if (storedSettings) {
             blockedUsers = storedSettings;
         }
-
+        else {
+            blockedUsers = [];
+        }
         $('#blockedDropList').empty();
-        blockedUsers.forEach(function (blockedUser, index) {
-            $('#blockedDropList').append('<option value="' + blockedUser.id + '">' +
-                blockedUser.name + '</option>');
-        });
         reblockList();
-    };
+    }
 
-    /**
-     * Deletes settings from the browser's local storage
-     */
-    var deleteSettings = function () {
-        localStorage.removeItem(localStorageName);
-        blockedUsers = [];
-        $('#blockedDropList').empty();
-    };
+    function getHtml() {
+        return html;
+    }
+
+    function toString() {
+        return 'Blocking Module';
+    }
 
     return {
         init: init,
         loadSettings: loadSettings,
-        deleteSettings: deleteSettings,
-
-        getHtml: function () {
-            return html;
-        },
-
-        toString: function () {
-            return 'Blocking Module';
-        },
-
-        getSettings: function () {
-            return blockedUsers;
-        },
+        getHtml: getHtml,
+        toString: toString,
     };
 }());

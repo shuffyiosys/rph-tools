@@ -47,7 +47,7 @@ var rngModule = (function () {
     /** 
      * Initializes the GUI components of the module.
      */
-    var init = function () {
+    function init() {
         $('#diceNum').blur(function () {
             var dieNum = parseInt($('#diceNum').val());
             if (dieNum < DIE_MIN) {
@@ -106,7 +106,7 @@ var rngModule = (function () {
      * Generates a coin flip
      * @returns String contaning the coin flip results.
      */
-    var genCoinFlip = function () {
+    function genCoinFlip() {
         var coinMsg = '(( Coin toss: ';
         if (Math.ceil(Math.random() * 2) == 2) {
             coinMsg += 'heads!))';
@@ -124,7 +124,7 @@ var rngModule = (function () {
      * @param {boolean} showTotals Flag to show the total value of the roll
      * @returns String containing the dice roll result
      */
-    var getDiceRoll = function (dieNum, dieSides, showTotals) {
+    function getDiceRoll(dieNum, dieSides, showTotals) {
         /* Cap the values, just in case. */
         dieNum = (dieNum > DIE_MAX) ? DIE_MAX : dieNum;
         dieNum = (dieNum < DIE_MIN) ? DIE_MIN : dieNum;
@@ -154,7 +154,7 @@ var rngModule = (function () {
      * @param {number} maxNum Maximum end of the range
      * @returns String containing the random number result.
      */
-    var genRandomNum = function (minNum, maxNum) {
+    function genRandomNum(minNum, maxNum) {
         var ranNumMsg = '(( Random number generated (' + minNum + ' to ' +
             maxNum + '): ';
         ranNumMsg += Math.floor((Math.random() * (maxNum - minNum) + minNum)) +
@@ -166,7 +166,7 @@ var rngModule = (function () {
      * Sends the result of a random number generated to the server
      * @param {string} outcomeMsg A built string to show up on the chat.
      */
-    var sendResult = function (outcomeMsg) {
+    function sendResult(outcomeMsg) {
         var class_name = $('li.active')[0].className.split(" ");
         var room_name = "";
         var this_room = null;
@@ -191,6 +191,15 @@ var rngModule = (function () {
         return outcomeMsg;
     }
 
+    
+    function getHtml() {
+        return html;
+    };
+
+    function toString() {
+        return 'RNG Module';
+    };
+
     /**
      * Public members of the module exposed to others.
      */
@@ -198,13 +207,7 @@ var rngModule = (function () {
         init: init,
         genCoinFlip: genCoinFlip,
         getDiceRoll: getDiceRoll,
-
-        getHtml: function () {
-            return html;
-        },
-
-        toString: function () {
-            return 'RNG Module';
-        },
+        getHtml: getHtml,
+        toString: toString
     };
 }());
