@@ -55,7 +55,7 @@ var chatModule = (function () {
             '<label class="rpht_labels">Ping Tester: </label><input type="text" id="pingPreviewInput" name="pingPreviewInput">' +
             '<br /><br />' +
             '<label class="rpht_labels">Ping preview:</label><span id="pingPreviewText"></span>' +
-            '</div><div>'
+            '</div>'
     }
 
     function init() {
@@ -272,7 +272,7 @@ var chatModule = (function () {
         /* If there's a verification mark, check to see if it's good */
         if (msg.indexOf('\u200b') > -1) {
             var verifiedMsg = verifyMessage(msg);
-            msg = message.substring(0, message.indexOf('\u200b'));
+            msg = msg.substring(0, msg.indexOf('\u200b'));
             if (verifiedMsg) {
                 msg += ' <span style="background:#4A4; color: #000;">&#9745;</span>';
             } else {

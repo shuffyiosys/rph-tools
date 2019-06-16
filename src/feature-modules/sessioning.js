@@ -70,7 +70,7 @@ var sessionModule = (function () {
             '<select style="width: 611px;" id="favRoomsList" size="10"></select><br><br>' +
             '<button style="margin-left: 560px;" type="button" id="favRemove">Remove</button>' +
             '<br>' +
-            '</div><div>'
+            '</div>'
     };
 
     function init() {
@@ -140,7 +140,9 @@ var sessionModule = (function () {
                 setTimeout(() => {
                     var pmTextBoxes = $("#pm-bottom .textarea textarea");
                     for (var i = 0; i < pmTextBoxes.length; i++){
-                        pmTextBoxes[i].value =  sessionSettings.pmTextboxes[i];
+                        console.log(sessionSettings.pmTextboxes[i]);
+                        if (sessionSettings.pmTextboxes[i])
+                            pmTextBoxes[i].value = sessionSettings.pmTextboxes[i];
                     }
                 }, 1000);
             }

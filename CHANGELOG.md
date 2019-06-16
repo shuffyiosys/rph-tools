@@ -4,6 +4,8 @@ RPH Tools (4.1.0)
 * Added PM and Chat textbox input saving and restoring. There are some caveats:
   * Chatbox textbox inputs will only be restored if both the character rejoins the room. 
   * PM textbox inputs will be out of sync if a PM session was started but the PM was not sent. It depends on what the RPH servers send over.
+* Removed spam filtering since it's not needed anymore.
+* Removed auto-modding features
 
 RPH Tools (4.0.10)
 --------------
