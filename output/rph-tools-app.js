@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.1.0
+// @version    4.1.2
 // @description Adds extended settings to RPH
 // @match      http://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.1.0';
+const VERSION_STRING = '4.1.2';
 
 const SETTINGS_NAME = "rph_tools_settings";
 /**
@@ -255,6 +255,10 @@ String.prototype.hashCode = function () {
     return hash;
 };
 
+
+var chatHistory = {};
+var chatHistIdx = 0;
+
 /**
  * Modified handler for keyup events from the chat textbox
  * @param {object} ev - Event
@@ -263,14 +267,20 @@ String.prototype.hashCode = function () {
  */
 function intputChatText(ev, User, Room) {
     var inputTextBox = null;
+    var roomTextboxName = "";
     Room.$tabs.forEach(function (roomTab) {
         var classesLen = roomTab[0].classList.length;
         if (roomTab[0].classList[classesLen - 1] === 'active') {
             inputTextBox = $('textarea.' + User.props.id + '_' + makeSafeForCss(Room.props.name));
+            roomTextboxName = 'textarea.' + User.props.id + '_' + makeSafeForCss(Room.props.name);
+            if (!chatHistory[roomTextboxName]){
+                chatHistory[roomTextboxName] = {};
+            }
         }
     });
     if (ev.keyCode === 13 && ev.ctrlKey === false && ev.shiftKey === false && inputTextBox.val() !== '' && inputTextBox.val().trim() !== '') {
         var newMessage = inputTextBox.val();
+
         if (newMessage.length > 4000) {
             Room.appendMessage(
                 '<span class="first">&nbsp;</span>\n\
@@ -279,10 +289,29 @@ function intputChatText(ev, User, Room) {
             return;
         }
 
+        chatHistory[roomTextboxName][0] = newMessage;
+
         if (newMessage[0] === '/' && newMessage.substring(0, 2) !== '//' && chatModule) {
-                chatModule.parseSlashCommand(inputTextBox, Room, User);
+            chatModule.parseSlashCommand(inputTextBox, Room, User);
         } else {
             sendChatMessage(inputTextBox, Room, User);
+        }
+    }
+    /* Up */
+    else if (ev.keyCode == 38) {
+        if (chatHistIdx == 0) {
+            chatHistory[roomTextboxName][1] = inputTextBox.val();
+            inputTextBox.val(chatHistory[roomTextboxName][0]);
+            chatHistIdx = 1;
+        }
+        
+    }
+    /* Down */
+    else if (ev.keyCode == 40) {
+        if (chatHistIdx == 1) {
+            chatHistory[roomTextboxName][0] = inputTextBox.val();
+            inputTextBox.val(chatHistory[roomTextboxName][1]);
+            chatHistIdx = 0;
         }
     }
 }
