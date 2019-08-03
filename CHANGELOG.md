@@ -1,3 +1,15 @@
+RPH Tools (4.1.3)
+--------------
+* Fixed the color picker as RPH now expects colors without the "#"
+
+RPH Tools (4.1.2)
+--------------
+* Added a basic chat history function as RPH has a habit of eating messages now.
+
+RPH Tools (4.1.1)
+--------------
+* (history was lost here, unfortunately)
+
 RPH Tools (4.1.0)
 --------------
 * Redid the settings store system. Everything is now under the same localstore key, rather than each module having its own key. This should help simplify settings management. However, this makes it incompatible with settings before this version.

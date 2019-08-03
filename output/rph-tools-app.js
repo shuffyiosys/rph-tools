@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.1.2
+// @version    4.1.3
 // @description Adds extended settings to RPH
 // @match      http://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.1.2';
+const VERSION_STRING = '4.1.3';
 
 const SETTINGS_NAME = "rph_tools_settings";
 /**
@@ -53,15 +53,18 @@ function validateSetting(settingId, setting) {
     var validInput = false;
     var input = $(settingId).val();
 
-    switch (setting) {
-        case "url":
-            validInput = validateUrl(input);
-            break;
-
-        case "color":
-            validInput = validateColor(input);
-            validInput = validateColorRange(input);
-            break;
+    if (setting === "url") {
+        validInput = validateUrl(input);
+    }
+    else if (setting === "color-allrange") {
+        input = input.replace('#', '');
+        console.log("checking all color ranges", validateColor(input), input);
+        validInput = validateColor(input);
+    }
+    else if (setting === "color") {
+        input = input.replace('#', '');
+        validInput = validateColor(input);
+        validInput = validateColorRange(input);
     }
     markProblem(settingId, !validInput);
     return validInput;
@@ -73,7 +76,7 @@ function validateSetting(settingId, setting) {
  * @returns If the color input is valid
  */
 function validateColor(color) {
-    var pattern = new RegExp(/(^#[0-9A-Fa-f]{6}$)|(^#[0-9A-Fa-f]{3}$)/i);
+    var pattern = new RegExp(/([0-9A-Fa-f]{6}$)|([0-9A-Fa-f]{3}$)/i);
     return pattern.test(color);
 };
 
@@ -104,27 +107,26 @@ var validateUrl = function (url) {
  * @return True if the color is within range, false otherwise.
  */
 function validateColorRange(TextColor) {
-    var rawHex = TextColor.substring(1, TextColor.length);
     var validColor = false;
     var red = 255;
     var green = 255;
     var blue = 255;
 
     /* If the color text is 3 characters, limit it to #DDD */
-    if (rawHex.length == 3) {
-        red = parseInt(rawHex.substring(0, 1), 16);
-        green = parseInt(rawHex.substring(1, 2), 16);
-        blue = parseInt(rawHex.substring(2, 3), 16);
+    if (TextColor.length == 3) {
+        red = parseInt(TextColor.substring(0, 1), 16);
+        green = parseInt(TextColor.substring(1, 2), 16);
+        blue = parseInt(TextColor.substring(2, 3), 16);
 
         if ((red <= 0xD) && (green <= 0xD) && (blue <= 0xD)) {
             validColor = true;
         }
     }
     /* If the color text is 6 characters, limit it to #DDDDDD */
-    else if (rawHex.length == 6) {
-        red = parseInt(rawHex.substring(0, 2), 16);
-        green = parseInt(rawHex.substring(2, 4), 16);
-        blue = parseInt(rawHex.substring(4, 6), 16);
+    else if (TextColor.length == 6) {
+        red = parseInt(TextColor.substring(0, 2), 16);
+        green = parseInt(TextColor.substring(2, 4), 16);
+        blue = parseInt(TextColor.substring(4, 6), 16);
         if ((red <= 0xDD) && (green <= 0xDD) && (blue <= 0xDD)) {
             validColor = true;
         }
@@ -223,6 +225,7 @@ function sortOnKeys (dict) {
     return tempDict;
 }
 
+/*
 function makeFullTimeStamp(timestamp){
     var timeObj = new Date(timestamp);
     var timestamp = timeObj.getHours().toString().padStart(2, '0') + ':';
@@ -230,7 +233,7 @@ function makeFullTimeStamp(timestamp){
     timestamp += timeObj.getSeconds().toString().padStart(2, '0');
 
     return timestamp
-}
+}*/
 
 function getSortedNames() {
     var namesToIds = {};
@@ -374,11 +377,12 @@ var chatModule = (function () {
         'tabContents': '<h3>Chat room settings</h3>' +
             '<div>' +
             '<h4>User text color</h4>' +
+            '<p>Use <a href="https://htmlcolorcodes.com/color-picker/" target="_blank">this color picker</a> if you need to find the right hex code.</p>'+
             '<p><strong>Shortcut:</strong> /color [HTML color] - Changes the text color of the current username</p>' +
             '<br /><br />' +
             '<label class="rpht_labels">Username:</label><select  style="width: 300px;" id="userColorDroplist"></select>' +
             '<br /><br />' +
-            '<label class="rpht_labels">Text color:</label><input style="width: 300px;" type="text" id="userNameTextColor" name="userNameTextColor" value="#111">' +
+            '<label class="rpht_labels">Text color:</label><input style="width: 300px;" type="text" id="userNameTextColor" name="userNameTextColor" value="111">' +
             '<br /><br />' +
             '<label class="rpht_labels">Color preview: </label><span id="colorPreview">This is a sample text</span>' +
             '<br /><br />' +
@@ -410,13 +414,36 @@ var chatModule = (function () {
     function init() {
         loadSettings();
 
+        $('#userColorDroplist').change(() => {
+            var userId = $('#userColorDroplist option:selected').val();
+            console.log(userId);
+            getUserById(userId, (user) => { 
+                $('#userNameTextColor').val(user.props.color);
+                $('#colorPreview').css('color', '#' + user.props.color);
+            });
+        });
+
         $('#userNameTextColorButton').click(function () {
-            changeTextColor();
+            if (validateSetting('input#userNameTextColor', 'color') === true) {
+                var userId = $('#userColorDroplist option:selected').val();
+                var textColor = getInput('input#userNameTextColor').replace('#', '');
+                getUserById(userId, (user) => {
+                    socket.emit('modify', {
+                        userid: user.props.id,
+                        color: textColor
+                    });
+                })
+            }
         });
 
         $('#userNameTextColor').change(function () {
-            if (validateColorRange(getInput('#userNameTextColor'))) {
-                $('#colorPreview').css('color', getInput('#userNameTextColor'));
+            console.log(getInput('input#userNameTextColor'));
+            if (validateSetting('input#userNameTextColor', 'color')) {
+                var inputText = getInput('#userNameTextColor');
+                if (inputText[0] != '#'){
+                    inputText = '#' + inputText;
+                }
+                $('#colorPreview').css('color', inputText);
             }
         });
 
@@ -435,7 +462,7 @@ var chatModule = (function () {
         });
 
         $('#pingTextColor').blur(function () {
-            if (validateColor(getInput('#pingTextColor'))) {
+            if (validateSetting('#pingTextColor', 'color-allrange') === true) {
                 pingSettings.color = getInput('#pingTextColor');
                 saveSettings();
                 markProblem('#pingHighlightColor', false);
@@ -445,12 +472,9 @@ var chatModule = (function () {
         });
 
         $('#pingHighlightColor').blur(function () {
-            if (validateColor(getInput('#pingHighlightColor'))) {
+            if (validateSetting('#pingHighlightColor', 'color-allrange') === true) {
                 pingSettings.highlight = getInput('#pingHighlightColor');
                 saveSettings();
-                markProblem('#pingHighlightColor', false);
-            } else {
-                markProblem('#pingHighlightColor', true);
             }
         });
 
@@ -507,6 +531,9 @@ var chatModule = (function () {
                 for (var name in namesToIds) {
                     addToDroplist(namesToIds[name], name, "#userColorDroplist");
                 }
+                getUserById($('#userColorDroplist option:selected').val(), (user) => { 
+                    $('#userNameTextColor').val(user.props.color);
+                });
             }, 3000);
         });
 
@@ -590,7 +617,7 @@ var chatModule = (function () {
      * @param {object} data The message for the room
      */
     function postMessage(thisRoom, data, User) {
-        var timestamp = makeFullTimeStamp(data.time);
+        var timestamp = makeTimestamp(false, true);
         var msg = parseMsg(data.msg);
         var classes = '';
         var $el = '';
@@ -695,7 +722,7 @@ var chatModule = (function () {
         switch (cmdArgs[0]) {
             case '/status':
             case '/away':
-                if (cmdArgs.length < 2) {
+                if (cmdArgs.length != 3) {
                     error = true;
                 } else {
                     var type = 0;
@@ -711,16 +738,21 @@ var chatModule = (function () {
                 }
                 break;
             case '/color':
-                if (cmdArgs.length < 2) {
+                if (cmdArgs.length != 3) {
                     error = true;
-                } else if (validateColor(cmdArgs[1]) && validateColorRange(cmdArgs[1])) {
-                    socket.emit('modify', {
-                        userid: User.props.id,
-                        color: cmdArgs[1]
-                    });
-                    inputTextBox.css('color', cmdArgs[1]);
-                } else {
-                    error = true;
+                }
+                else {
+                    var colorArg = cmdArgs[1].replace('#', '');
+                    if (validateColor(colorArg) && validateColorRange(colorArg)) {
+                        socket.emit('modify', {
+                            userid: User.props.id,
+                            color: colorArg
+                        });
+                        inputTextBox.css('color', cmdArgs[1].replace('#', ''));
+                    }
+                    else {
+                        error = true;
+                    }
                 }
                 break;
             case '/coinflip':
@@ -923,21 +955,6 @@ var chatModule = (function () {
         setTimeout(() => {
             $(window).resize(resizeChatTabs);
         }, 100);
-    };
-
-    /**
-     * Handlers for text color changing
-     */
-    function changeTextColor() {
-        var textColor = $('input#userNameTextColor').val();
-        if (validateSetting('input#userNameTextColor', 'color') === true) {
-            var userId = $('#userColorDroplist option:selected').val();
-            textColor = textColor.substring(1, textColor.length);
-            socket.emit('modify', {
-                userid: userId,
-                color: textColor
-            });
-        }
     };
 
     /**
@@ -2128,10 +2145,9 @@ var moddingModule = (function () {
             var room = $('input#modRoomTextInput').val();
 
             getUserByName($('input#modFromTextInput').val(), function (user) {
-                var userId = user.props.id;
                 chatSocket.emit('modify', {
                     room: room,
-                    userid: userId,
+                    userid: user.props.id,
                     props: {
                         pw: false
                     }

@@ -39,15 +39,18 @@ function validateSetting(settingId, setting) {
     var validInput = false;
     var input = $(settingId).val();
 
-    switch (setting) {
-        case "url":
-            validInput = validateUrl(input);
-            break;
-
-        case "color":
-            validInput = validateColor(input);
-            validInput = validateColorRange(input);
-            break;
+    if (setting === "url") {
+        validInput = validateUrl(input);
+    }
+    else if (setting === "color-allrange") {
+        input = input.replace('#', '');
+        console.log("checking all color ranges", validateColor(input), input);
+        validInput = validateColor(input);
+    }
+    else if (setting === "color") {
+        input = input.replace('#', '');
+        validInput = validateColor(input);
+        validInput = validateColorRange(input);
     }
     markProblem(settingId, !validInput);
     return validInput;
@@ -59,7 +62,7 @@ function validateSetting(settingId, setting) {
  * @returns If the color input is valid
  */
 function validateColor(color) {
-    var pattern = new RegExp(/(^#[0-9A-Fa-f]{6}$)|(^#[0-9A-Fa-f]{3}$)/i);
+    var pattern = new RegExp(/([0-9A-Fa-f]{6}$)|([0-9A-Fa-f]{3}$)/i);
     return pattern.test(color);
 };
 
@@ -90,27 +93,26 @@ var validateUrl = function (url) {
  * @return True if the color is within range, false otherwise.
  */
 function validateColorRange(TextColor) {
-    var rawHex = TextColor.substring(1, TextColor.length);
     var validColor = false;
     var red = 255;
     var green = 255;
     var blue = 255;
 
     /* If the color text is 3 characters, limit it to #DDD */
-    if (rawHex.length == 3) {
-        red = parseInt(rawHex.substring(0, 1), 16);
-        green = parseInt(rawHex.substring(1, 2), 16);
-        blue = parseInt(rawHex.substring(2, 3), 16);
+    if (TextColor.length == 3) {
+        red = parseInt(TextColor.substring(0, 1), 16);
+        green = parseInt(TextColor.substring(1, 2), 16);
+        blue = parseInt(TextColor.substring(2, 3), 16);
 
         if ((red <= 0xD) && (green <= 0xD) && (blue <= 0xD)) {
             validColor = true;
         }
     }
     /* If the color text is 6 characters, limit it to #DDDDDD */
-    else if (rawHex.length == 6) {
-        red = parseInt(rawHex.substring(0, 2), 16);
-        green = parseInt(rawHex.substring(2, 4), 16);
-        blue = parseInt(rawHex.substring(4, 6), 16);
+    else if (TextColor.length == 6) {
+        red = parseInt(TextColor.substring(0, 2), 16);
+        green = parseInt(TextColor.substring(2, 4), 16);
+        blue = parseInt(TextColor.substring(4, 6), 16);
         if ((red <= 0xDD) && (green <= 0xDD) && (blue <= 0xDD)) {
             validColor = true;
         }
@@ -209,6 +211,7 @@ function sortOnKeys (dict) {
     return tempDict;
 }
 
+/*
 function makeFullTimeStamp(timestamp){
     var timeObj = new Date(timestamp);
     var timestamp = timeObj.getHours().toString().padStart(2, '0') + ':';
@@ -216,7 +219,7 @@ function makeFullTimeStamp(timestamp){
     timestamp += timeObj.getSeconds().toString().padStart(2, '0');
 
     return timestamp
-}
+}*/
 
 function getSortedNames() {
     var namesToIds = {};

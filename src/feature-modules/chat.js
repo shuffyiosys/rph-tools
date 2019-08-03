@@ -25,11 +25,12 @@ var chatModule = (function () {
         'tabContents': '<h3>Chat room settings</h3>' +
             '<div>' +
             '<h4>User text color</h4>' +
+            '<p>Use <a href="https://htmlcolorcodes.com/color-picker/" target="_blank">this color picker</a> if you need to find the right hex code.</p>'+
             '<p><strong>Shortcut:</strong> /color [HTML color] - Changes the text color of the current username</p>' +
             '<br /><br />' +
             '<label class="rpht_labels">Username:</label><select  style="width: 300px;" id="userColorDroplist"></select>' +
             '<br /><br />' +
-            '<label class="rpht_labels">Text color:</label><input style="width: 300px;" type="text" id="userNameTextColor" name="userNameTextColor" value="#111">' +
+            '<label class="rpht_labels">Text color:</label><input style="width: 300px;" type="text" id="userNameTextColor" name="userNameTextColor" value="111">' +
             '<br /><br />' +
             '<label class="rpht_labels">Color preview: </label><span id="colorPreview">This is a sample text</span>' +
             '<br /><br />' +
@@ -61,13 +62,36 @@ var chatModule = (function () {
     function init() {
         loadSettings();
 
+        $('#userColorDroplist').change(() => {
+            var userId = $('#userColorDroplist option:selected').val();
+            console.log(userId);
+            getUserById(userId, (user) => { 
+                $('#userNameTextColor').val(user.props.color);
+                $('#colorPreview').css('color', '#' + user.props.color);
+            });
+        });
+
         $('#userNameTextColorButton').click(function () {
-            changeTextColor();
+            if (validateSetting('input#userNameTextColor', 'color') === true) {
+                var userId = $('#userColorDroplist option:selected').val();
+                var textColor = getInput('input#userNameTextColor').replace('#', '');
+                getUserById(userId, (user) => {
+                    socket.emit('modify', {
+                        userid: user.props.id,
+                        color: textColor
+                    });
+                })
+            }
         });
 
         $('#userNameTextColor').change(function () {
-            if (validateColorRange(getInput('#userNameTextColor'))) {
-                $('#colorPreview').css('color', getInput('#userNameTextColor'));
+            console.log(getInput('input#userNameTextColor'));
+            if (validateSetting('input#userNameTextColor', 'color')) {
+                var inputText = getInput('#userNameTextColor');
+                if (inputText[0] != '#'){
+                    inputText = '#' + inputText;
+                }
+                $('#colorPreview').css('color', inputText);
             }
         });
 
@@ -86,7 +110,7 @@ var chatModule = (function () {
         });
 
         $('#pingTextColor').blur(function () {
-            if (validateColor(getInput('#pingTextColor'))) {
+            if (validateSetting('#pingTextColor', 'color-allrange') === true) {
                 pingSettings.color = getInput('#pingTextColor');
                 saveSettings();
                 markProblem('#pingHighlightColor', false);
@@ -96,12 +120,9 @@ var chatModule = (function () {
         });
 
         $('#pingHighlightColor').blur(function () {
-            if (validateColor(getInput('#pingHighlightColor'))) {
+            if (validateSetting('#pingHighlightColor', 'color-allrange') === true) {
                 pingSettings.highlight = getInput('#pingHighlightColor');
                 saveSettings();
-                markProblem('#pingHighlightColor', false);
-            } else {
-                markProblem('#pingHighlightColor', true);
             }
         });
 
@@ -158,6 +179,9 @@ var chatModule = (function () {
                 for (var name in namesToIds) {
                     addToDroplist(namesToIds[name], name, "#userColorDroplist");
                 }
+                getUserById($('#userColorDroplist option:selected').val(), (user) => { 
+                    $('#userNameTextColor').val(user.props.color);
+                });
             }, 3000);
         });
 
@@ -241,7 +265,7 @@ var chatModule = (function () {
      * @param {object} data The message for the room
      */
     function postMessage(thisRoom, data, User) {
-        var timestamp = makeFullTimeStamp(data.time);
+        var timestamp = makeTimestamp(false, true);
         var msg = parseMsg(data.msg);
         var classes = '';
         var $el = '';
@@ -346,7 +370,7 @@ var chatModule = (function () {
         switch (cmdArgs[0]) {
             case '/status':
             case '/away':
-                if (cmdArgs.length < 2) {
+                if (cmdArgs.length != 3) {
                     error = true;
                 } else {
                     var type = 0;
@@ -362,16 +386,21 @@ var chatModule = (function () {
                 }
                 break;
             case '/color':
-                if (cmdArgs.length < 2) {
+                if (cmdArgs.length != 3) {
                     error = true;
-                } else if (validateColor(cmdArgs[1]) && validateColorRange(cmdArgs[1])) {
-                    socket.emit('modify', {
-                        userid: User.props.id,
-                        color: cmdArgs[1]
-                    });
-                    inputTextBox.css('color', cmdArgs[1]);
-                } else {
-                    error = true;
+                }
+                else {
+                    var colorArg = cmdArgs[1].replace('#', '');
+                    if (validateColor(colorArg) && validateColorRange(colorArg)) {
+                        socket.emit('modify', {
+                            userid: User.props.id,
+                            color: colorArg
+                        });
+                        inputTextBox.css('color', cmdArgs[1].replace('#', ''));
+                    }
+                    else {
+                        error = true;
+                    }
                 }
                 break;
             case '/coinflip':
@@ -574,21 +603,6 @@ var chatModule = (function () {
         setTimeout(() => {
             $(window).resize(resizeChatTabs);
         }, 100);
-    };
-
-    /**
-     * Handlers for text color changing
-     */
-    function changeTextColor() {
-        var textColor = $('input#userNameTextColor').val();
-        if (validateSetting('input#userNameTextColor', 'color') === true) {
-            var userId = $('#userColorDroplist option:selected').val();
-            textColor = textColor.substring(1, textColor.length);
-            socket.emit('modify', {
-                userid: userId,
-                color: textColor
-            });
-        }
     };
 
     /**

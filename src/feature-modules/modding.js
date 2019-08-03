@@ -79,10 +79,9 @@ var moddingModule = (function () {
             var room = $('input#modRoomTextInput').val();
 
             getUserByName($('input#modFromTextInput').val(), function (user) {
-                var userId = user.props.id;
                 chatSocket.emit('modify', {
                     room: room,
-                    userid: userId,
+                    userid: user.props.id,
                     props: {
                         pw: false
                     }
