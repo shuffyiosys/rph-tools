@@ -252,7 +252,7 @@ var chatModule = (function () {
             resizeChatTabs();
             var chatTextArea = $('textarea.' + User.props.id + '_' + makeSafeForCss(thisRoom.props.name));
             chatTextArea.unbind('keyup');
-            chatTextArea.bind('keyup', function (ev) {
+            chatTextArea.bind('keydown', function (ev) {
                 intputChatText(ev, User, thisRoom);
             });
         });
@@ -414,7 +414,7 @@ var chatModule = (function () {
                 var rngModule = rphToolsModule.getModule('RNG Module');
                 if (rngModule) {
                     var die = 1;
-                    var sides = 1000;
+                    var sides = 20;
 
                     if (cmdArgs.length > 1) {
                         die = parseInt(cmdArgs[1].split('d')[0]);

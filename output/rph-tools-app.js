@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.1.3
+// @version    4.1.4
 // @description Adds extended settings to RPH
 // @match      http://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.1.3';
+const VERSION_STRING = '4.1.4';
 
 const SETTINGS_NAME = "rph_tools_settings";
 /**
@@ -281,6 +281,7 @@ function intputChatText(ev, User, Room) {
             }
         }
     });
+
     if (ev.keyCode === 13 && ev.ctrlKey === false && ev.shiftKey === false && inputTextBox.val() !== '' && inputTextBox.val().trim() !== '') {
         var newMessage = inputTextBox.val();
 
@@ -301,21 +302,22 @@ function intputChatText(ev, User, Room) {
         }
     }
     /* Up */
-    else if (ev.keyCode == 38) {
-        if (chatHistIdx == 0) {
-            chatHistory[roomTextboxName][1] = inputTextBox.val();
-            inputTextBox.val(chatHistory[roomTextboxName][0]);
-            chatHistIdx = 1;
-        }
-        
+    else if (ev.keyCode === 38 && 
+             inputTextBox.prop("selectionStart") === 0 && 
+             chatHistIdx === 0) 
+    {
+        chatHistory[roomTextboxName][1] = inputTextBox.val();
+        inputTextBox.val(chatHistory[roomTextboxName][0]);
+        chatHistIdx = 1;
     }
     /* Down */
-    else if (ev.keyCode == 40) {
-        if (chatHistIdx == 1) {
-            chatHistory[roomTextboxName][0] = inputTextBox.val();
-            inputTextBox.val(chatHistory[roomTextboxName][1]);
-            chatHistIdx = 0;
-        }
+    else if (ev.keyCode === 40 && 
+             (inputTextBox.prop("selectionStart") === inputTextBox.val().length) && 
+             chatHistIdx === 1 ) 
+    {
+        chatHistory[roomTextboxName][0] = inputTextBox.val();
+        inputTextBox.val(chatHistory[roomTextboxName][1]);
+        chatHistIdx = 0;
     }
 }
 
@@ -604,7 +606,7 @@ var chatModule = (function () {
             resizeChatTabs();
             var chatTextArea = $('textarea.' + User.props.id + '_' + makeSafeForCss(thisRoom.props.name));
             chatTextArea.unbind('keyup');
-            chatTextArea.bind('keyup', function (ev) {
+            chatTextArea.bind('keydown', function (ev) {
                 intputChatText(ev, User, thisRoom);
             });
         });
@@ -766,7 +768,7 @@ var chatModule = (function () {
                 var rngModule = rphToolsModule.getModule('RNG Module');
                 if (rngModule) {
                     var die = 1;
-                    var sides = 1000;
+                    var sides = 20;
 
                     if (cmdArgs.length > 1) {
                         die = parseInt(cmdArgs[1].split('d')[0]);

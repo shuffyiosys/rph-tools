@@ -1,3 +1,8 @@
+RPH Tools (4.1.4)
+--------------
+* Changed the default blank /roll parameters to do a 1d20 due to the frequency of people using that
+* Fixed a problem with using the up/down arrows to recall input history. It will now only switch if the cursor is at the beginning of the textbox for pressing up and at the end for pressing down.
+
 RPH Tools (4.1.3)
 --------------
 * Fixed the color picker as RPH now expects colors without the "#"

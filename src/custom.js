@@ -37,6 +37,7 @@ function intputChatText(ev, User, Room) {
             }
         }
     });
+
     if (ev.keyCode === 13 && ev.ctrlKey === false && ev.shiftKey === false && inputTextBox.val() !== '' && inputTextBox.val().trim() !== '') {
         var newMessage = inputTextBox.val();
 
@@ -57,21 +58,22 @@ function intputChatText(ev, User, Room) {
         }
     }
     /* Up */
-    else if (ev.keyCode == 38) {
-        if (chatHistIdx == 0) {
-            chatHistory[roomTextboxName][1] = inputTextBox.val();
-            inputTextBox.val(chatHistory[roomTextboxName][0]);
-            chatHistIdx = 1;
-        }
-        
+    else if (ev.keyCode === 38 && 
+             inputTextBox.prop("selectionStart") === 0 && 
+             chatHistIdx === 0) 
+    {
+        chatHistory[roomTextboxName][1] = inputTextBox.val();
+        inputTextBox.val(chatHistory[roomTextboxName][0]);
+        chatHistIdx = 1;
     }
     /* Down */
-    else if (ev.keyCode == 40) {
-        if (chatHistIdx == 1) {
-            chatHistory[roomTextboxName][0] = inputTextBox.val();
-            inputTextBox.val(chatHistory[roomTextboxName][1]);
-            chatHistIdx = 0;
-        }
+    else if (ev.keyCode === 40 && 
+             (inputTextBox.prop("selectionStart") === inputTextBox.val().length) && 
+             chatHistIdx === 1 ) 
+    {
+        chatHistory[roomTextboxName][0] = inputTextBox.val();
+        inputTextBox.val(chatHistory[roomTextboxName][1]);
+        chatHistIdx = 0;
     }
 }
 
