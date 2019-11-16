@@ -96,9 +96,7 @@ var rngModule = (function () {
         });
 
         $('#randomRngButton').click(function () {
-            var minNum = parseInt($('#rngMinNumber').val());
-            var maxNum = parseInt($('#rngMaxNumber').val());
-            sendResult(genRandomNum(minNum, maxNum));
+            sendResult(genRandomNum());
         });
     }
 
@@ -107,11 +105,11 @@ var rngModule = (function () {
      * @returns String contaning the coin flip results.
      */
     function genCoinFlip() {
-        var coinMsg = '(( Coin toss: ';
+        var coinMsg = '/me flips a coin. It lands on... ';
         if (Math.ceil(Math.random() * 2) == 2) {
-            coinMsg += 'heads!))';
+            coinMsg += 'heads!';
         } else {
-            coinMsg += 'tails!))';
+            coinMsg += 'tails!';
         }
 
         return attachIntegrity(coinMsg);
@@ -131,19 +129,12 @@ var rngModule = (function () {
         dieSides = (dieSides > DIE_SIDE_MAX) ? DIE_SIDE_MAX : dieSides;
         dieSides = (dieSides < DIE_SIDE_MIN) ? DIE_SIDE_MIN : dieSides;
 
-        var totals = 0;
         var dieMsg = '/me rolled ' + dieNum + 'd' + dieSides + ':';
 
         for (i = 0; i < dieNum; i++) {
             var result = Math.ceil(Math.random() * dieSides);
-            if (showTotals) {
-                totals += result;
-            }
             dieMsg += ' ';
             dieMsg += result;
-        }
-        if (showTotals) {
-            dieMsg += " (Total amount: " + totals + ")";
         }
         return attachIntegrity(dieMsg);
     };
@@ -154,7 +145,9 @@ var rngModule = (function () {
      * @param {number} maxNum Maximum end of the range
      * @returns String containing the random number result.
      */
-    function genRandomNum(minNum, maxNum) {
+    function genRandomNum() {
+        var minNum = parseInt($('#rngMinNumber').val());
+        var maxNum = parseInt($('#rngMaxNumber').val());
         var ranNumMsg = '(( Random number generated (' + minNum + ' to ' +
             maxNum + '): ';
         ranNumMsg += Math.floor((Math.random() * (maxNum - minNum) + minNum)) +
@@ -207,6 +200,7 @@ var rngModule = (function () {
         init: init,
         genCoinFlip: genCoinFlip,
         getDiceRoll: getDiceRoll,
+        genRandomNum: genRandomNum,
         getHtml: getHtml,
         toString: toString
     };

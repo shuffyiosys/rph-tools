@@ -1,3 +1,7 @@
+RPH Tools (4.1.5)
+--------------
+* Modified the RNG so that the receivers generate the final number. This adds on the older RNG method, making this backwards compatible, but not forwards compatible.
+
 RPH Tools (4.1.4)
 --------------
 * Changed the default blank /roll parameters to do a 1d20 due to the frequency of people using that

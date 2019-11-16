@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.1.4
+// @version    4.1.5
 // @description Adds extended settings to RPH
 // @match      http://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.1.4';
+const VERSION_STRING = '4.1.5';
 
 const SETTINGS_NAME = "rph_tools_settings";
 /**
@@ -652,9 +652,10 @@ var chatModule = (function () {
             var verifiedMsg = verifyMessage(msg);
             msg = msg.substring(0, msg.indexOf('\u200b'));
             if (verifiedMsg) {
-                msg += ' <span style="background:#4A4; color: #000;">&#9745;</span>';
+                msg = parseMsg(parseRng(msg))
+                msg += ' <span style="background:#4A4; color: #FFF;"> &#9745; </span>';
             } else {
-                msg += ' <span style="background:#A44; color: #000;">&#x1f6c7;</span>';
+                msg += ' <span style="background:#A44; color: #FFF;"> &#x1f6c7; </span>';
             }
 
         }
@@ -709,6 +710,68 @@ var chatModule = (function () {
 
         return (origMsg.hashCode() == parseInt(recvdHash));
     };
+
+    /**
+     * Parses a RNG message to take what the client sent and seed it into an
+     * RNG.
+     * @param {*} message - Message from the sender.
+     */
+    function parseRng(message) {
+        let newMsg = "";
+        console.log(message)
+        if (message.match(new RegExp(/coin/, 'gi'))){
+            let result = 0;
+            newMsg = "/me flips a coin. It lands on... ";
+            if (message.match(new RegExp(/heads/, 'gi'))) {
+                result = LcgRng(1)
+            }
+            else {
+                result = LcgRng(0)
+            }
+
+            if (result % 2 === 1) {
+                newMsg += "heads!"
+            }
+            else {
+                newMsg += "tails!"
+            }
+        }
+        else if (message.match(new RegExp(/rolled/, 'gi'))){
+            let resultStartIdx = message.indexOf(':')
+            let submsg = message.substring(resultStartIdx, message.length)
+            let numberMatches = submsg.match(new RegExp(/[0-9]+/, 'gi'))
+            let dieSides = message.match(new RegExp(/[0-9]+d[0-9]+/, 'gi'))
+            let sides = dieSides[0].split('d')[1]
+            let results = []
+            let total = 0
+
+            numberMatches.forEach((number) => {
+                results.push(LcgRng(parseInt(number)) % sides)
+            })
+            
+            total = results.reduce((a, b) => a + b, 0)
+            newMsg = message.substring(0, resultStartIdx) + ': '
+            newMsg += results.join(' ')
+            newMsg += ' (total ' + total + ')'
+        }
+        else if (message.match(new RegExp(/generated/, 'gi'))){
+            let resultStartIdx = message.indexOf(':')
+            let submsg = message.substring(resultStartIdx, message.length)
+            let numberMatch = submsg.match(new RegExp(/[0-9]+/, 'gi'))
+            let upperLim = message.match(new RegExp(/to [0-9]+/, 'gi'))[0].split(' ')[1]
+            newMsg = message.substring(0, resultStartIdx)
+            newMsg += ': ' + LcgRng(parseInt(numberMatch[0])) % upperLim + ' ))'
+        }
+        return newMsg;
+    }
+
+    /**
+     * Generates a randum number using the Linear congruential generator algorithm
+     * @param {*} value - Number that seeds the RNG
+     */
+    function LcgRng (value) {
+        return (value * 1103515245 + 12345) % 2147483648;
+    }
 
     /**
      * Parses a slash command from an input source.
@@ -780,6 +843,13 @@ var chatModule = (function () {
                         inputTextBox.val(rngModule.getDiceRoll(die, sides, true));
                         sendChatMessage(inputTextBox, Room, User);
                     }
+                }
+                break;
+            case '/random':
+                var rngModule = rphToolsModule.getModule('RNG Module');
+                if (rngModule) {
+                    inputTextBox.val(rngModule.genRandomNum());
+                    sendChatMessage(inputTextBox, Room, User);
                 }
                 break;
             case '/kick':
@@ -1820,9 +1890,7 @@ var rngModule = (function () {
         });
 
         $('#randomRngButton').click(function () {
-            var minNum = parseInt($('#rngMinNumber').val());
-            var maxNum = parseInt($('#rngMaxNumber').val());
-            sendResult(genRandomNum(minNum, maxNum));
+            sendResult(genRandomNum());
         });
     }
 
@@ -1831,11 +1899,11 @@ var rngModule = (function () {
      * @returns String contaning the coin flip results.
      */
     function genCoinFlip() {
-        var coinMsg = '(( Coin toss: ';
+        var coinMsg = '/me flips a coin. It lands on... ';
         if (Math.ceil(Math.random() * 2) == 2) {
-            coinMsg += 'heads!))';
+            coinMsg += 'heads!';
         } else {
-            coinMsg += 'tails!))';
+            coinMsg += 'tails!';
         }
 
         return attachIntegrity(coinMsg);
@@ -1855,19 +1923,12 @@ var rngModule = (function () {
         dieSides = (dieSides > DIE_SIDE_MAX) ? DIE_SIDE_MAX : dieSides;
         dieSides = (dieSides < DIE_SIDE_MIN) ? DIE_SIDE_MIN : dieSides;
 
-        var totals = 0;
         var dieMsg = '/me rolled ' + dieNum + 'd' + dieSides + ':';
 
         for (i = 0; i < dieNum; i++) {
             var result = Math.ceil(Math.random() * dieSides);
-            if (showTotals) {
-                totals += result;
-            }
             dieMsg += ' ';
             dieMsg += result;
-        }
-        if (showTotals) {
-            dieMsg += " (Total amount: " + totals + ")";
         }
         return attachIntegrity(dieMsg);
     };
@@ -1878,7 +1939,9 @@ var rngModule = (function () {
      * @param {number} maxNum Maximum end of the range
      * @returns String containing the random number result.
      */
-    function genRandomNum(minNum, maxNum) {
+    function genRandomNum() {
+        var minNum = parseInt($('#rngMinNumber').val());
+        var maxNum = parseInt($('#rngMaxNumber').val());
         var ranNumMsg = '(( Random number generated (' + minNum + ' to ' +
             maxNum + '): ';
         ranNumMsg += Math.floor((Math.random() * (maxNum - minNum) + minNum)) +
@@ -1931,6 +1994,7 @@ var rngModule = (function () {
         init: init,
         genCoinFlip: genCoinFlip,
         getDiceRoll: getDiceRoll,
+        genRandomNum: genRandomNum,
         getHtml: getHtml,
         toString: toString
     };
