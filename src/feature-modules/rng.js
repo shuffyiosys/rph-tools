@@ -179,8 +179,7 @@ var rngModule = (function () {
     };
 
     function attachIntegrity (outcomeMsg) {
-        var outcomeHash = outcomeMsg.hashCode();
-        outcomeMsg += '\u200b' + outcomeHash;
+        outcomeMsg += '\u200b';
         return outcomeMsg;
     }
 

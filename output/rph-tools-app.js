@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.1.5
+// @version    4.1.5A
 // @description Adds extended settings to RPH
 // @match      http://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.1.5';
+const VERSION_STRING = '4.1.5A';
 
 const SETTINGS_NAME = "rph_tools_settings";
 /**
@@ -649,14 +649,8 @@ var chatModule = (function () {
 
         /* If there's a verification mark, check to see if it's good */
         if (msg.indexOf('\u200b') > -1) {
-            var verifiedMsg = verifyMessage(msg);
-            msg = msg.substring(0, msg.indexOf('\u200b'));
-            if (verifiedMsg) {
-                msg = parseMsg(parseRng(msg))
-                msg += ' <span style="background:#4A4; color: #FFF;"> &#9745; </span>';
-            } else {
-                msg += ' <span style="background:#A44; color: #FFF;"> &#x1f6c7; </span>';
-            }
+            msg = parseMsg(parseRng(data))
+            msg += ' <span style="background:#4A4; color: #FFF;"> &#9745; </span>';
 
         }
 
@@ -698,35 +692,21 @@ var chatModule = (function () {
     };
 
     /**
-     * If a verification mark (Unicode 200B) was in the message, check to see
-     * if it's valid by comparing the hash received vs. the original message.
-     * 
-     * @param {String} message - Incoming message
-     */
-    function verifyMessage(message) {
-        var delimitChar = message.indexOf('\u200b');
-        var recvdHash = message.substring(delimitChar + 1);
-        var origMsg = message.substring(0, delimitChar);
-
-        return (origMsg.hashCode() == parseInt(recvdHash));
-    };
-
-    /**
      * Parses a RNG message to take what the client sent and seed it into an
      * RNG.
      * @param {*} message - Message from the sender.
      */
-    function parseRng(message) {
+    function parseRng(data) {
         let newMsg = "";
-        console.log(message)
+        let message = data.msg.substring(0, data.msg.indexOf('\u200b'));;
         if (message.match(new RegExp(/coin/, 'gi'))){
             let result = 0;
             newMsg = "/me flips a coin. It lands on... ";
             if (message.match(new RegExp(/heads/, 'gi'))) {
-                result = LcgRng(1)
+                result = LcgRng(1 + data.time)
             }
             else {
-                result = LcgRng(0)
+                result = LcgRng(1 + data.time)
             }
 
             if (result % 2 === 1) {
@@ -746,7 +726,10 @@ var chatModule = (function () {
             let total = 0
 
             numberMatches.forEach((number) => {
-                results.push(LcgRng(parseInt(number)) % sides)
+                console.log(number)
+                let seed = parseInt(number) + data.time
+                console.log(seed)
+                results.push(LcgRng(seed) % sides)
             })
             
             total = results.reduce((a, b) => a + b, 0)
@@ -759,8 +742,10 @@ var chatModule = (function () {
             let submsg = message.substring(resultStartIdx, message.length)
             let numberMatch = submsg.match(new RegExp(/[0-9]+/, 'gi'))
             let upperLim = message.match(new RegExp(/to [0-9]+/, 'gi'))[0].split(' ')[1]
+            let seed = parseInt(numberMatch[0]) + data.time
+            console.log(seed)
             newMsg = message.substring(0, resultStartIdx)
-            newMsg += ': ' + LcgRng(parseInt(numberMatch[0])) % upperLim + ' ))'
+            newMsg += ': ' + LcgRng(parseInt(seed)) % upperLim + ' ))'
         }
         return newMsg;
     }
@@ -770,7 +755,7 @@ var chatModule = (function () {
      * @param {*} value - Number that seeds the RNG
      */
     function LcgRng (value) {
-        return (value * 1103515245 + 12345) % 2147483648;
+        return (value * 1103515245 + 12345) % 2147483648 + 1;
     }
 
     /**
@@ -1973,8 +1958,7 @@ var rngModule = (function () {
     };
 
     function attachIntegrity (outcomeMsg) {
-        var outcomeHash = outcomeMsg.hashCode();
-        outcomeMsg += '\u200b' + outcomeHash;
+        outcomeMsg += '\u200b';
         return outcomeMsg;
     }
 
