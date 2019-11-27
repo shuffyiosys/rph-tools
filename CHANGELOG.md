@@ -1,3 +1,7 @@
+RPH Tools (4.1.6)
+--------------
+* Changed the RNG's LCG parameters as the values used were too large for JavaScript to compute correctly
+
 RPH Tools (4.1.5)
 --------------
 * Modified the RNG so that the receivers generate the final number. This adds on the older RNG method, making this backwards compatible, but not forwards compatible.

@@ -1,15 +1,15 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.1.5A
+// @version    4.1.6
 // @description Adds extended settings to RPH
-// @match      http://chat.rphaven.com/
+// @match      https://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
 // @grant      none
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.1.5A';
+const VERSION_STRING = '4.1.6';
 
 const SETTINGS_NAME = "rph_tools_settings";
 /**
@@ -418,7 +418,6 @@ var chatModule = (function () {
 
         $('#userColorDroplist').change(() => {
             var userId = $('#userColorDroplist option:selected').val();
-            console.log(userId);
             getUserById(userId, (user) => { 
                 $('#userNameTextColor').val(user.props.color);
                 $('#colorPreview').css('color', '#' + user.props.color);
@@ -439,7 +438,6 @@ var chatModule = (function () {
         });
 
         $('#userNameTextColor').change(function () {
-            console.log(getInput('input#userNameTextColor'));
             if (validateSetting('input#userNameTextColor', 'color')) {
                 var inputText = getInput('#userNameTextColor');
                 if (inputText[0] != '#'){
@@ -726,10 +724,8 @@ var chatModule = (function () {
             let total = 0
 
             numberMatches.forEach((number) => {
-                console.log(number)
-                let seed = parseInt(number) + data.time
-                console.log(seed)
-                results.push(LcgRng(seed) % sides)
+                let seed = (parseInt(number) + data.time) % Math.pow(2, 32)
+                results.push(LcgRng(seed) % sides + 1)
             })
             
             total = results.reduce((a, b) => a + b, 0)
@@ -743,7 +739,6 @@ var chatModule = (function () {
             let numberMatch = submsg.match(new RegExp(/[0-9]+/, 'gi'))
             let upperLim = message.match(new RegExp(/to [0-9]+/, 'gi'))[0].split(' ')[1]
             let seed = parseInt(numberMatch[0]) + data.time
-            console.log(seed)
             newMsg = message.substring(0, resultStartIdx)
             newMsg += ': ' + LcgRng(parseInt(seed)) % upperLim + ' ))'
         }
@@ -755,7 +750,8 @@ var chatModule = (function () {
      * @param {*} value - Number that seeds the RNG
      */
     function LcgRng (value) {
-        return (value * 1103515245 + 12345) % 2147483648 + 1;
+        let result = (((value * 214013) % Math.pow(2,32) + 2531011) % Math.pow(2,32))
+        return result
     }
 
     /**
