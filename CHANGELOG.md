@@ -1,3 +1,10 @@
+RPH Tools (4.1.7)
+---------------
+* General code clean up
+* Removed the color picker, as it can break the color settings for the user.
+* Fixed an issue getting the accounts usernames populated in various places.
+* Fixed an issue with the mod-room pairing logic to keep from triggering if a mod enters with a non-mod alt
+
 RPH Tools (4.1.6)
 --------------
 * Changed the RNG's LCG parameters as the values used were too large for JavaScript to compute correctly

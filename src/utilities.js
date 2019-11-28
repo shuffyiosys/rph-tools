@@ -4,8 +4,8 @@
  * @return The extracted HTML's value
  */
 function getInput(settingId) {
-    return $(settingId).val();
-};
+	return $(settingId).val()
+}
 
 /**
  * Gets the value of a checkbox
@@ -13,8 +13,8 @@ function getInput(settingId) {
  * @return The extracted HTML's value
  */
 function getCheckBox(settingId) {
-    return $(settingId).is(':checked');
-};
+	return $(settingId).is(':checked')
+}
 
 /**
  * Marks an HTML element with red or white if there's a problem
@@ -22,12 +22,12 @@ function getCheckBox(settingId) {
  * @param {boolean} mark If the mark is for good or bad
  */
 function markProblem(element, mark) {
-    if (mark === true) {
-        $(element).css('background', '#FF7F7F');
-    } else {
-        $(element).css('background', '#FFF');
-    }
-};
+	if (mark === true) {
+		$(element).css('background', '#FF7F7F')
+	} else {
+		$(element).css('background', '#FFF')
+	}
+}
 
 /**
  * Checks to see if an input is valid or not and marks it accordingly
@@ -36,25 +36,25 @@ function markProblem(element, mark) {
  * @return If the input is valid or not
  */
 function validateSetting(settingId, setting) {
-    var validInput = false;
-    var input = $(settingId).val();
+	var validInput = false
+	var input = $(settingId).val()
 
-    if (setting === "url") {
-        validInput = validateUrl(input);
-    }
-    else if (setting === "color-allrange") {
-        input = input.replace('#', '');
-        console.log("checking all color ranges", validateColor(input), input);
-        validInput = validateColor(input);
-    }
-    else if (setting === "color") {
-        input = input.replace('#', '');
-        validInput = validateColor(input);
-        validInput = validateColorRange(input);
-    }
-    markProblem(settingId, !validInput);
-    return validInput;
-};
+	if (setting === "url") {
+		validInput = validateUrl(input)
+	}
+	else if (setting === "color-allrange") {
+		input = input.replace('#', '')
+		console.log("checking all color ranges", validateColor(input), input)
+		validInput = validateColor(input)
+	}
+	else if (setting === "color") {
+		input = input.replace('#', '')
+		validInput = validateColor(input)
+		validInput = validateColorRange(input)
+	}
+	markProblem(settingId, !validInput)
+	return validInput
+}
 
 /**
  * Makes sure the color input is a valid hex color input
@@ -62,9 +62,9 @@ function validateSetting(settingId, setting) {
  * @returns If the color input is valid
  */
 function validateColor(color) {
-    var pattern = new RegExp(/([0-9A-Fa-f]{6}$)|([0-9A-Fa-f]{3}$)/i);
-    return pattern.test(color);
-};
+	var pattern = new RegExp(/([0-9A-Fa-f]{6}$)|([0-9A-Fa-f]{3}$)/i)
+	return pattern.test(color)
+}
 
 /**
  * Makes sure the URL input is valid
@@ -72,19 +72,19 @@ function validateColor(color) {
  * @returns If the URL input is valid
  */
 var validateUrl = function (url) {
-    var match = false;
-    var regexp = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/;
-    var pingExt = url.slice((url.length - 4), (url.length));
+	var match = false
+	var regexp = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/
+	var pingExt = url.slice((url.length - 4), (url.length))
 
-    if (url === '') {
-        match = true;
-    } else if (regexp.test(url) === true) {
-        if (pingExt == ".wav" || pingExt == ".ogg" || pingExt == ".mp3") {
-            match = true;
-        }
-    }
-    return match;
-};
+	if (url === '') {
+		match = true
+	} else if (regexp.test(url) === true) {
+		if (pingExt == ".wav" || pingExt == ".ogg" || pingExt == ".mp3") {
+			match = true
+		}
+	}
+	return match
+}
 
 /**
  * Makes sure the color is less than #DDDDDD or #DDD depending on how many
@@ -93,32 +93,32 @@ var validateUrl = function (url) {
  * @return True if the color is within range, false otherwise.
  */
 function validateColorRange(TextColor) {
-    var validColor = false;
-    var red = 255;
-    var green = 255;
-    var blue = 255;
+	var validColor = false
+	var red = 255
+	var green = 255
+	var blue = 255
 
-    /* If the color text is 3 characters, limit it to #DDD */
-    if (TextColor.length == 3) {
-        red = parseInt(TextColor.substring(0, 1), 16);
-        green = parseInt(TextColor.substring(1, 2), 16);
-        blue = parseInt(TextColor.substring(2, 3), 16);
+	/* If the color text is 3 characters, limit it to #DDD */
+	if (TextColor.length == 3) {
+		red = parseInt(TextColor.substring(0, 1), 16)
+		green = parseInt(TextColor.substring(1, 2), 16)
+		blue = parseInt(TextColor.substring(2, 3), 16)
 
-        if ((red <= 0xD) && (green <= 0xD) && (blue <= 0xD)) {
-            validColor = true;
-        }
-    }
-    /* If the color text is 6 characters, limit it to #DDDDDD */
-    else if (TextColor.length == 6) {
-        red = parseInt(TextColor.substring(0, 2), 16);
-        green = parseInt(TextColor.substring(2, 4), 16);
-        blue = parseInt(TextColor.substring(4, 6), 16);
-        if ((red <= 0xDD) && (green <= 0xDD) && (blue <= 0xDD)) {
-            validColor = true;
-        }
-    }
-    return validColor;
-};
+		if ((red <= 0xD) && (green <= 0xD) && (blue <= 0xD)) {
+			validColor = true
+		}
+	}
+	/* If the color text is 6 characters, limit it to #DDDDDD */
+	else if (TextColor.length == 6) {
+		red = parseInt(TextColor.substring(0, 2), 16)
+		green = parseInt(TextColor.substring(2, 4), 16)
+		blue = parseInt(TextColor.substring(4, 6), 16)
+		if ((red <= 0xDD) && (green <= 0xDD) && (blue <= 0xDD)) {
+			validColor = true
+		}
+	}
+	return validColor
+}
 
 /**
  * Adds an option to a select element with a value and its label
@@ -127,12 +127,12 @@ function validateColorRange(TextColor) {
  * @param {object} droplist Which select element to add option to
  */
 function addToDroplist(value, label, droplist) {
-    var droplist_elem = $(droplist);
-    droplist_elem.append($('<option>', {
-        value: value,
-        text: label
-    }));
-};
+	var droplist_elem = $(droplist)
+	droplist_elem.append($('<option>', {
+		value: value,
+		text: label
+	}))
+}
 
 /**
  * Un an array of objects, return the first instance where a key matches the
@@ -144,88 +144,30 @@ function addToDroplist(value, label, droplist) {
  *         otherwise.
  */
 function arrayObjectIndexOf(objArray, key, value) {
-    for (var i = 0; i < objArray.length; i++) {
-        if (objArray[i][key] === value) {
-            return i;
-        }
-    }
-    return -1;
-};
-
-/**
- * Checks if a search term is in an <a href=...> tag.
- * @param {string} searchTerm Search term to look for
- * @param {string} msg The string being looked at
- * @returns True or false if there's a match.
- */
-function isInLink(searchTerm, msg) {
-    var regexp = new RegExp('href=".*?' + searchTerm + '.*?"', '');
-    return regexp.test(msg);
-};
-
-/**
- * Checks if the current account is a mod of the room.
- * @param {object} room Object containing room data
- */
-function isModOfRoom(room) {
-    var isMod = false;
-    for (var idx = 0; idx < account.userids.length && !isMod; idx++) {
-        if (room.props.mods.indexOf(account.userids[idx]) > -1 ||
-            room.props.owners.indexOf(account.userids[idx]) > -1) {
-            isMod = true;
-        }
-    }
-    return isMod;
-};
-
-function getModForRoom(room){
-    var modName = '';
-    var users = account.users;
-    for (var idx = 0; idx < users.length; idx++) {
-        if (room.props.mods.includes(users[idx].props.id) ||
-            room.props.owners.includes(users[idx].props.id)) {
-            modName = users[idx].props.name;
-            break;
-        }
-    }
-    return modName;
+	for (var i = 0; i < objArray.length; i++) {
+		if (objArray[i][key] === value) {
+			return i
+		}
+	}
+	return -1
 }
-
-/**
- * Takes a dictionary and creates a sorted version of it based on its keys
- * @param {object} dict Dictionary to be sorted
- * @returns Sorted dictionary
- */
-function sortOnKeys (dict) {
-    var sorted = [];
-    for (var key in dict) {
-        sorted[sorted.length] = key;
-    }
-    sorted.sort();
-
-    var tempDict = {};
-    for (var i = 0; i < sorted.length; i++) {
-        tempDict[sorted[i]] = dict[sorted[i]];
-    }
-
-    return tempDict;
-}
-
-/*
-function makeFullTimeStamp(timestamp){
-    var timeObj = new Date(timestamp);
-    var timestamp = timeObj.getHours().toString().padStart(2, '0') + ':';
-    timestamp += timeObj.getMinutes().toString().padStart(2, '0') + ':';
-    timestamp += timeObj.getSeconds().toString().padStart(2, '0');
-
-    return timestamp
-}*/
 
 function getSortedNames() {
-    var namesToIds = {};
-    account.users.forEach(function (userObj) {
-        namesToIds[userObj.props.name] = userObj.props.id;
-    });
-    namesToIds = sortOnKeys(namesToIds);
-    return namesToIds;
+	var namesToIds = {}
+	account.users.forEach(function (userObj) {
+		namesToIds[userObj.props.name] = userObj.props.id
+	})
+
+	var sorted = []
+	for (var key in namesToIds) {
+		sorted[sorted.length] = key
+	}
+	sorted.sort()
+
+	var tempDict = {}
+	for (var i = 0; i < sorted.length; i++) {
+		tempDict[sorted[i]] = namesToIds[sorted[i]]
+	}
+	namesToIds = tempDict
+	return namesToIds
 }
