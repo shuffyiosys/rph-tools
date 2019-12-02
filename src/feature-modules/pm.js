@@ -19,7 +19,7 @@ var pmModule = (function () {
 			'<h3>PM Settings</h3><br>' +
 			'<h4>General options</h4>' +
 			'<div class="rpht-option-block">' +
-			'	<div class="rpht-option-section">' +
+			'	<div class="rpht-option-section option-section-bottom">' +
 			'		<label class="rpht-label checkbox-label" for="pmColorEnable">Use user text colors</label>' +
 			'		<label class="switch"><input type="checkbox" id="pmColorEnable"><span class="slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Use the user\'s color to stylize their text</label>' +
@@ -123,17 +123,13 @@ var pmModule = (function () {
 			pmSettings.notify = $('#pmNotify').is(":checked")
 			settingsModule.saveSettings(localStorageName, pmSettings)
 		})
-
-		while(socket._callbacks['$pm'].length > 0) {
-			socket._callbacks['$pm'].pop()
-		}
-
 		socket.on('pm', (data) => {
 			/* Check if the user is blocked */
 			if (account.ignores.indexOf(data.to) > -1) {
 				return;
 			}
 			rph.getPm({'from':data.from, 'to':data.to}, function(pm){
+				console.log(data, pm)
 				handleIncomingPm(data, pm)
 				pm.typingStop()
 			})
@@ -164,36 +160,17 @@ var pmModule = (function () {
 	 * @param {object } data Data containing the PM.
 	 */
 	function handleIncomingPm(data, pm) {
-		let pmHtml = makePmMessage(data, pm.to)
-		pm.appendMsg(pmHtml, data.time)
-		let activePm = ($('ul.pm-tabs li.tab.active a')[0].innerHTML == pm.to.props.name)
-		if(!activePm || !$('#pm-dialog').dialog('isOpen')){
-			pm.setUnread();
-		}
-		if (!pmSettings.pmMute) {
-			$('#jp_audio_0')[0].play()
-		}
-		if (!data.time) {
-			data.time = Math.round(Date.now() / 1000)
-		}
-		db.msgs.put({date: data.time, fromid: pm.to.props.id, userid:data.from, otherid:data.to, msg:data.msg});
-		
-		if( pmSettings.notify ){
-			let notification = new Notification(`${pm.to.props.name} messaged you to ${pm.from.props.name}`)
-			setTimeout(() => {
-				notification.close()
-			}, pmSettings.notifyTime)
+		let lastMsg = pm.$msgs[0].lastChild
+		let rgbString = ''
+
+		if (lastMsg.lastChild.data.charAt(1) === '/') {
+			lastMsg.lastChild.data = ` ${parseCommand(data)}`
 		}
 
-		if (awayMessages[data.from] && awayMessages[data.from].enabled){
-			awayMessages[data.from].usedPmAwayMsg = true
-			socket.emit('pm', {
-				'from': data.from,
-				'to': data.to,
-				'msg': awayMessages[data.from].message,
-				'target': 'all'
-			})
+		if(pmSettings.colorText) {
+			rgbString = `style="color: #${pm.to.props.color.toString()}"`
 		}
+		lastMsg.innerHTML = `${lastMsg.children[0].outerHTML}<span ${rgbString}>${lastMsg.children[1].outerHTML}${lastMsg.lastChild.data }</span>`
 	}
 
 	/**
@@ -229,14 +206,15 @@ var pmModule = (function () {
 			message = parseCommand(data)
 		}
 
+		if(pmSettings.colorText) {
+			rgbString = ` style="color: #${userProps.props.color.toString()}"`
+		}
+
 		if( message.charAt(0) === '/' && message.indexOf('me') === 1 ){
 			classes += 'action ';
 			message = message.slice(3) + ' ';
 		}
 
-		if(pmSettings.colorText) {
-			rgbString = ` style="color: #${userProps.props.color.toString()}"`
-		}
 		return `<p class="${classes}"${rgbString}><span style="color: #FFF;">${timestampStr}</span> ` + 
 				`<strong class="user">${(userProps.props.vanity || userProps.props.name)}${((classes === '') ? ':' : '')}</strong> ${message}</p>`
 	}
@@ -266,7 +244,7 @@ var pmModule = (function () {
 						rolls.push(result % sides + 1)
 					}
 					total = rolls.reduce((a, b) => a + b, 0)
-					msg = `/me rolled ${die}d${sides}: `
+					msg = `rolled ${die}d${sides}: `
 					msg += rolls.join(' ') + ' (total ' + total + ')'
 				}
 				break
