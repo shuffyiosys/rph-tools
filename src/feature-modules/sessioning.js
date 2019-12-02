@@ -140,7 +140,6 @@ var sessionModule = (function () {
 				setTimeout(() => {
 					var pmTextBoxes = $("#pm-bottom .textarea textarea")
 					for (var i = 0; i < pmTextBoxes.length; i++){
-						console.log(sessionSettings.pmTextboxes[i])
 						if (sessionSettings.pmTextboxes[i])
 							pmTextBoxes[i].value = sessionSettings.pmTextboxes[i]
 					}
@@ -413,7 +412,6 @@ var sessionModule = (function () {
 			)
 			sessionSettings.favRooms.push(favRoomObj)
 		}
-
 		if (sessionSettings.favRooms.length >= MAX_ROOMS) {
 			$('#favAdd').text("Favorites Full")
 			$('#favAdd')[0].disabled = true
@@ -427,14 +425,12 @@ var sessionModule = (function () {
 		var favItem = document.getElementById("favRoomsList")
 		var favItemId = $('#favRoomsList option:selected').val()
 		favItem.remove(favItem.selectedIndex)
-
 		for (var idx = 0; idx < sessionSettings.favRooms.length; idx++) {
 			if (sessionSettings.favRooms[idx]._id == favItemId) {
 				sessionSettings.favRooms.splice(idx, 1)
 				break
 			}
 		}
-
 		if (sessionSettings.favRooms.length < 10) {
 			$('#favAdd').text("Add")
 			$('#favAdd')[0].disabled = false

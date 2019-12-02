@@ -13,32 +13,50 @@ var rngModule = (function () {
 	var html = {
 		'tabId': 'rng-module',
 		'tabName': 'Random Numbers',
-		'tabContents': '<h3>Random Number Generators</h3>' +
-			'<div>' +
-			'<h4>Shortcuts</h4><br />' +
-			'<p><span style="font-family: courier">/coinflip</span> - Does a coin toss</p>' +
-			'<p><span style="font-family: courier">/roll [num]d[num]</span> - Dice roll. ' + 
-			'If no argument is given, it rolls 1d1000. Example: <span style="font-family: courier">/roll 2d6</span> will roll 2 dices with 6 sides</p>' +
+		'tabContents':
+			'<h3>Random Numbers</h3><br />' +
+			'<h4>Shortcuts</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<table style="width: 600px;">' +
+			'		<tbody>' +
+			'			<tr>' +
+			'				<td><span style="font-family: courier">/coinflip</span></td>' +
+			'				<td>Coin flip (heads or tails)</td>' +
+			'			</tr>' +
+			'			<tr>' +
+			'				<td><span style="font-family: courier">/roll [num die]d[sides]</span></td>' +
+			'				<td style="width: 65%;">Dice roll. Doing just "<code>/roll</code>" is 1d20.<br>' +
+			'					[num die] is number of dice to roll. [sides] is how many sides per die. Example <code>/roll' +
+			'						2d10</code> will roll 2 10-sided dice</td>' +
+			'			</tr>' +
+			'			<tr>' +
+			'				<td><span style="font-family: courier">/random</span></td>' +
+			'				<td>Generates random number based on RNG settings below</td>' +
+			'			</tr>' +
+			'			<tr>' +
+			'				<td><span style="font-family: courier">/rps</span></td>' +
+			'				<td>Do rock, paper, scissors</td>' +
+			'			</tr>' +
+			'		</tbody>' +
+			'	</table>' +
 			'</div>' +
-			'<div id="coinFlipOptions">' +
-			'<h4>Coin toss</h4><br />' +
-			'<button style="margin-left: 312px;" type="button" id="coinRngButton">Flip a coin!</button>' +
-			'</div>' +
-			'<div id="diceOptions">' +
-			'<h4>Dice roll</h4><br />' +
-			'<label class="rpht_labels">Number of die </label><input style="width: 300px;" type="number" id="diceNum" name="diceNum" max="100" min="1" value="2">' +
-			'<br /><br />' +
-			'<label  class="rpht_labels">Sides </label><input style="width: 300px;" type="number" id="diceSides" name="diceSides" max="1000" min="2" value="6">' +
-			'<br /><br />' +
-			'<button style="margin-left: 312px;" type="button" id="diceRngButton">Let\'s roll!</button>' +
-			'</div>' +
-			'<div id="rngOptions">' +
-			'<h4>General RNG</h4><br />' +
-			'<label  class="rpht_labels">Minimum: </label><input style="width: 300px;" type="number" id="rngMinNumber" name="rngMinNumber" max="4294967295" min="-4294967296" value="0">' +
-			'<br /><br />' +
-			'<label  class="rpht_labels">Maximum: </label><input style="width: 300px;" type="number" id="rngMaxNumber" name="rngMaxNumber" max="4294967295" min="-4294967296" value="10">' +
-			'<br /><br />' +
-			'<button style="margin-left: 312px;" type="button" id="randomRngButton">Randomize!</button>' +
+			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section">' +
+			'		<p><strong>Coin flip</strong></p>' +
+			'		<button type="button" id="coinRngButton" style="float:right;">Flip a coin!</button><br/><br/>' +
+			'	</div>' +
+			'	<div class="rpht-option-section">' +
+			'		<p><strong>Dice roll</strong></p>' +
+			'		<label class="rpht-label text-input-label">Number of die </label><input class="rpht-short-input" type="number" id="diceNum" name="diceNum" max="100" min="1" value="2"><br /><br />' +
+			'		<label class="rpht-label text-input-label">Sides </label><input class="rpht-short-input" type="number" id="diceSides" name="diceSides" max="1000" min="2" value="6"><br /><br />' +
+			'		<button type="button" id="diceRngButton" style="float:right;">Let\'s roll!</button><br/><br/>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<p><strong>General RNG</strong></p>' +
+			'		<label class="rpht-label text-input-label">Minimum: </label><input class="rpht-short-input" type="number" id="rngMinNumber" name="rngMinNumber" max="4294967295" min="-4294967296" value="0"><br /><br />' +
+			'		<label class="rpht-label text-input-label">Maximum: </label><input class="rpht-short-input" type="number" id="rngMaxNumber" name="rngMaxNumber" max="4294967295" min="-4294967296" value="10"><br /><br />' +
+			'		<button type="button" id="randomRngButton" style="float:right;">Randomize!</button><br/><br/>' +
+			'	</div>' +
 			'</div>'
 	}
 
@@ -179,7 +197,6 @@ var rngModule = (function () {
 		outcomeMsg += '\u200b'
 		return outcomeMsg
 	}
-
 	
 	function getHtml() {
 		return html
@@ -193,11 +210,11 @@ var rngModule = (function () {
 	 * Public members of the module exposed to others.
 	 */
 	return {
-		init: init,
-		genCoinFlip: genCoinFlip,
-		getDiceRoll: getDiceRoll,
-		genRandomNum: genRandomNum,
-		getHtml: getHtml,
-		toString: toString
+		init,
+		genCoinFlip,
+		getDiceRoll,
+		genRandomNum,
+		getHtml,
+		toString,
 	}
 }());

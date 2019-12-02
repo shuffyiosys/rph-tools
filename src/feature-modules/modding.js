@@ -14,45 +14,64 @@ var moddingModule = (function () {
 	var html = {
 		'tabId': 'modding-module',
 		'tabName': 'Modding',
-		'tabContents': '<h3>Modding</h3>' +
-			'<div>' +
-			'<h4>Shortcuts</h4><br />' +
-			'<p><strong>Note:</strong> This must be done with the mod\'s chat tab selected.</p>' +
-			'<p>General form: <span style="font-family: courier;">/[action] [username],[reason]</span>. The reason is optional. Example: /kick Alice,Being rude</p>' +
-			'<p>Supported actions: kick, ban, unban, add-mod, remove-mod, add-owner, remove-owner</p>' +
+		'tabContents':
+			'<h3>Moderator Control</h3><br>' +
+			'<h4>Shortcuts</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<p><strong>Note:</strong> This must be done with the mods chat tab selected.</p>' +
+			'	<p>General form: <code>/[action] [username],[reason]</code>. The reason is optional.</p>' +
+			'	<p>Example: <code>/kick Alice,Being rude</code></p>' +
+			'	<p>Supported actions: kick, ban, unban, add-mod, remove-mod, add-owner, remove-owner</p>' +
 			'</div>' +
-			'<div>' +
-			'<h4>Mod commands</h4><br />' +
-			'<label class="rpht_labels">Room-Name pair</label>' +
-			'<select style="width: 300px;" id="roomModSelect">' +
-			'<option value="">&lt;Blank out fields&gt;</option>' +
-			'</select>' +
-			'<br/><br/>' +
-			'<label class="rpht_labels">Room:</label><input style="width: 300px;" type="text" id="modRoomTextInput" placeholder="Room">' +
-			'<br/><br/>' +
-			'<label class="rpht_labels">Mod name:</label><input style="width: 300px;" type="text" id="modFromTextInput" placeholder="Your mod name">' +
-			'<br/><br/>' +
-			'<label class="rpht_labels">Message:</label><input style="width: 300px;" type="text" id="modMessageTextInput" placeholder="Message">' +
-			'<br/><br/>' +
-			'<p>Perform action on these users (comma separated): </p>' +
-			'<textarea name="modTargetTextInput" id="modTargetTextInput" rows=2 class="rpht_textarea"></textarea>' +
-			'<br/><br/>' +
-			'<button style="width: 60px;" type="button" id="kickButton">Kick</button>' +
-			'<button style="margin-left: 30px; width: 60px;" type="button" id="banButton">Ban</button>' +
-			'<button style="margin-left: 6px;  width: 60px;" type="button" id="unbanButton">Unban</button>' +
-			'<button style="margin-left: 30px; width: 60px;" type="button" id="modButton">Mod</button>' +
-			'<button style="margin-left: 6px;  width: 60px;" type="button" id="unmodButton">Unmod</button>' +
-			'<button style="margin-left: 30px; width: 60px;" type="button" id="OwnButton">Owner</button>' +
-			'<button style="margin-left: 6px;  width: 60px;" type="button" id="UnownButton">Unowner</button>' +
-			'<br/><br/>' +
-			'<button type="button" id="resetPwButton">Reset PW</button>' +
-			'<br/><br/>' +
-			'</div><div>' +
-			'<h4>Word alerter</h4><br />' +
-			'<p><strong>Note:</strong> Separate all entries with a pipe character ( | ). To disable, empty the textbox.</p>' +
-			'<br/><br/>' +
-			'<textarea name="alertTriggers" id="alertTriggers" rows=4 class="rpht_textarea"></textarea>' +
-			'<br/><br/>' +
+			'<h4>Mod commands</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label split-input-label">Room-Name pair</label>' +
+			'		<select class="split-input-label" id="roomModSelect"><option value="">&lt;Blank out fields&gt;</option></select><br /><br />' +
+			'		<label class="rpht-label split-input-label">Room:</label><input class="split-input-label" type="text" id="modRoomTextInput" placeholder="Room"><br /><br />' +
+			'		<label class="rpht-label split-input-label">Mod name:</label><input class="split-input-label" type="text" id="modFromTextInput" placeholder="Your mod name"><br /><br />' +
+			'		<label class="rpht-label split-input-label">Reason Message:</label><input class="split-input-label" type="text" id="modMessageTextInput" placeholder="Message"><br /><br />' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<p>Perform action on these users (comma separated): </p>' +
+			'		<textarea name="modTargetTextInput" id="modTargetTextInput" rows=2 class="rpht_textarea"></textarea>' +
+			'		<br /><br />' +
+			'		<table style="width: 600px;" cellpadding="2">' +
+			'			<tbody>' +
+			'				<tr>' +
+			'					<td valign="top">' +
+			'						<button style="width: 60px;" type="button" id="kickButton">Kick</button>' +
+			'					</td>' +
+			'					<td>' +
+			'						<button style="width: 60px; margin-bottom: 8px;" type="button" id="banButton">Ban</button><br />' +
+			'						<button style="width: 60px;" type="button" id="unbanButton">Unban</button>' +
+			'					</td>' +
+			'					<td>' +
+			'						<button style="width: 60px; margin-bottom: 8px;" type="button" id="modButton">Mod</button><br>' +
+			'						<button style="width: 60px;" type="button" id="unmodButton">Unmod</button>' +
+			'					</td>' +
+			'					<td>' +
+			'						<button style="width: 80px; margin-bottom: 8px;" type="button" id="OwnButton">Owner</button><br>' +
+			'						<button style="width: 80px;" type="button" id="UnownButton">Unowner</button>' +
+			'					</td>' +
+			'				</tr>' +
+			'			</tbody>' +
+			'		</table>' +
+			'		<br><br>' +
+			'		<button type="button" id="resetPwButton">Reset PW</button>' +
+			'	</div>' +
+			'</div>' +
+			'<h4>Word Alert</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="wordAlertEnable">Enable word alerting</label>' +
+			'		<label class="switch"><input type="checkbox" id="wordAlertEnable"><span class="slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Highlights words that you want to be pinged on for moderation</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<p><strong>Note:</strong> Separate all entries with a pipe character ( | ).</p>' +
+			'		<textarea name="alertTriggers" id="alertTriggers" rows=4 class="rpht_textarea"></textarea>' +
+			'	</div>' +
 			'</div>'
 	}
 

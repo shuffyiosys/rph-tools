@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.1.7
+// @version    4.2.0
 // @description Adds extended settings to RPH
 // @match      https://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.1.7'
+const VERSION_STRING = '4.2.0'
 
 const SETTINGS_NAME = "rph_tools_settings"
 /**
@@ -184,7 +184,64 @@ function getSortedNames() {
 	}
 	namesToIds = tempDict
 	return namesToIds
-}/**
+}
+
+/** 
+ * Generates a randum number using the Linear congruential generator algorithm
+ * @param {*} value - Number that seeds the RNG
+ */
+function LcgRng (value) {
+	let result = (((value * 214013) + 2531011) % Math.pow(2,31))
+	return result
+}
+
+/**
+ * Parses a RNG message to take what the client sent and seed it into an
+ * RNG.
+ * @param {*} message - Message from the sender.
+ */
+function parseRng(data) {
+	let newMsg = ""
+	let message = data.msg.substring(0, data.msg.indexOf('\u200b'));
+	if (message.match(new RegExp(/coin/, 'gi'))){
+		newMsg = "flips a coin. It lands on... "
+		if (LcgRng(data.time) % 2 === 1) {
+			newMsg += "heads!"
+		}
+		else {
+			newMsg += "tails!"
+		}
+	}
+	else if (message.match(new RegExp(/rolled/, 'gi'))){
+		let numbers = message.match(new RegExp(/[0-9]+/, 'gi'))
+		let sides = parseInt(numbers[1])
+		let dieNum = parseInt(numbers[0])
+		let results = []
+		let total = 0
+		let seed = data.time
+
+		let result = LcgRng(seed)
+		results.push(result % sides + 1)
+		for (let die = 1; die < dieNum; die++) {
+			result = LcgRng(result)
+			results.push(result % sides + 1)
+		}
+		total = results.reduce((a, b) => a + b, 0)
+		newMsg = `rolled ${numbers[0]}d${numbers[1]}: `
+		newMsg += results.join(' ') + ' (total ' + total + ')'
+		console.log('[parseRng] Dice roll params', numbers, data.time)
+	}
+	else if (message.match(new RegExp(/generated/, 'gi'))){
+		let resultStartIdx = message.indexOf(':')
+		let numbers = message.match(new RegExp(/-?[0-9]+/, 'gi'))
+		let seed = parseInt(numbers[2]) + data.time
+		newMsg = message.substring(0, resultStartIdx)
+		newMsg += ': ' + LcgRng(parseInt(seed)) % (numbers[1] - numbers[0] + 1 ) + ' ))'
+		console.log(`[parseRng]: General RNG params`, numbers, data.time)
+	}
+	return newMsg
+}
+/**
  * Generates a hash value for a string
  * This was modified from https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
  */
@@ -298,7 +355,13 @@ function sendChatMessage(inputTextBox, Room, User) {
  * This module handles the chat functions of the script.
  ****/
 var chatModule = (function () {
-	var pingSettings = {
+	var chatSettings = {
+		'colorText': false,
+		'msgMargin': false,
+
+		'enablePings': true,
+		'pingNotify': false,
+		'notifyTime': 6000,
 		'triggers': [],
 		'audioUrl': 'https://www.rphaven.com/sounds/boop.mp3',
 		'color': '#000',
@@ -307,6 +370,10 @@ var chatModule = (function () {
 		'italics': false,
 		'exact': false,
 		'case': false,
+
+		'joinFavorites': false,
+		'roomSession': [],
+		'favRooms': [],
 	}
 
 	var localStorageName = "chatSettings"
@@ -315,54 +382,152 @@ var chatModule = (function () {
 
 	var autoDismissTimer = null
 
+	var autoJoinTimer = null
+
+	const AUTOJOIN_TIMEOUT_SEC = 5 * 1000
+
+	const MAX_ROOMS = 30
+
+	const AUTOJOIN_INTERVAL = 2 * 1000
+
 	var html = {
 		'tabId': 'chat-module',
 		'tabName': 'Chat',
-		'tabContents': '<h3>Chat room settings</h3>' +
-			'<div>' +
-			'<h4>Pings</h4>' +
-			'<p>Names to be pinged (comma separated)</p>' +
-			'<br />' +
-			'<textarea id="pingNames" name="pingNames" rows="8" class="rpht_textarea"> </textarea>' +
-			'<br /><br />' +
-			'<label class="rpht_labels">Ping URL: </label><input type="text" id="pingURL" name="pingURL">' +
-			'<br /><br />' +
-			'<label class="rpht_labels">Text Color: </label><input type="text" id="pingTextColor" name="pingTextColor" value="#000">' +
-			'<br /><br />' +
-			'<label class="rpht_labels">Highlight: </label><input type="text" id="pingHighlightColor" name="pingHighlightColor" value="#FFA">' +
-			'<br /><br />' +
-			'<p>Matching options</p> <br/>' +
-			'<input style="width: 40px;" type="checkbox" id="pingBoldEnable" name="pingBoldEnable"><strong>Bold</strong>' +
-			'<input style="width: 40px;" type="checkbox" id="pingItalicsEnable" name="pingItalicsEnable"><em>Italics</em>' +
-			'<input style="width: 40px;" type="checkbox" id="pingExactMatch" name="pingExactMatch">Exact match' +
-			'<input style="width: 40px;" type="checkbox" id="pingCaseSense" name="pingCaseSense">Case sensitive' +
-			'<br /><br />' +
-			'<label class="rpht_labels">Ping Tester: </label><input type="text" id="pingPreviewInput" name="pingPreviewInput">' +
-			'<br /><br />' +
-			'<label class="rpht_labels">Ping preview:</label><span id="pingPreviewText"></span>' +
+		'tabContents': '<h3>Chat Options</h3><br/>' +
+			'<h4>General options</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="chatColorEnable">Use user text colors</label>' +
+			'		<label class="switch"><input type="checkbox" id="chatColorEnable"><span class="slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Use the user\'s color to stylize their text</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<label class="rpht-label checkbox-label" for="chatMsgMarginEnable">Add padding between messages</label>' +
+			'		<label class="switch"><input type="checkbox" id="chatMsgMarginEnable"><span class="slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Adds some padding at the end of each message for readibility</label>' +
+			'	</div>' +
+			'</div>' +
+			'<h4>Chat Pinging</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="notifyPingEnable">Enable pings</label>' +
+			'		<label class="switch"><input type="checkbox" id="notifyPingEnable"><span class="slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">	Turns on ping notifications in chat</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="notifyNotificationEnable">Enable desktop notifications</label>' +
+			'		<label class="switch"><input type="checkbox" id="notifyNotificationEnable"><span class="slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Pops up a notification when you get pinged</label>' +
+			'	</div>' +
+			'<div class="rpht-option-section">' +
+			'<label style="font-weight: bold; width:522px; padding: 0px;">Desktop notification duration</label>' +
+			'<select style="width: 80px;" id="pingNotifyTimeoutSelect">' +
+			'	<option value="3000">Short</option>' +
+			'	<option value="6000" selected>Normal</option>' +
+			'	<option value="10000">Long</option>' +
+			'</select>' +
+			'<label class="rpht-label descript-label">How long the notification will stay up</label>' +
+			'</div>' +
+			'	<div class="rpht-option-section">' +
+			'		<p>Names to be pinged (comma separated)</p>' +
+			'		<textarea id="pingNames" rows="8" class="rpht_textarea"> </textarea>' +
+			'	</div>' +
+			'	<div class="rpht-option-section">' +
+			'		<label><strong>Ping sound URL</strong></label><br>' +
+			'		<input type="text" class="rpht-long-input" id="pingURL"><br><br>' +
+			'		<label class="rpht-label descript-label">URL to an audio file, or leave blank for no sound</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="pingExactMatch">Exact match</label>' +
+			'		<label class="switch"><input type="checkbox" id="pingExactMatch"><span class="slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">e.g., If pinging on "Mel", matches on "Mel" and not "Melody"</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="pingCaseSense">Case sensitive</label>' +
+			'		<label class="switch"><input type="checkbox" id="pingCaseSense"><span class="slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">e.g., If pinging on "Mel", matches on "Mel" and not "mel"</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section">' +
+			'		<h4>Ping styling</h4>' +
+			'		<label class="rpht-label text-input-label">Text Color</label><input type="text" class="rpht-short-input" id="pingTextColor" value="#000"><br /><br />' +
+			'		<label class="rpht-label text-input-label">Highlight</label><input type="text" class="rpht-short-input" id="pingHighlightColor" value="#FFA"><br><br>' +
+			'		<label class="rpht-label checkbox-label" style="font-weight:initial;" for="pingBoldEnable">Add <strong>bold</strong></label>' +
+			'		<label class="switch"><input type="checkbox" id="pingBoldEnable"><span class="slider round"></span></label><br><br>' +
+			'		<label class="rpht-label checkbox-label" style="font-weight:initial;" for="pingItalicsEnable">Add <em>Italics</em></label>' +
+			'		<label class="switch"><input type="checkbox" id="pingItalicsEnable"><span class="slider round"></span></label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'			<label class="rpht-label checkbox-label">Ping Tester: </label>' +
+			'			<input type="text" class="rpht-long-input" id="pingPreviewInput" placeholder="Enter ping word to test"><br /><br />' +
+			'			<label>Ping preview:</label><span id="pingPreviewText"></span>' +
+			'	</div>' +
+			'</div>' +
+			'<h4>Auto Joining</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="joinFavEnable">Join favorites</label>' +
+			'		<label class="switch"><input type="checkbox" id="joinFavEnable"><span class="slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Join rooms that are in the favorite rooms list</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<h4>Favorite Rooms</h4>' +
+			'		<label class="rpht-label split-input-label">Username </label><select class="split-input-label" id="favUserDropList"></select><br /><br />' +
+			'		<label class="rpht-label split-input-label">Room </label><input class="split-input-label" type="text" id="favRoom" name="favRoom"><br /><br />' +
+			'		<label class="rpht-label split-input-label">Password</label><input class="split-input-label" type="text" id="favRoomPw" name="favRoomPw"><br /><br />' +
+			'		<button style="width: 60px; float:right;" type="button" id="favAdd">Add</button><br /><br />' +
+			'		<select style="width: 100%;" id="favRoomsList" size="10"></select><br><br>' +
+			'		<button style="float:right;" type="button" id="favRemove">Remove</button><br />' +
+			'	</div>' +
 			'</div>'
 	}
 
 	function init() {
 		loadSettings()
 
-		$('#pingNames').blur(function () {
-			var triggers = $('#pingNames').val().replace('\n', '').replace('\r', '')
-			pingSettings.triggers = triggers
+		/* General Options */
+		$('#chatColorEnable').change(() => {
+			chatSettings.colorText = getCheckBox('#chatColorEnable')
 			saveSettings()
 		})
 
-		$('#pingURL').blur(function () {
-			if (validateSetting('#pingURL', 'url')) {
-				pingSettings.audioUrl = getInput('#pingURL')
-				pingSound = new Audio(pingSettings.audioUrl)
-				saveSettings()
-			}
+		$('#chatMsgMarginEnable').change(() => {
+			chatSettings.msgMargin = getCheckBox('#chatMsgMarginEnable')
+			saveSettings()
 		})
 
-		$('#pingTextColor').blur(function () {
-			if (validateSetting('#pingTextColor', 'color-allrange') === true) {
-				pingSettings.color = getInput('#pingTextColor')
+		/* Pinging Options */
+		$('#notifyPingEnable').change(() => {
+			chatSettings.enablePings = getCheckBox('#notifyPingEnable')
+			saveSettings()
+		})
+
+		$('#notifyNotificationEnable').change(() => {
+			chatSettings.pingNotify = getCheckBox('#notifyNotificationEnable')
+			saveSettings()
+		})
+
+		$('#pingNotifyTimeoutSelect').change(() => {
+			let timeoutHtml = $('#pingNotifyTimeoutSelect option:selected')
+			chatSettings.notifyTime = parseInt(timeoutHtml.val())
+			saveSettings()
+		})
+
+		$('#pingNames').blur(() => {
+			var triggers = $('#pingNames').val().replace('\n', '').replace('\r', '')
+			chatSettings.triggers = triggers
+			saveSettings()
+		})
+
+		$('#pingURL').blur(() => {
+			chatSettings.audioUrl = getInput('#pingURL')
+			pingSound = new Audio(chatSettings.audioUrl)
+			saveSettings()
+		})
+
+		$('#pingTextColor').blur(() => {
+			let colorInput = $('#pingTextColor').val()
+			if (validateColor(colorInput) === true) {
+				chatSettings.color = colorInput
 				saveSettings()
 				markProblem('#pingHighlightColor', false)
 			} else {
@@ -370,41 +535,41 @@ var chatModule = (function () {
 			}
 		})
 
-		$('#pingHighlightColor').blur(function () {
+		$('#pingHighlightColor').blur(() => {
 			if (validateSetting('#pingHighlightColor', 'color-allrange') === true) {
-				pingSettings.highlight = getInput('#pingHighlightColor')
+				chatSettings.highlight = getInput('#pingHighlightColor')
 				saveSettings()
 			}
 		})
 
-		$('#pingBoldEnable').change(function () {
-			pingSettings.bold = getCheckBox('#pingBoldEnable')
+		$('#pingBoldEnable').change(() => {
+			chatSettings.bold = getCheckBox('#pingBoldEnable')
 			saveSettings()
 		})
 
-		$('#pingItalicsEnable').change(function () {
-			pingSettings.italics = getCheckBox('#pingItalicsEnable')
+		$('#pingItalicsEnable').change(() => {
+			chatSettings.italics = getCheckBox('#pingItalicsEnable')
 			saveSettings()
 		})
 
-		$('#pingExactMatch').change(function () {
-			pingSettings.exact = getCheckBox('#pingExactMatch')
+		$('#pingExactMatch').change(() => {
+			chatSettings.exact = getCheckBox('#pingExactMatch')
 			saveSettings()
 		})
 
-		$('#pingCaseSense').change(function () {
-			pingSettings.case = getCheckBox('#pingCaseSense')
+		$('#pingCaseSense').change(() => {
+			chatSettings.case = getCheckBox('#pingCaseSense')
 			saveSettings()
 		})
 
-		$('#pingPreviewInput').blur(function () {
+		$('#pingPreviewInput').blur(() => {
 			var msg = getInput('#pingPreviewInput')
-			var testRegex = matchPing(msg, pingSettings.triggers, pingSettings.case,
-				pingSettings.exact)
+			var testRegex = matchPing(msg, chatSettings.triggers, chatSettings.case,
+				chatSettings.exact)
 			if (testRegex !== null) {
-				msg = highlightPing(msg, testRegex, pingSettings.color,
-					pingSettings.highlight, pingSettings.bold,
-					pingSettings.italics)
+				msg = highlightPing(msg, testRegex, chatSettings.color,
+					chatSettings.highlight, chatSettings.bold,
+					chatSettings.italics)
 				pingSound.play()
 				$('#pingPreviewText')[0].innerHTML = msg
 			} else {
@@ -412,39 +577,52 @@ var chatModule = (function () {
 			}
 		})
 
-		$('#showUsername').change(() => {
-			pingSettings.case = getCheckBox('#pingCaseSense')
+		/* Session Options */
+		$('#joinFavEnable').click(() => {
+			chatSettings.joinFavorites = getCheckBox('#joinFavEnable')
 			saveSettings()
 		})
 
+		$('#favAdd').click(() => {
+			parseFavoriteRoom($('#favRoom').val())
+			settingsModule.saveSettings(localStorageName, chatSettings)
+		})
+
+		$('#favRemove').click(() => {
+			removeFavoriteRoom()
+			settingsModule.saveSettings(localStorageName, chatSettings)
+		})
+
+		if (chatSettings.joinFavorites) {
+			autoJoinTimer = setInterval(autoJoiningHandler, AUTOJOIN_INTERVAL)
+		}
+
+		/* General intialization */
 		$(window).resize(resizeChatTabs)
 
 		chatSocket.on('confirm-room-join', function (data) {
 			roomSetup(data)
 		})
 
-		chatSocket.on('room-users-leave', function (data) {
-			var sessionModule = rphToolsModule.getModule('Session Module')
-			if (sessionModule === null) {
-				return
-			}
-	
-			data.users.forEach((userId) => {
-				if (account.userids.indexOf(userId) > -1) {
-					sessionModule.removeRoomFromSession(data.room, userId)
-				}
-			})
-		})
-
 		/* Setup the timer for automatically dismissing the opening dialog once
 		   rooms are available. The timer clears after. */
-		autoDismissTimer = setInterval(function () {
+		autoDismissTimer = setInterval(() => {
 			if (roomnames.length === 0) {
 				return
 			}
 			$("button span:contains('Continue')").trigger('click')
 			clearTimeout(autoDismissTimer)
 		}, 500)
+
+		socket.on('account-users', () => {
+			setTimeout(() => {
+				$('#favUserDropList').empty()
+				var namesToIds = getSortedNames()
+				for (var name in namesToIds) {
+					addToDroplist(namesToIds[name], name, "#favUserDropList")
+				}
+			}, 3000)
+		})
 	}
 
 	/**
@@ -469,15 +647,12 @@ var chatModule = (function () {
 			}
 		}
 
-		thisRoom.locked = {}
-		thisRoom.locked.onMessage = (data) => {
-			if (account.ignores.indexOf(data.userid) !== -1) {
-				return
-			}
-			getUserById(data.userid, (User) => {
-				postMessage(thisRoom, data, User, (modUserIdx !== -1))
+		chatSocket.on('msg', function (data) {
+			getUserById(data[data.length - 1].userid, (User) => {
+				let chatMsgHtml = thisRoom.$el.find('>div:last')[0].children
+				postMessage(thisRoom, data, chatMsgHtml, User, (modUserIdx !== -1))
 			})
-		}
+		})
 
 		getUserById(userId, (User) => {
 			addNameToUI(thisRoom, User)
@@ -490,6 +665,7 @@ var chatModule = (function () {
 			}
 
 			resizeChatTabs()
+			$('div.' + User.props.id + '_' + makeSafeForCss(thisRoom.props.name) + ' .user-for-textarea span').css('overflow', 'hidden')
 			var chatTextArea = $('textarea.' + User.props.id + '_' + makeSafeForCss(thisRoom.props.name))
 			chatTextArea.unbind('keyup')
 			chatTextArea.bind('keydown', function (ev) {
@@ -504,20 +680,38 @@ var chatModule = (function () {
 	 * @param {object} thisRoom The room that the message is for.
 	 * @param {object} data The message for the room
 	 */
-	function postMessage(thisRoom, data, User, isMod) {
-		var timestamp = makeTimestamp(data.time, true)
-		var msg = parseMsg(data.msg)
-		var classes = ''
-		var $el = ''
-		var msgHtml = ''
-		var ownMessage = account.userids.includes(User.props.id)
+	function postMessage(thisRoom, data, chatMsgHtml, User, isMod) {
+		let msgHtml = chatMsgHtml[1]
+		let msg = msgHtml.innerHTML
+		if (chatSettings.msgMargin) {
+			thisRoom.$el.find('>div:last').css('margin-bottom', '8px')
+		}
+		chatMsgHtml[0].children[0].innerHTML = makeTimestamp(data.time, true)
 
-		/* Process only if not own message */
-		if (ownMessage === false) {
+		/* Add pinging higlights */
+		var testRegex = null
+		testRegex = matchPing(msg, chatSettings.triggers, chatSettings.case, chatSettings.exact)
+		if (testRegex !== null) {
+			msg = highlightPing(msg, testRegex, chatSettings.color,
+				chatSettings.highlight, chatSettings.bold,
+				chatSettings.italics)
+			highlightRoom(thisRoom, chatSettings.color, chatSettings.highlight)
+			pingSound.play()
+
+			/* Bring up the notification if enabled, but don't do it if the user
+			   pinged themselves*/
+			if (chatSettings.pingNotify && account.userids.includes(User.props.id) === false) {
+				let notification = new Notification(`${User.props.name} pinged you in ${thisRoom.props.name}`)
+				setTimeout(() => {
+					notification.close()
+				}, chatSettings.notifyTime)
+			}
+		}
+
+		/* Process other's messages for issues if a mod */
+		if (isMod && account.userids.includes(User.props.id) === false) {
 			var moddingModule = rphToolsModule.getModule('Modding Module')
-
-			/* Perform mod actions */
-			if (moddingModule !== null && isMod) {
+			if (moddingModule !== null) {
 				var alertWords = moddingModule.getAlertWords()
 				testRegex = matchPing(msg, alertWords, false, true)
 
@@ -533,101 +727,23 @@ var chatModule = (function () {
 			}
 		}
 
-		/* If there's a verification mark, check to see if it's good */
+		/* Check to see if there's a RNG marker, then process it if it's there */
 		if (msg.indexOf('\u200b') > -1) {
-			msg = parseMsg(parseRng(data))
-			msg += ' <span style="background:#4A4; color: #FFF;"> &#9745; </span>'
+			let msgData = data[0]
+			let newMsg = ''
 
-		}
-
-		/* Add pinging higlights */
-		try {
-			var testRegex = null
-			testRegex = matchPing(msg, pingSettings.triggers, pingSettings.case,
-				pingSettings.exact)
-			if (testRegex !== null) {
-				msg = highlightPing(msg, testRegex, pingSettings.color,
-					pingSettings.highlight, pingSettings.bold,
-					pingSettings.italics)
-				highlightRoom(thisRoom, pingSettings.color, pingSettings.highlight)
-				pingSound.play()
+			if (msgHtml.children.length > 0) {
+				newMsg += msgHtml.children[0].outerHTML
 			}
-		} catch (err) {
-			console.log('RPH Tools[postMessage]: I tried pinging D:', err)
-			msg = parseMsg(data.msg)
-		}
-		
-		let rgbString = User.props.color.toString()
-
-		if (msg.charAt(0) === '/' && msg.slice(1, 3) === 'me') {
-			classes += 'action '
-			msg = msg.slice(3)
-			msgHtml = '<span class="first">[' + timestamp +
-				']</span>\n<span style="color:#' + rgbString +
-				'"><a class="name" title="[' + timestamp +
-				']" style="color:#' + rgbString +
-				'">' + User.props.name + '</a>' + msg + '</span>'
-		} else {
-			msgHtml = '<span class="first">[' + timestamp + ']<a class="name" title="[' +
-				timestamp + ']" style="color:#' + rgbString + '">' +
-				User.props.name +
-				'<span class="colon">:</span></a></span>\n<span style="color:#' +
-				rgbString + '">' + msg + '</span>'
+			newMsg += `${parseMsg(parseRng(msgData))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
+			msg = newMsg
 		}
 
-		$el = thisRoom.appendMessage(msgHtml).addClass(classes)
-		$el.find('br:gt(7)').remove()
-	}
-
-	/**
-	 * Parses a RNG message to take what the client sent and seed it into an
-	 * RNG.
-	 * @param {*} message - Message from the sender.
-	 */
-	function parseRng(data) {
-		let newMsg = ""
-		let message = data.msg.substring(0, data.msg.indexOf('\u200b'));
-		if (message.match(new RegExp(/coin/, 'gi'))){
-			newMsg = "/me flips a coin. It lands on... "
-			if (LcgRng(data.time) % 2 === 1) {
-				newMsg += "heads!"
-			}
-			else {
-				newMsg += "tails!"
-			}
+		let rgbString = ''
+		if (chatSettings.colorText) {
+			rgbString = `style="color:#${User.props.color.toString()};"`
 		}
-		else if (message.match(new RegExp(/rolled/, 'gi'))){
-			let numbers = message.match(new RegExp(/[0-9]+/, 'gi'))
-			let results = []
-			let total = 0
-			for (let die = 2; die < numbers.length; die++) {
-				let sides = parseInt(numbers[1])
-				let seed = (parseInt(numbers[die]) + data.time)
-				results.push(LcgRng(seed) % sides + 1)
-			}
-			total = results.reduce((a, b) => a + b, 0)
-			newMsg = `/me rolled ${numbers[0]}d${numbers[2]}: `
-			newMsg += results.join(' ') + ' (total ' + total + ')'
-			console.log('[parseRng] Dice roll params', numbers, data.time)
-		}
-		else if (message.match(new RegExp(/generated/, 'gi'))){
-			let resultStartIdx = message.indexOf(':')
-			let numbers = message.match(new RegExp(/-?[0-9]+/, 'gi'))
-			let seed = parseInt(numbers[2]) + data.time
-			newMsg = message.substring(0, resultStartIdx)
-			newMsg += ': ' + LcgRng(parseInt(seed)) % (numbers[1] - numbers[0] + 1 ) + ' ))'
-			console.log(`[parseRng]: General RNG params`, numbers, data.time)
-		}
-		return newMsg
-	}
-
-	/**
-	 * Generates a randum number using the Linear congruential generator algorithm
-	 * @param {*} value - Number that seeds the RNG
-	 */
-	function LcgRng (value) {
-		let result = (((value * 214013) % Math.pow(2,32) + 2531011) % Math.pow(2,32))
-		return result
+		msgHtml.outerHTML = `<span ${rgbString}>${msg}</span>`
 	}
 
 	/**
@@ -691,6 +807,11 @@ var chatModule = (function () {
 					sendChatMessage(inputTextBox, Room, User)
 				}
 				break
+			case '/rps':
+				const results = ['Rock!', 'Paper!', 'Scissors!']
+				inputTextBox.val('/me plays Rock, Paper, Scissors and chooses... ' + results[Math.ceil(Math.random() * 3) % 3].toString())
+				sendChatMessage(inputTextBox, Room, User)
+				break
 			case '/kick':
 			case '/ban':
 			case '/unban':
@@ -722,7 +843,7 @@ var chatModule = (function () {
 
 		if (error) {
 			Room.appendMessage(
-				'<span class="first">&nbsp;</span><span title="' + 
+				'<span class="first">&nbsp;</span><span title="' +
 				makeTimestamp(false, true) + '">Error in command input</span>'
 			).addClass('sys')
 		}
@@ -798,14 +919,14 @@ var chatModule = (function () {
 			thisRoom.$tabs[0].css('background-color', highlight)
 			thisRoom.$tabs[0].css('color', color)
 
-			thisRoom.$tabs[0].click(function () {
+			thisRoom.$tabs[0].click(() => {
 				thisRoom.$tabs[0].css('background-color', '#333')
 				thisRoom.$tabs[0].css('color', '#6F9FB9')
 
-				thisRoom.$tabs[0].hover(function () {
+				thisRoom.$tabs[0].hover(() => {
 					thisRoom.$tabs[0].css('background-color', '#6F9FB9')
 					thisRoom.$tabs[0].css('color', '#333')
-				}, function () {
+				}, () => {
 					thisRoom.$tabs[0].css('background-color', '#333')
 					thisRoom.$tabs[0].css('color', '#6F9FB9')
 				})
@@ -868,23 +989,144 @@ var chatModule = (function () {
 		}, 100)
 	}
 
+	/** AUTO JOINING FUNCTIONS **********************************************/
+	/**
+	 * Handler for the auto-joining mechanism.
+	 **/
+	function autoJoiningHandler() {
+		/* Don't run this if there's no rooms yet. */
+		if (roomnames.length === 0) {
+			return
+		}
+		$('<div id="rpht-autojoin" class="inner">' +
+			'<p>Autojoining or restoring session.</p>' +
+			'<p>Press "Cancel" to stop autojoin or session restore.</p>' +
+			'</div>'
+		).dialog({
+			open: function (event, ui) {
+				setTimeout(() => {
+					$('#rpht-autojoin').dialog('close')
+				}, AUTOJOIN_TIMEOUT_SEC)
+			},
+			buttons: {
+				Cancel: () => {
+					clearTimeout(autoJoinTimer)
+					$('#rpht-autojoin').dialog('close')
+				}
+			},
+		}).dialog('open')
+
+		clearTimeout(autoJoinTimer)
+		autoJoinTimer = setTimeout(joinRooms, AUTOJOIN_TIMEOUT_SEC)
+	}
+
+	/**
+	 * Join rooms in the favorites and what was in the session.
+	 */
+	function joinRooms() {
+		if (chatSettings.joinFavorites === true) {
+			joinFavoriteRooms()
+		}
+	}
+
+	/** 
+	 * Joins all the rooms in the favorite rooms list
+	 */
+	function joinFavoriteRooms() {
+		for (var i = 0; i < chatSettings.favRooms.length; i++) {
+			var favRoom = chatSettings.favRooms[i]
+			chatSocket.emit('join', {
+				name: favRoom.room,
+				userid: favRoom.userId,
+				pw: favRoom.roomPw
+			})
+		}
+	}
+
+	/** 
+	 * Adds an entry to the Favorite Chat Rooms list from an input
+	 * @param {string} roomname - Name of the room
+	 */
+	function parseFavoriteRoom(roomname) {
+		var room = getRoom(roomname)
+		if (room === undefined) {
+			markProblem('favRoom', true)
+			return
+		}
+		if (chatSettings.favRooms.length < MAX_ROOMS) {
+			var selectedFav = $('#favUserDropList option:selected')
+			var hashStr = $('#favRoom').val() + selectedFav.html()
+			var favRoomObj = {
+				_id: hashStr.hashCode(),
+				user: selectedFav.html(),
+				userId: parseInt(selectedFav.val()),
+				room: $('#favRoom').val(),
+				roomPw: $('#favRoomPw').val()
+			}
+			addFavoriteRoom(favRoomObj)
+			markProblem('favRoom', false)
+		}
+	}
+
+	/**
+	 * Adds a favorite room to the settings list
+	 * @param {Object} favRoomObj - Object containing the favorite room parameters.
+	 */
+	function addFavoriteRoom(favRoomObj) {
+		if (arrayObjectIndexOf(chatSettings.favRooms, "_id", favRoomObj._id) === -1) {
+			$('#favRoomsList').append(
+				'<option value="' + favRoomObj._id + '">' +
+				favRoomObj.user + ": " + favRoomObj.room + '</option>'
+			)
+			chatSettings.favRooms.push(favRoomObj)
+		}
+		if (chatSettings.favRooms.length >= MAX_ROOMS) {
+			$('#favAdd').text("Favorites Full")
+			$('#favAdd')[0].disabled = true
+		}
+	}
+
+	/** 
+	 * Removes an entry to the Favorite Chat Rooms list
+	 */
+	function removeFavoriteRoom() {
+		var favItem = document.getElementById("favRoomsList")
+		var favItemId = $('#favRoomsList option:selected').val()
+		favItem.remove(favItem.selectedIndex)
+		for (var idx = 0; idx < chatSettings.favRooms.length; idx++) {
+			if (chatSettings.favRooms[idx]._id == favItemId) {
+				chatSettings.favRooms.splice(idx, 1)
+				break
+			}
+		}
+		if (chatSettings.favRooms.length < 10) {
+			$('#favAdd').text("Add")
+			$('#favAdd')[0].disabled = false
+		}
+	}
+
 	/**
 	 * Save current settings
 	 */
 	function saveSettings() {
-		settingsModule.saveSettings(localStorageName, pingSettings)
+		settingsModule.saveSettings(localStorageName, chatSettings)
 	}
 	/**
 	 * Loads settings from local storage
 	 * @param {object} storedSettings Object containing the settings
 	 */
-	function loadSettings () {
-		var storedSettings = settingsModule.getSettings(localStorageName)
+	function loadSettings() {
+		let storedSettings = settingsModule.getSettings(localStorageName)
 		if (storedSettings) {
-			pingSettings = storedSettings
-		}
-		else {
-			pingSettings = {
+			chatSettings = Object.assign(chatSettings, storedSettings)
+		} else {
+			chatSettings = {
+				'colorText': false,
+				'msgMargin': false,
+
+				'enablePings': true,
+				'pingNotify': false,
+				'notifyTime': 6000,
 				'triggers': [],
 				'audioUrl': 'https://www.rphaven.com/sounds/boop.mp3',
 				'color': '#000',
@@ -893,18 +1135,36 @@ var chatModule = (function () {
 				'italics': false,
 				'exact': false,
 				'case': false,
+
+				'joinFavorites': false,
+				'roomSession': [],
+				'favRooms': [],
 			}
 		}
 
-		$('#pingNames').val(pingSettings.triggers)
-		$('#pingURL').val(pingSettings.audioUrl)
-		$('#pingTextColor').val(pingSettings.color)
-		$('#pingHighlightColor').val(pingSettings.highlight)
-		$('input#pingBoldEnable').prop("checked", pingSettings.bold)
-		$('input#pingItalicsEnable').prop("checked", pingSettings.italics)
-		$('input#pingExactMatch').prop("checked", pingSettings.exact)
-		$('input#pingCaseSense').prop("checked", pingSettings.case)
-		pingSound = new Audio(pingSettings.audioUrl)
+		$('#chatColorEnable').prop("checked", chatSettings.colorText)
+		$('#chatMsgMarginEnable').prop("checked", chatSettings.msgMargin)
+
+		$('#notifyPingEnable').prop("checked", chatSettings.enablePings)
+		$('#notifyNotificationEnable').prop("checked", chatSettings.pingNotify)
+		$('#pingNames').val(chatSettings.triggers)
+		$('#pingURL').val(chatSettings.audioUrl)
+		$('#pingTextColor').val(chatSettings.color)
+		$('#pingHighlightColor').val(chatSettings.highlight)
+		$('input#pingBoldEnable').prop("checked", chatSettings.bold)
+		$('input#pingItalicsEnable').prop("checked", chatSettings.italics)
+		$('input#pingExactMatch').prop("checked", chatSettings.exact)
+		$('input#pingCaseSense').prop("checked", chatSettings.case)
+
+		$('#joinFavEnable').prop("checked", chatSettings.joinFavorites)
+		for (var i = 0; i < chatSettings.favRooms.length; i++) {
+			var favRoomObj = chatSettings.favRooms[i]
+			$('#favRoomsList').append(
+				'<option value="' + favRoomObj._id + '">' +
+				favRoomObj.user + ": " + favRoomObj.room + '</option>'
+			)
+		}
+		pingSound = new Audio(chatSettings.audioUrl)
 	}
 
 	function getHtml() {
@@ -1064,7 +1324,6 @@ var sessionModule = (function () {
 				setTimeout(() => {
 					var pmTextBoxes = $("#pm-bottom .textarea textarea")
 					for (var i = 0; i < pmTextBoxes.length; i++){
-						console.log(sessionSettings.pmTextboxes[i])
 						if (sessionSettings.pmTextboxes[i])
 							pmTextBoxes[i].value = sessionSettings.pmTextboxes[i]
 					}
@@ -1337,7 +1596,6 @@ var sessionModule = (function () {
 			)
 			sessionSettings.favRooms.push(favRoomObj)
 		}
-
 		if (sessionSettings.favRooms.length >= MAX_ROOMS) {
 			$('#favAdd').text("Favorites Full")
 			$('#favAdd')[0].disabled = true
@@ -1351,14 +1609,12 @@ var sessionModule = (function () {
 		var favItem = document.getElementById("favRoomsList")
 		var favItemId = $('#favRoomsList option:selected').val()
 		favItem.remove(favItem.selectedIndex)
-
 		for (var idx = 0; idx < sessionSettings.favRooms.length; idx++) {
 			if (sessionSettings.favRooms[idx]._id == favItemId) {
 				sessionSettings.favRooms.splice(idx, 1)
 				break
 			}
 		}
-
 		if (sessionSettings.favRooms.length < 10) {
 			$('#favAdd').text("Add")
 			$('#favAdd')[0].disabled = false
@@ -1430,36 +1686,84 @@ var sessionModule = (function () {
  */
 var pmModule = (function () {
 	var pmSettings = {
+		'colorText': false,
+		'notify': false,
+		'notifyTime': 6000,
 		'audioUrl': 'https://www.rphaven.com/sounds/imsound.mp3',
 		'pmMute': false,
 	}
 
-	var localStorageName = "rpht_PmModule"
+	var localStorageName = "pmSettings"
 
 	var html = {
 		'tabId': 'pm-module',
 		'tabName': 'PMs',
-		'tabContents': '<h3>PM Settings</h3>' +
-			'<div><h4>PM Away System</h4>' +
-			'</p>' +
-			'<p>Username</p>' +
-			'<select style="width: 613px;" id="pmNamesDroplist" size="10"></select>' +
-			'<br><br>' +
-			'<label class="rpht_labels">Away Message: </label><input type="text" id="awayMessageTextbox" name="awayMessageTextbox" maxlength="300" placeholder="Away message...">' +
-			'<br /><br />' +
-			'<button style="margin-left: 483px; width:60px" "type="button" id="setAwayButton">Enable</button> <button type="button" style="margin-left: 6px; width:60px" id="removeAwayButton">Disable</button>' +
-			'</div><div>' +
-			'<h4>Other Settings</h4>' +
-			'</p>' +
-			'<label class="rpht_labels">PM Sound: </label><input type="text" id="pmPingURL" name="pmPingURL">' +
-			'<br /><br />' +
-			'<label class="rpht_labels">Mute PMs: </label><input style="width: 40px;" type="checkbox" id="pmMute" name="pmMute">'
+		'tabContents': 
+			'<h3>PM Settings</h3><br>' +
+			'<h4>General options</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="pmColorEnable">Use user text colors</label>' +
+			'		<label class="switch"><input type="checkbox" id="pmColorEnable"><span class="slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Use the user\'s color to stylize their text</label>' +
+			'	</div>' +
+			'</div>' +
+			'<h4>PM Notification Settings</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="pmNotify">Enable desktop notifications</label>' +
+			'		<label class="switch"><input type="checkbox" id="pmNotify"><span class="slider round"></span></label>' +
+			'		<p>Pops a desktop notification when you get a PM</p>' +
+			'	</div>' +
+			'	<div class="rpht-option-section">' +
+			'		<label style="font-weight: bold; width:522px; padding: 0px;">Desktop notification duration</label>' +
+			'		<select style="width: 80px;" id="pmNotifyTimeoutSelect">' +
+			'			<option value="3000">Short</option>' +
+			'			<option value="6000" selected>Normal</option>' +
+			'			<option value="10000">Long</option>' +
+			'		</select>' +
+			'		<label class="rpht-label descript-label">How long the notification will stay up</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<label class="rpht-label split-input-label">PM sound URL </label>' +
+			'		<input class="split-input-label" type="text" id="pmPingURL" name="pmPingURL" style="margin-bottom: 12px;">' +
+			'		<label class="rpht-label checkbox-label" for="pmMute">Mute PMs</label>' +
+			'		<label class="switch"><input type="checkbox" id="pmMute"><span class="slider round"></span></label>' +
+			'	</div>' +
+			'</div>' +
+			'<h4>PM Away System</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<p>Usernames</p>' +
+			'		<select style="width: 100%;" id="pmNamesDroplist" size="10"></select><br><br>' +
+			'		<label><strong>Away Message </strong></label><input type="text" class="rpht-long-input" id="awayMessageTextbox" maxlength="300" placeholder="Away message...">' +
+			'		<br><br>' +
+			'		<button type="button" style="float:right; width:60px" id="setAwayButton">Enable</button>' +
+			'		<button type="button" style="float:right; margin-right: 20px; width:60px" id="removeAwayButton">Disable</button>' +
+			'	</div>' +
+			'</div>'
 	}
 
 	var awayMessages = {}
 
 	function init() {
 		loadSettings()
+
+		$('#pmColorEnable').change(() => {
+			pmSettings.colorText = getCheckBox('#pmColorEnable')
+			settingsModule.saveSettings(localStorageName, pmSettings)
+		})
+
+		$('#pmNotify').change(() => {
+			pmSettings.notify = getCheckBox('#pmNotify')
+			settingsModule.saveSettings(localStorageName, pmSettings)
+		})
+
+		$('#pmNotifyTimeoutSelect').change(() => {
+			let timeoutHtml = $('#pmNotifyTimeoutSelect option:selected')
+			pmSettings.notifyTime = parseInt(timeoutHtml.val())
+			settingsModule.saveSettings(localStorageName, pmSettings)
+		})
 		
 		$('#pmNamesDroplist').change(() => {
 			var userId = $('#pmNamesDroplist option:selected').val()
@@ -1498,12 +1802,33 @@ var pmModule = (function () {
 			settingsModule.saveSettings(localStorageName, pmSettings)
 		})
 
-		socket.on('pm', function (data) {
-			handleIncomingPm(data)
+		$('#pmNotify').change(() => {
+			pmSettings.notify = $('#pmNotify').is(":checked")
+			settingsModule.saveSettings(localStorageName, pmSettings)
 		})
 
-		socket.on('outgoing-pm', function (data) {
-			handleOutgoingPm(data)
+		while(socket._callbacks['$pm'].length > 0) {
+			socket._callbacks['$pm'].pop()
+		}
+
+		socket.on('pm', (data) => {
+			/* Check if the user is blocked */
+			if (account.ignores.indexOf(data.to) > -1) {
+				return;
+			}
+			rph.getPm({'from':data.from, 'to':data.to}, function(pm){
+				handleIncomingPm(data, pm)
+				pm.typingStop()
+			})
+		})
+
+		socket.onOutgoing('pm', (data) => {
+			if (account.ignores.indexOf(data.to) > -1) {
+				return;
+			}
+			rph.getPm({'from':data.from, 'to':data.to}, function(pm){
+				handleOutgoingPm(data, pm)
+			})
 		})
 
 		socket.on('account-users', () => {
@@ -1521,12 +1846,29 @@ var pmModule = (function () {
 	 * Handler for PMs that are incoming
 	 * @param {object } data Data containing the PM.
 	 */
-	function handleIncomingPm(data) {
-		if (!awayMessages[data.from]) {
-			return
+	function handleIncomingPm(data, pm) {
+		let pmHtml = makePmMessage(data, pm.to)
+		pm.appendMsg(pmHtml, data.time)
+		let activePm = ($('ul.pm-tabs li.tab.active a')[0].innerHTML == pm.to.props.name)
+		if(!activePm || !$('#pm-dialog').dialog('isOpen')){
+			pm.setUnread();
+		}
+		if (!pmSettings.pmMute) {
+			$('#jp_audio_0')[0].play()
+		}
+		if (!data.time) {
+			data.time = Math.round(Date.now() / 1000)
+		}
+		db.msgs.put({date: data.time, fromid: pm.to.props.id, userid:data.from, otherid:data.to, msg:data.msg});
+		
+		if( pmSettings.notify ){
+			let notification = new Notification(`${pm.to.props.name} messaged you to ${pm.from.props.name}`)
+			setTimeout(() => {
+				notification.close()
+			}, pmSettings.notifyTime)
 		}
 
-		if (awayMessages[data.from].enabled) {
+		if (awayMessages[data.from] && awayMessages[data.from].enabled){
 			awayMessages[data.from].usedPmAwayMsg = true
 			socket.emit('pm', {
 				'from': data.from,
@@ -1541,18 +1883,78 @@ var pmModule = (function () {
 	 * Handler for PMs that are outgoing
 	 * @param {object } data Data containing the PM.
 	 */
-	function handleOutgoingPm(data) {
-		if (!awayMessages[data.from]) {
-			return
+	function handleOutgoingPm(data, pm) {
+		let pmHtml = makePmMessage(data, pm.from)
+		
+		for(let i = pm.$msgs[0].children.length -1; i > -1; i--) {
+			let msgHtml = pm.$msgs[0].children[i].innerHTML
+			if (msgHtml.match(pm.from.props.name, 'i')){
+				pm.$msgs[0].children[i].innerHTML = pmHtml
+				break
+			}
 		}
-
-		if (!awayMessages[data.from].usedPmAwayMsg) {
+		if (awayMessages[data.from] && !awayMessages[data.from].usedPmAwayMsg) {
 			awayMessages[data.from].enabled = false
 			$('#pmNamesDroplist option').filter(function () {
 				return this.value == data.from
 			}).css("background-color", "")
+			awayMessages[data.from].usedPmAwayMsg = false
 		}
-		awayMessages[data.from].usedPmAwayMsg = false
+	}
+
+	function makePmMessage(data, userProps) {
+		let timestampStr = makeTimestamp(data.time, true)
+		let classes = ''
+		let message = parseMsg(data.msg);
+		let rgbString = ''
+
+		if (message.charAt(0) === '/') {
+			message = parseCommand(data)
+		}
+
+		if( message.charAt(0) === '/' && message.indexOf('me') === 1 ){
+			classes += 'action ';
+			message = message.slice(3) + ' ';
+		}
+
+		if(pmSettings.colorText) {
+			rgbString = ` style="color: #${userProps.props.color.toString()}"`
+		}
+		return `<p class="${classes}"${rgbString}><span style="color: #FFF;">${timestampStr}</span> ` + 
+				`<strong class="user">${(userProps.props.vanity || userProps.props.name)}${((classes === '') ? ':' : '')}</strong> ${message}</p>`
+	}
+
+	function parseCommand(data) {
+		var msg = parseMsg(data.msg);
+		var cmdArgs = msg.split(/ (.+)/)
+		switch(cmdArgs[0]) {
+			case '/roll':
+				let die = 1
+				let sides = 20
+				let rolls = []
+				let total = 0
+				
+				if (cmdArgs.length > 1) {
+					die = parseInt(cmdArgs[1].split('d')[0])
+					sides = parseInt(cmdArgs[1].split('d')[1])
+				}
+				if (isNaN(die) || isNaN(sides)) {
+					error = true
+				} 
+				else {
+					let result = LcgRng(data.date)
+					rolls.push(result  % sides + 1)
+					for (let i = 1; i < die; i++) {
+						result = LcgRng(result)
+						rolls.push(result % sides + 1)
+					}
+					total = rolls.reduce((a, b) => a + b, 0)
+					msg = `/me rolled ${die}d${sides}: `
+					msg += rolls.join(' ') + ' (total ' + total + ')'
+				}
+				break
+		}
+		return msg
 	}
 
 	/**
@@ -1605,14 +2007,22 @@ var pmModule = (function () {
 	function loadSettings() {
 		var storedSettings = settingsModule.getSettings(localStorageName)
 		if (storedSettings) {
-			pmSettings = storedSettings
+			pmSettings = Object.assign(pmSettings, storedSettings)
 		} 
 		else {
 			pmSettings = {
+				'colorText': false,
+				'notify': false,
+				'notifyTime': 6000,
 				'audioUrl': 'https://www.rphaven.com/sounds/imsound.mp3',
 				'pmMute': false,
 			}
 		}
+
+		$('#pmColorEnable').prop("checked", pmSettings.colorText)
+		$('#pmEnhnaceContrastEnable').prop("checked", pmSettings.enhanceContrast)
+		$('#pmNotify').prop("checked", pmSettings.notify)
+		$('#pmNotifyTimeoutSelect').val(pmSettings.notifyTime.toString())
 		$('#pmPingURL').val(pmSettings.audioUrl)
 		$('#pmMute').prop("checked", pmSettings.pmMute)
 	}
@@ -1646,32 +2056,50 @@ var rngModule = (function () {
 	var html = {
 		'tabId': 'rng-module',
 		'tabName': 'Random Numbers',
-		'tabContents': '<h3>Random Number Generators</h3>' +
-			'<div>' +
-			'<h4>Shortcuts</h4><br />' +
-			'<p><span style="font-family: courier">/coinflip</span> - Does a coin toss</p>' +
-			'<p><span style="font-family: courier">/roll [num]d[num]</span> - Dice roll. ' + 
-			'If no argument is given, it rolls 1d1000. Example: <span style="font-family: courier">/roll 2d6</span> will roll 2 dices with 6 sides</p>' +
+		'tabContents':
+			'<h3>Random Numbers</h3><br />' +
+			'<h4>Shortcuts</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<table style="width: 600px;">' +
+			'		<tbody>' +
+			'			<tr>' +
+			'				<td><span style="font-family: courier">/coinflip</span></td>' +
+			'				<td>Coin flip (heads or tails)</td>' +
+			'			</tr>' +
+			'			<tr>' +
+			'				<td><span style="font-family: courier">/roll [num die]d[sides]</span></td>' +
+			'				<td style="width: 65%;">Dice roll. Doing just "<code>/roll</code>" is 1d20.<br>' +
+			'					[num die] is number of dice to roll. [sides] is how many sides per die. Example <code>/roll' +
+			'						2d10</code> will roll 2 10-sided dice</td>' +
+			'			</tr>' +
+			'			<tr>' +
+			'				<td><span style="font-family: courier">/random</span></td>' +
+			'				<td>Generates random number based on RNG settings below</td>' +
+			'			</tr>' +
+			'			<tr>' +
+			'				<td><span style="font-family: courier">/rps</span></td>' +
+			'				<td>Do rock, paper, scissors</td>' +
+			'			</tr>' +
+			'		</tbody>' +
+			'	</table>' +
 			'</div>' +
-			'<div id="coinFlipOptions">' +
-			'<h4>Coin toss</h4><br />' +
-			'<button style="margin-left: 312px;" type="button" id="coinRngButton">Flip a coin!</button>' +
-			'</div>' +
-			'<div id="diceOptions">' +
-			'<h4>Dice roll</h4><br />' +
-			'<label class="rpht_labels">Number of die </label><input style="width: 300px;" type="number" id="diceNum" name="diceNum" max="100" min="1" value="2">' +
-			'<br /><br />' +
-			'<label  class="rpht_labels">Sides </label><input style="width: 300px;" type="number" id="diceSides" name="diceSides" max="1000" min="2" value="6">' +
-			'<br /><br />' +
-			'<button style="margin-left: 312px;" type="button" id="diceRngButton">Let\'s roll!</button>' +
-			'</div>' +
-			'<div id="rngOptions">' +
-			'<h4>General RNG</h4><br />' +
-			'<label  class="rpht_labels">Minimum: </label><input style="width: 300px;" type="number" id="rngMinNumber" name="rngMinNumber" max="4294967295" min="-4294967296" value="0">' +
-			'<br /><br />' +
-			'<label  class="rpht_labels">Maximum: </label><input style="width: 300px;" type="number" id="rngMaxNumber" name="rngMaxNumber" max="4294967295" min="-4294967296" value="10">' +
-			'<br /><br />' +
-			'<button style="margin-left: 312px;" type="button" id="randomRngButton">Randomize!</button>' +
+			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section">' +
+			'		<p><strong>Coin flip</strong></p>' +
+			'		<button type="button" id="coinRngButton" style="float:right;">Flip a coin!</button><br/><br/>' +
+			'	</div>' +
+			'	<div class="rpht-option-section">' +
+			'		<p><strong>Dice roll</strong></p>' +
+			'		<label class="rpht-label text-input-label">Number of die </label><input class="rpht-short-input" type="number" id="diceNum" name="diceNum" max="100" min="1" value="2"><br /><br />' +
+			'		<label class="rpht-label text-input-label">Sides </label><input class="rpht-short-input" type="number" id="diceSides" name="diceSides" max="1000" min="2" value="6"><br /><br />' +
+			'		<button type="button" id="diceRngButton" style="float:right;">Let\'s roll!</button><br/><br/>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<p><strong>General RNG</strong></p>' +
+			'		<label class="rpht-label text-input-label">Minimum: </label><input class="rpht-short-input" type="number" id="rngMinNumber" name="rngMinNumber" max="4294967295" min="-4294967296" value="0"><br /><br />' +
+			'		<label class="rpht-label text-input-label">Maximum: </label><input class="rpht-short-input" type="number" id="rngMaxNumber" name="rngMaxNumber" max="4294967295" min="-4294967296" value="10"><br /><br />' +
+			'		<button type="button" id="randomRngButton" style="float:right;">Randomize!</button><br/><br/>' +
+			'	</div>' +
 			'</div>'
 	}
 
@@ -1812,7 +2240,6 @@ var rngModule = (function () {
 		outcomeMsg += '\u200b'
 		return outcomeMsg
 	}
-
 	
 	function getHtml() {
 		return html
@@ -1826,12 +2253,12 @@ var rngModule = (function () {
 	 * Public members of the module exposed to others.
 	 */
 	return {
-		init: init,
-		genCoinFlip: genCoinFlip,
-		getDiceRoll: getDiceRoll,
-		genRandomNum: genRandomNum,
-		getHtml: getHtml,
-		toString: toString
+		init,
+		genCoinFlip,
+		getDiceRoll,
+		genRandomNum,
+		getHtml,
+		toString,
 	}
 }());/**
  * This module handles adding blocking of users. This is meant to supersede
@@ -1981,45 +2408,64 @@ var moddingModule = (function () {
 	var html = {
 		'tabId': 'modding-module',
 		'tabName': 'Modding',
-		'tabContents': '<h3>Modding</h3>' +
-			'<div>' +
-			'<h4>Shortcuts</h4><br />' +
-			'<p><strong>Note:</strong> This must be done with the mod\'s chat tab selected.</p>' +
-			'<p>General form: <span style="font-family: courier;">/[action] [username],[reason]</span>. The reason is optional. Example: /kick Alice,Being rude</p>' +
-			'<p>Supported actions: kick, ban, unban, add-mod, remove-mod, add-owner, remove-owner</p>' +
+		'tabContents':
+			'<h3>Moderator Control</h3><br>' +
+			'<h4>Shortcuts</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<p><strong>Note:</strong> This must be done with the mods chat tab selected.</p>' +
+			'	<p>General form: <code>/[action] [username],[reason]</code>. The reason is optional.</p>' +
+			'	<p>Example: <code>/kick Alice,Being rude</code></p>' +
+			'	<p>Supported actions: kick, ban, unban, add-mod, remove-mod, add-owner, remove-owner</p>' +
 			'</div>' +
-			'<div>' +
-			'<h4>Mod commands</h4><br />' +
-			'<label class="rpht_labels">Room-Name pair</label>' +
-			'<select style="width: 300px;" id="roomModSelect">' +
-			'<option value="">&lt;Blank out fields&gt;</option>' +
-			'</select>' +
-			'<br/><br/>' +
-			'<label class="rpht_labels">Room:</label><input style="width: 300px;" type="text" id="modRoomTextInput" placeholder="Room">' +
-			'<br/><br/>' +
-			'<label class="rpht_labels">Mod name:</label><input style="width: 300px;" type="text" id="modFromTextInput" placeholder="Your mod name">' +
-			'<br/><br/>' +
-			'<label class="rpht_labels">Message:</label><input style="width: 300px;" type="text" id="modMessageTextInput" placeholder="Message">' +
-			'<br/><br/>' +
-			'<p>Perform action on these users (comma separated): </p>' +
-			'<textarea name="modTargetTextInput" id="modTargetTextInput" rows=2 class="rpht_textarea"></textarea>' +
-			'<br/><br/>' +
-			'<button style="width: 60px;" type="button" id="kickButton">Kick</button>' +
-			'<button style="margin-left: 30px; width: 60px;" type="button" id="banButton">Ban</button>' +
-			'<button style="margin-left: 6px;  width: 60px;" type="button" id="unbanButton">Unban</button>' +
-			'<button style="margin-left: 30px; width: 60px;" type="button" id="modButton">Mod</button>' +
-			'<button style="margin-left: 6px;  width: 60px;" type="button" id="unmodButton">Unmod</button>' +
-			'<button style="margin-left: 30px; width: 60px;" type="button" id="OwnButton">Owner</button>' +
-			'<button style="margin-left: 6px;  width: 60px;" type="button" id="UnownButton">Unowner</button>' +
-			'<br/><br/>' +
-			'<button type="button" id="resetPwButton">Reset PW</button>' +
-			'<br/><br/>' +
-			'</div><div>' +
-			'<h4>Word alerter</h4><br />' +
-			'<p><strong>Note:</strong> Separate all entries with a pipe character ( | ). To disable, empty the textbox.</p>' +
-			'<br/><br/>' +
-			'<textarea name="alertTriggers" id="alertTriggers" rows=4 class="rpht_textarea"></textarea>' +
-			'<br/><br/>' +
+			'<h4>Mod commands</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label split-input-label">Room-Name pair</label>' +
+			'		<select class="split-input-label" id="roomModSelect"><option value="">&lt;Blank out fields&gt;</option></select><br /><br />' +
+			'		<label class="rpht-label split-input-label">Room:</label><input class="split-input-label" type="text" id="modRoomTextInput" placeholder="Room"><br /><br />' +
+			'		<label class="rpht-label split-input-label">Mod name:</label><input class="split-input-label" type="text" id="modFromTextInput" placeholder="Your mod name"><br /><br />' +
+			'		<label class="rpht-label split-input-label">Reason Message:</label><input class="split-input-label" type="text" id="modMessageTextInput" placeholder="Message"><br /><br />' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<p>Perform action on these users (comma separated): </p>' +
+			'		<textarea name="modTargetTextInput" id="modTargetTextInput" rows=2 class="rpht_textarea"></textarea>' +
+			'		<br /><br />' +
+			'		<table style="width: 600px;" cellpadding="2">' +
+			'			<tbody>' +
+			'				<tr>' +
+			'					<td valign="top">' +
+			'						<button style="width: 60px;" type="button" id="kickButton">Kick</button>' +
+			'					</td>' +
+			'					<td>' +
+			'						<button style="width: 60px; margin-bottom: 8px;" type="button" id="banButton">Ban</button><br />' +
+			'						<button style="width: 60px;" type="button" id="unbanButton">Unban</button>' +
+			'					</td>' +
+			'					<td>' +
+			'						<button style="width: 60px; margin-bottom: 8px;" type="button" id="modButton">Mod</button><br>' +
+			'						<button style="width: 60px;" type="button" id="unmodButton">Unmod</button>' +
+			'					</td>' +
+			'					<td>' +
+			'						<button style="width: 80px; margin-bottom: 8px;" type="button" id="OwnButton">Owner</button><br>' +
+			'						<button style="width: 80px;" type="button" id="UnownButton">Unowner</button>' +
+			'					</td>' +
+			'				</tr>' +
+			'			</tbody>' +
+			'		</table>' +
+			'		<br><br>' +
+			'		<button type="button" id="resetPwButton">Reset PW</button>' +
+			'	</div>' +
+			'</div>' +
+			'<h4>Word Alert</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="wordAlertEnable">Enable word alerting</label>' +
+			'		<label class="switch"><input type="checkbox" id="wordAlertEnable"><span class="slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Highlights words that you want to be pinged on for moderation</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<p><strong>Note:</strong> Separate all entries with a pipe character ( | ).</p>' +
+			'		<textarea name="alertTriggers" id="alertTriggers" rows=4 class="rpht_textarea"></textarea>' +
+			'	</div>' +
 			'</div>'
 	}
 
@@ -2231,14 +2677,13 @@ var settingsModule = (function () {
 	var html = {
 		'tabId': 'settings-module',
 		'tabName': 'Settings',
-		'tabContents': '<h3>Script Settings</h3>' +
-			'<p>Press "Export" to export savable settings.</p>' +
-			'<p>To import settings, paste them into the text box and press "Import".</p><br />' +
-			'<textarea name="importExportText" id="importExportTextarea" rows=10 class="rpht_textarea" ></textarea>' +
+		'tabContents': '<h3>Script Settings</h3><br>' +
+			'<p>Press "Export" to export savable settings. To import settings, paste them into the text box and press "Import".</p>' +
+			'<textarea name="importExportText" id="importExportTextarea" rows=10 class="rpht_textarea"></textarea>' +
 			'<br /><br />' +
 			'<button type="button" style="width: 60px;" id="exportButton">Export</button>' +
 			'<button type="button" style="margin-left: 10px; width: 60px;" id="importButton">Import</button>' +
-			'<button type="button" style="margin-left: 394px; "id="deleteSettingsButton">Delete settings</button>'
+			'<button type="button" style="margin-left: 376px; " id="deleteSettingsButton">Delete settings</button>'
 	}
 
 	var confirmDelete = false
@@ -2364,7 +2809,7 @@ var aboutModule = (function () {
 	var html = {
 		'tabId': 'about-module',
 		'tabName': 'About',
-		'tabContents': '<h3>RPH Tools</h3>' +
+		'tabContents': '<h3>RPH Tools</h3><br>' +
 			'<p><strong>Version: ' + VERSION_STRING + '</strong>' +
 			' | <a href="https://github.com/shuffyiosys/rph-tools/blob/master/CHANGELOG.md" target="_blank">Version history</a>' +
 			' | <a href="https://openuserjs.org/install/shuffyiosys/RPH_Tools.user.js" target="_blank">Install the latest version</a>' +
@@ -2399,15 +2844,28 @@ var rphToolsModule = (function () {
 
 	var rpht_css =
 		'<style>' +
-		'.rpht_labels{display: inline-block; width: 300px; text-align: right; margin-right: 10px;}' +
-		'.rpht_textarea{border: 1px solid black; width: 611px;}' +
-		'.rpht_chat_tab {' +
-		'position: absolute;' +
-		'height: 54px;' +
-		'overflow-x: auto;' +
-		'overflow-y: hidden;' +
-		'white-space: nowrap;' +
-		'}' +
+		'#settings-dialog .inner > div > div.rpht-option-block{width:640px;border:#888 solid 1px;border-radius:10px;padding:12px;padding-top:16px;padding-bottom:16px;margin-bottom:16px}' +
+		'.rpht-option-section{border-bottom:#444 solid 1px;padding-bottom:12px;margin-bottom:12px}' +
+		'.option-section-bottom{border-bottom:none;margin-bottom:0}' +
+		'.rpht-label{padding-left: 0px;text-align:justify;display:inline-block;cursor:default}' +
+		'.checkbox-label{font-weight:700;width:542px;cursor:pointer}' +
+		'.descript-label{width:500px;margin-top:8px}' +
+		'.text-input-label{width:400px}' +
+		'.split-input-label {width: 300px;}' +
+		'.rpht_textarea{border:1px solid #000;width:611px;padding:2px;background:#e6e3df}' +
+		'.rpht_chat_tab{position:absolute;height:54px;overflow-x:auto;overflow-y:hidden;white-space:nowrap}' +
+		'.rpht-checkbox{height:16px;width:16px}' +
+		'input.rpht-short-input{width:200px}' +
+		'input.rpht-long-input{max-width:100%}' +
+		'.switch{position:relative;right:12px;width:50px;height:24px;float:right}' +
+		'.switch input{opacity:0;width:0;height:0}' +
+		'.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;-webkit-transition:.4s;transition:.4s}' +
+		'.slider:before{position:absolute;content:"";height:16px;width:16px;left:4px;bottom:4px;background-color:#fff;-webkit-transition:.4s;transition:.4s}' +
+		'input:checked+.slider{background-color:#2196f3}' +
+		'input:focus+.slider{box-shadow:0 0 1px #2196f3}' +
+		'input:checked+.slider:before{-webkit-transform:translateX(26px);-ms-transform:translateX(26px);transform:translateX(26px)}' +
+		'.slider.round{border-radius:34px}' +
+		'.slider.round:before{border-radius:50%}' +
 		'</style>'
 
 	/**
@@ -2417,6 +2875,10 @@ var rphToolsModule = (function () {
 	function init (addonModules) {
 		var $settingsDialog = $('#settings-dialog')
 		modules = addonModules
+
+		if (Notification.permission !== 'denied') {
+			Notification.requestPermission()
+		}
 
 		$('head').append(rpht_css)
 		$('#settings-dialog .inner ul.tabs').append('<h3>RPH Tools</h3>')
@@ -2493,10 +2955,8 @@ $(function () {
 	console.log('RPH Tools', VERSION_STRING, 'start')
 	var modules = [
 		chatModule,
-		sessionModule,
 		pmModule,
 		rngModule,
-		blockingModule,
 		moddingModule,
 		settingsModule,
 		aboutModule,

@@ -5,7 +5,7 @@ var aboutModule = (function () {
 	var html = {
 		'tabId': 'about-module',
 		'tabName': 'About',
-		'tabContents': '<h3>RPH Tools</h3>' +
+		'tabContents': '<h3>RPH Tools</h3><br>' +
 			'<p><strong>Version: ' + VERSION_STRING + '</strong>' +
 			' | <a href="https://github.com/shuffyiosys/rph-tools/blob/master/CHANGELOG.md" target="_blank">Version history</a>' +
 			' | <a href="https://openuserjs.org/install/shuffyiosys/RPH_Tools.user.js" target="_blank">Install the latest version</a>' +

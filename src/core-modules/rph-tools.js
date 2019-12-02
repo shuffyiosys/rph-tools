@@ -6,15 +6,28 @@ var rphToolsModule = (function () {
 
 	var rpht_css =
 		'<style>' +
-		'.rpht_labels{display: inline-block; width: 300px; text-align: right; margin-right: 10px;}' +
-		'.rpht_textarea{border: 1px solid black; width: 611px;}' +
-		'.rpht_chat_tab {' +
-		'position: absolute;' +
-		'height: 54px;' +
-		'overflow-x: auto;' +
-		'overflow-y: hidden;' +
-		'white-space: nowrap;' +
-		'}' +
+		'#settings-dialog .inner > div > div.rpht-option-block{width:640px;border:#888 solid 1px;border-radius:10px;padding:12px;padding-top:16px;padding-bottom:16px;margin-bottom:16px}' +
+		'.rpht-option-section{border-bottom:#444 solid 1px;padding-bottom:12px;margin-bottom:12px}' +
+		'.option-section-bottom{border-bottom:none;margin-bottom:0}' +
+		'.rpht-label{padding-left: 0px;text-align:justify;display:inline-block;cursor:default}' +
+		'.checkbox-label{font-weight:700;width:542px;cursor:pointer}' +
+		'.descript-label{width:500px;margin-top:8px}' +
+		'.text-input-label{width:400px}' +
+		'.split-input-label {width: 300px;}' +
+		'.rpht_textarea{border:1px solid #000;width:611px;padding:2px;background:#e6e3df}' +
+		'.rpht_chat_tab{position:absolute;height:54px;overflow-x:auto;overflow-y:hidden;white-space:nowrap}' +
+		'.rpht-checkbox{height:16px;width:16px}' +
+		'input.rpht-short-input{width:200px}' +
+		'input.rpht-long-input{max-width:100%}' +
+		'.switch{position:relative;right:12px;width:50px;height:24px;float:right}' +
+		'.switch input{opacity:0;width:0;height:0}' +
+		'.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;-webkit-transition:.4s;transition:.4s}' +
+		'.slider:before{position:absolute;content:"";height:16px;width:16px;left:4px;bottom:4px;background-color:#fff;-webkit-transition:.4s;transition:.4s}' +
+		'input:checked+.slider{background-color:#2196f3}' +
+		'input:focus+.slider{box-shadow:0 0 1px #2196f3}' +
+		'input:checked+.slider:before{-webkit-transform:translateX(26px);-ms-transform:translateX(26px);transform:translateX(26px)}' +
+		'.slider.round{border-radius:34px}' +
+		'.slider.round:before{border-radius:50%}' +
 		'</style>'
 
 	/**
@@ -24,6 +37,10 @@ var rphToolsModule = (function () {
 	function init (addonModules) {
 		var $settingsDialog = $('#settings-dialog')
 		modules = addonModules
+
+		if (Notification.permission !== 'denied') {
+			Notification.requestPermission()
+		}
 
 		$('head').append(rpht_css)
 		$('#settings-dialog .inner ul.tabs').append('<h3>RPH Tools</h3>')

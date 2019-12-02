@@ -5,10 +5,8 @@ $(function () {
 	console.log('RPH Tools', VERSION_STRING, 'start')
 	var modules = [
 		chatModule,
-		sessionModule,
 		pmModule,
 		rngModule,
-		blockingModule,
 		moddingModule,
 		settingsModule,
 		aboutModule,

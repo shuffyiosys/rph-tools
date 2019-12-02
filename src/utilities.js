@@ -171,3 +171,59 @@ function getSortedNames() {
 	namesToIds = tempDict
 	return namesToIds
 }
+
+/** 
+ * Generates a randum number using the Linear congruential generator algorithm
+ * @param {*} value - Number that seeds the RNG
+ */
+function LcgRng (value) {
+	let result = (((value * 214013) + 2531011) % Math.pow(2,31))
+	return result
+}
+
+/**
+ * Parses a RNG message to take what the client sent and seed it into an
+ * RNG.
+ * @param {*} message - Message from the sender.
+ */
+function parseRng(data) {
+	let newMsg = ""
+	let message = data.msg.substring(0, data.msg.indexOf('\u200b'));
+	if (message.match(new RegExp(/coin/, 'gi'))){
+		newMsg = "flips a coin. It lands on... "
+		if (LcgRng(data.time) % 2 === 1) {
+			newMsg += "heads!"
+		}
+		else {
+			newMsg += "tails!"
+		}
+	}
+	else if (message.match(new RegExp(/rolled/, 'gi'))){
+		let numbers = message.match(new RegExp(/[0-9]+/, 'gi'))
+		let sides = parseInt(numbers[1])
+		let dieNum = parseInt(numbers[0])
+		let results = []
+		let total = 0
+		let seed = data.time
+
+		let result = LcgRng(seed)
+		results.push(result % sides + 1)
+		for (let die = 1; die < dieNum; die++) {
+			result = LcgRng(result)
+			results.push(result % sides + 1)
+		}
+		total = results.reduce((a, b) => a + b, 0)
+		newMsg = `rolled ${numbers[0]}d${numbers[1]}: `
+		newMsg += results.join(' ') + ' (total ' + total + ')'
+		console.log('[parseRng] Dice roll params', numbers, data.time)
+	}
+	else if (message.match(new RegExp(/generated/, 'gi'))){
+		let resultStartIdx = message.indexOf(':')
+		let numbers = message.match(new RegExp(/-?[0-9]+/, 'gi'))
+		let seed = parseInt(numbers[2]) + data.time
+		newMsg = message.substring(0, resultStartIdx)
+		newMsg += ': ' + LcgRng(parseInt(seed)) % (numbers[1] - numbers[0] + 1 ) + ' ))'
+		console.log(`[parseRng]: General RNG params`, numbers, data.time)
+	}
+	return newMsg
+}

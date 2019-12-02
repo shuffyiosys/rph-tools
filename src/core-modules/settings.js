@@ -5,14 +5,13 @@ var settingsModule = (function () {
 	var html = {
 		'tabId': 'settings-module',
 		'tabName': 'Settings',
-		'tabContents': '<h3>Script Settings</h3>' +
-			'<p>Press "Export" to export savable settings.</p>' +
-			'<p>To import settings, paste them into the text box and press "Import".</p><br />' +
-			'<textarea name="importExportText" id="importExportTextarea" rows=10 class="rpht_textarea" ></textarea>' +
+		'tabContents': '<h3>Script Settings</h3><br>' +
+			'<p>Press "Export" to export savable settings. To import settings, paste them into the text box and press "Import".</p>' +
+			'<textarea name="importExportText" id="importExportTextarea" rows=10 class="rpht_textarea"></textarea>' +
 			'<br /><br />' +
 			'<button type="button" style="width: 60px;" id="exportButton">Export</button>' +
 			'<button type="button" style="margin-left: 10px; width: 60px;" id="importButton">Import</button>' +
-			'<button type="button" style="margin-left: 394px; "id="deleteSettingsButton">Delete settings</button>'
+			'<button type="button" style="margin-left: 376px; " id="deleteSettingsButton">Delete settings</button>'
 	}
 
 	var confirmDelete = false

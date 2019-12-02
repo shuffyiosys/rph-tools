@@ -3,36 +3,84 @@
  */
 var pmModule = (function () {
 	var pmSettings = {
+		'colorText': false,
+		'notify': false,
+		'notifyTime': 6000,
 		'audioUrl': 'https://www.rphaven.com/sounds/imsound.mp3',
 		'pmMute': false,
 	}
 
-	var localStorageName = "rpht_PmModule"
+	var localStorageName = "pmSettings"
 
 	var html = {
 		'tabId': 'pm-module',
 		'tabName': 'PMs',
-		'tabContents': '<h3>PM Settings</h3>' +
-			'<div><h4>PM Away System</h4>' +
-			'</p>' +
-			'<p>Username</p>' +
-			'<select style="width: 613px;" id="pmNamesDroplist" size="10"></select>' +
-			'<br><br>' +
-			'<label class="rpht_labels">Away Message: </label><input type="text" id="awayMessageTextbox" name="awayMessageTextbox" maxlength="300" placeholder="Away message...">' +
-			'<br /><br />' +
-			'<button style="margin-left: 483px; width:60px" "type="button" id="setAwayButton">Enable</button> <button type="button" style="margin-left: 6px; width:60px" id="removeAwayButton">Disable</button>' +
-			'</div><div>' +
-			'<h4>Other Settings</h4>' +
-			'</p>' +
-			'<label class="rpht_labels">PM Sound: </label><input type="text" id="pmPingURL" name="pmPingURL">' +
-			'<br /><br />' +
-			'<label class="rpht_labels">Mute PMs: </label><input style="width: 40px;" type="checkbox" id="pmMute" name="pmMute">'
+		'tabContents': 
+			'<h3>PM Settings</h3><br>' +
+			'<h4>General options</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="pmColorEnable">Use user text colors</label>' +
+			'		<label class="switch"><input type="checkbox" id="pmColorEnable"><span class="slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Use the user\'s color to stylize their text</label>' +
+			'	</div>' +
+			'</div>' +
+			'<h4>PM Notification Settings</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="pmNotify">Enable desktop notifications</label>' +
+			'		<label class="switch"><input type="checkbox" id="pmNotify"><span class="slider round"></span></label>' +
+			'		<p>Pops a desktop notification when you get a PM</p>' +
+			'	</div>' +
+			'	<div class="rpht-option-section">' +
+			'		<label style="font-weight: bold; width:522px; padding: 0px;">Desktop notification duration</label>' +
+			'		<select style="width: 80px;" id="pmNotifyTimeoutSelect">' +
+			'			<option value="3000">Short</option>' +
+			'			<option value="6000" selected>Normal</option>' +
+			'			<option value="10000">Long</option>' +
+			'		</select>' +
+			'		<label class="rpht-label descript-label">How long the notification will stay up</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<label class="rpht-label split-input-label">PM sound URL </label>' +
+			'		<input class="split-input-label" type="text" id="pmPingURL" name="pmPingURL" style="margin-bottom: 12px;">' +
+			'		<label class="rpht-label checkbox-label" for="pmMute">Mute PMs</label>' +
+			'		<label class="switch"><input type="checkbox" id="pmMute"><span class="slider round"></span></label>' +
+			'	</div>' +
+			'</div>' +
+			'<h4>PM Away System</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<p>Usernames</p>' +
+			'		<select style="width: 100%;" id="pmNamesDroplist" size="10"></select><br><br>' +
+			'		<label><strong>Away Message </strong></label><input type="text" class="rpht-long-input" id="awayMessageTextbox" maxlength="300" placeholder="Away message...">' +
+			'		<br><br>' +
+			'		<button type="button" style="float:right; width:60px" id="setAwayButton">Enable</button>' +
+			'		<button type="button" style="float:right; margin-right: 20px; width:60px" id="removeAwayButton">Disable</button>' +
+			'	</div>' +
+			'</div>'
 	}
 
 	var awayMessages = {}
 
 	function init() {
 		loadSettings()
+
+		$('#pmColorEnable').change(() => {
+			pmSettings.colorText = getCheckBox('#pmColorEnable')
+			settingsModule.saveSettings(localStorageName, pmSettings)
+		})
+
+		$('#pmNotify').change(() => {
+			pmSettings.notify = getCheckBox('#pmNotify')
+			settingsModule.saveSettings(localStorageName, pmSettings)
+		})
+
+		$('#pmNotifyTimeoutSelect').change(() => {
+			let timeoutHtml = $('#pmNotifyTimeoutSelect option:selected')
+			pmSettings.notifyTime = parseInt(timeoutHtml.val())
+			settingsModule.saveSettings(localStorageName, pmSettings)
+		})
 		
 		$('#pmNamesDroplist').change(() => {
 			var userId = $('#pmNamesDroplist option:selected').val()
@@ -71,12 +119,33 @@ var pmModule = (function () {
 			settingsModule.saveSettings(localStorageName, pmSettings)
 		})
 
-		socket.on('pm', function (data) {
-			handleIncomingPm(data)
+		$('#pmNotify').change(() => {
+			pmSettings.notify = $('#pmNotify').is(":checked")
+			settingsModule.saveSettings(localStorageName, pmSettings)
 		})
 
-		socket.on('outgoing-pm', function (data) {
-			handleOutgoingPm(data)
+		while(socket._callbacks['$pm'].length > 0) {
+			socket._callbacks['$pm'].pop()
+		}
+
+		socket.on('pm', (data) => {
+			/* Check if the user is blocked */
+			if (account.ignores.indexOf(data.to) > -1) {
+				return;
+			}
+			rph.getPm({'from':data.from, 'to':data.to}, function(pm){
+				handleIncomingPm(data, pm)
+				pm.typingStop()
+			})
+		})
+
+		socket.onOutgoing('pm', (data) => {
+			if (account.ignores.indexOf(data.to) > -1) {
+				return;
+			}
+			rph.getPm({'from':data.from, 'to':data.to}, function(pm){
+				handleOutgoingPm(data, pm)
+			})
 		})
 
 		socket.on('account-users', () => {
@@ -94,12 +163,29 @@ var pmModule = (function () {
 	 * Handler for PMs that are incoming
 	 * @param {object } data Data containing the PM.
 	 */
-	function handleIncomingPm(data) {
-		if (!awayMessages[data.from]) {
-			return
+	function handleIncomingPm(data, pm) {
+		let pmHtml = makePmMessage(data, pm.to)
+		pm.appendMsg(pmHtml, data.time)
+		let activePm = ($('ul.pm-tabs li.tab.active a')[0].innerHTML == pm.to.props.name)
+		if(!activePm || !$('#pm-dialog').dialog('isOpen')){
+			pm.setUnread();
+		}
+		if (!pmSettings.pmMute) {
+			$('#jp_audio_0')[0].play()
+		}
+		if (!data.time) {
+			data.time = Math.round(Date.now() / 1000)
+		}
+		db.msgs.put({date: data.time, fromid: pm.to.props.id, userid:data.from, otherid:data.to, msg:data.msg});
+		
+		if( pmSettings.notify ){
+			let notification = new Notification(`${pm.to.props.name} messaged you to ${pm.from.props.name}`)
+			setTimeout(() => {
+				notification.close()
+			}, pmSettings.notifyTime)
 		}
 
-		if (awayMessages[data.from].enabled) {
+		if (awayMessages[data.from] && awayMessages[data.from].enabled){
 			awayMessages[data.from].usedPmAwayMsg = true
 			socket.emit('pm', {
 				'from': data.from,
@@ -114,18 +200,78 @@ var pmModule = (function () {
 	 * Handler for PMs that are outgoing
 	 * @param {object } data Data containing the PM.
 	 */
-	function handleOutgoingPm(data) {
-		if (!awayMessages[data.from]) {
-			return
+	function handleOutgoingPm(data, pm) {
+		let pmHtml = makePmMessage(data, pm.from)
+		
+		for(let i = pm.$msgs[0].children.length -1; i > -1; i--) {
+			let msgHtml = pm.$msgs[0].children[i].innerHTML
+			if (msgHtml.match(pm.from.props.name, 'i')){
+				pm.$msgs[0].children[i].innerHTML = pmHtml
+				break
+			}
 		}
-
-		if (!awayMessages[data.from].usedPmAwayMsg) {
+		if (awayMessages[data.from] && !awayMessages[data.from].usedPmAwayMsg) {
 			awayMessages[data.from].enabled = false
 			$('#pmNamesDroplist option').filter(function () {
 				return this.value == data.from
 			}).css("background-color", "")
+			awayMessages[data.from].usedPmAwayMsg = false
 		}
-		awayMessages[data.from].usedPmAwayMsg = false
+	}
+
+	function makePmMessage(data, userProps) {
+		let timestampStr = makeTimestamp(data.time, true)
+		let classes = ''
+		let message = parseMsg(data.msg);
+		let rgbString = ''
+
+		if (message.charAt(0) === '/') {
+			message = parseCommand(data)
+		}
+
+		if( message.charAt(0) === '/' && message.indexOf('me') === 1 ){
+			classes += 'action ';
+			message = message.slice(3) + ' ';
+		}
+
+		if(pmSettings.colorText) {
+			rgbString = ` style="color: #${userProps.props.color.toString()}"`
+		}
+		return `<p class="${classes}"${rgbString}><span style="color: #FFF;">${timestampStr}</span> ` + 
+				`<strong class="user">${(userProps.props.vanity || userProps.props.name)}${((classes === '') ? ':' : '')}</strong> ${message}</p>`
+	}
+
+	function parseCommand(data) {
+		var msg = parseMsg(data.msg);
+		var cmdArgs = msg.split(/ (.+)/)
+		switch(cmdArgs[0]) {
+			case '/roll':
+				let die = 1
+				let sides = 20
+				let rolls = []
+				let total = 0
+				
+				if (cmdArgs.length > 1) {
+					die = parseInt(cmdArgs[1].split('d')[0])
+					sides = parseInt(cmdArgs[1].split('d')[1])
+				}
+				if (isNaN(die) || isNaN(sides)) {
+					error = true
+				} 
+				else {
+					let result = LcgRng(data.date)
+					rolls.push(result  % sides + 1)
+					for (let i = 1; i < die; i++) {
+						result = LcgRng(result)
+						rolls.push(result % sides + 1)
+					}
+					total = rolls.reduce((a, b) => a + b, 0)
+					msg = `/me rolled ${die}d${sides}: `
+					msg += rolls.join(' ') + ' (total ' + total + ')'
+				}
+				break
+		}
+		return msg
 	}
 
 	/**
@@ -178,14 +324,22 @@ var pmModule = (function () {
 	function loadSettings() {
 		var storedSettings = settingsModule.getSettings(localStorageName)
 		if (storedSettings) {
-			pmSettings = storedSettings
+			pmSettings = Object.assign(pmSettings, storedSettings)
 		} 
 		else {
 			pmSettings = {
+				'colorText': false,
+				'notify': false,
+				'notifyTime': 6000,
 				'audioUrl': 'https://www.rphaven.com/sounds/imsound.mp3',
 				'pmMute': false,
 			}
 		}
+
+		$('#pmColorEnable').prop("checked", pmSettings.colorText)
+		$('#pmEnhnaceContrastEnable').prop("checked", pmSettings.enhanceContrast)
+		$('#pmNotify').prop("checked", pmSettings.notify)
+		$('#pmNotifyTimeoutSelect').val(pmSettings.notifyTime.toString())
 		$('#pmPingURL').val(pmSettings.audioUrl)
 		$('#pmMute').prop("checked", pmSettings.pmMute)
 	}
