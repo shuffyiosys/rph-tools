@@ -308,16 +308,16 @@ var chatModule = (function () {
 			}
 		}
 
-		chatSocket.on('msg', function (data) {
-			for(let idx in data){
-				getUserById(data[idx].userid, (User) => {
-					let chatMsgHtml = thisRoom.$el[0].lastChild.children
-					postMessage(thisRoom, data[idx], chatMsgHtml, User, (modUserIdx !== -1))
-				})
-			}
-
-		})
-
+		if (chatSocket._callbacks.$msg.length === 1) {
+			chatSocket.on('msg', (data) => {
+				for(let idx in data){
+					getUserById(data[idx].userid, (User) => {
+						postMessage(getRoom(data[idx].room), data[idx], User, (modUserIdx !== -1))
+					})
+				}
+			})
+		}
+		
 		getUserById(userId, (User) => {
 			addNameToUI(thisRoom, User)
 			if (moddingModule !== null && modUserIdx === userId) {
@@ -337,18 +337,20 @@ var chatModule = (function () {
 			})
 		})
 	}
-
 	/**
 	 * Takes a message received in the chat and processes it for pinging or 
 	 * otherwise
 	 * @param {object} thisRoom The room that the message is for.
 	 * @param {object} data The message for the room
 	 */
-	function postMessage(thisRoom, data, chatMsgHtml, User, isMod) {
-		let msgHtml = chatMsgHtml[1]
-		let msg = msgHtml.innerHTML
-		if (chatMsgHtml[1].children.length === 0) {
-			chatMsgHtml[0].children[0].innerHTML = makeTimestamp(data.time, true)
+	function postMessage(thisRoom, data, User, isMod) {
+		let chatMsgHtml = thisRoom.$el.find('>div:last')[0]
+		let sideBarHtml = chatMsgHtml.children[0]
+		let msg = chatMsgHtml.children[1].innerHTML
+
+		
+		if (chatMsgHtml.children.length === 0) {
+			sideBarHtml.children[0].innerHTML = makeTimestamp(data.time, true)
 			if (!chatSettings.combineMsg) {
 				$(thisRoom.$el[0].lastChild).find('.name').removeData('userid');
 			}	
@@ -357,7 +359,7 @@ var chatModule = (function () {
 			thisRoom.$el.find('>div:last').addClass('msg-padding')
 		}
 		if (!chatSettings.combineMsg) {
-			chatMsgHtml[0].children[0].innerHTML = makeTimestamp(data.time, true)
+			sideBarHtml.children[0].innerHTML = makeTimestamp(data.time, true)
 			$(thisRoom.$el[0].lastChild).find('.name').removeData('userid');
 		}
 
@@ -409,21 +411,11 @@ var chatModule = (function () {
 
 		/* Check to see if there's a RNG marker, then process it if it's there */
 		if (msg.indexOf('\u200b') > -1) {
-			let msgData = data
-			let newMsg = ''
-
-			if (msgHtml.children.length > 0) {
-				newMsg += msgHtml.children[0].outerHTML
-			}
-			newMsg += ` ${parseMsg(parseRng(msgData))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
-			msg = newMsg
+			$(thisRoom.$el.find('>div:last')[0].children[1]).html(`${parseMsg(parseRng(data))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`)
 		}
-
-		let rgbString = ''
 		if (chatSettings.colorText) {
-			rgbString = `style="color:#${User.props.color.toString()};"`
+			$(thisRoom.$el.find('>div:last')[0].children[1]).css('color', `#${User.props.color.toString()}`)
 		}
-		msgHtml.outerHTML = `<span ${rgbString}>${msg}</span>`
 		lastChatMsg = chatMsgHtml
 	}
 
