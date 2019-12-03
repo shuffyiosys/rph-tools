@@ -1,31 +1,20 @@
 # RPH Tools Quick Guide
 ## Chat
-### Color changing
-This will change the text color of the selected username.
-1. Select the user name whose color you want to change from the drop down
-2. Enter an HTML compliant color code. This is in the form of a number sign (#) followed by 3 or 6 digits from 0-9, A-F (hex values). Note in order to prevent really hard to read text colors, the limit is set to #DDD for 3 digit codes and #D2D2D2 for 6 digit codes.
-3. A preview can be seen so you don't have to send it and adjust to taste
-4. Press the "Set color" button when you want to change the text color. You may have to send it a few times.
+### General Options
+The option to color a user's text as they enter messages with their name's basic color is available. 
+
+An option to add padding to the end of messages to increase readibility is also available.
 
 ### Pings
 This will play an audio cue plus highlight the text color when a message with a trigger word appears in the chat.
+1. To use it, make sure "Enable Pings" is toggled ON
+1. If you wish to have a browser use a pop-up notification, you can set it to ON
 1. Enter the words you want to use as triggers. Separate them by comma, but with no space between them. e.g., ```Alice,Bob,Charlie``` instead of ```Alice, Bob, Charlie```
-2. Set the URL where the audio file is. It must be a .wav, .mp3, or .ogg.
-3. Enter an HTML compliant color code for the text color. There's no restriction.
-4. Enter an HTML compliant color code for the highlight color. There's no restriction.
-5. Add matching options to taste. "Exact Match" will only match whole words (e.g., "Mel" only pings on "Mel" and not "Melody"). Case sensitive will take into account using uppercase letters or not (e.g., "Mel" only pings on "Mel" and not "mel")
-6. You can enter words in the "Ping Tester" section. Focus away (i.e., click out of it) to test if it triggers a ping or not.
-
-### Flood Filtering
-This will monitor user messages and filter them out if the script detects they are attempting to flood/spam the room. Various strength levels can be used.
-
-## Sessions
-### Auto-Refresh
-This will refresh the page for you automatically when the script detects a disconnect event happens. It doesn't happen immediately, but after a delay. In addition, this will automatically re-join the rooms you were in.
-* Refresh on Disconnect, when checked, will cause the script to automatically refresh after the timeout.
-* Auto-Refresh time is the delay, in seconds, when a disconnect is detected to when the refresh happens. This can be set between 5-60 seconds.
-
-This feature has a retry mechanism in that it will retry 5 times before giving up. The retry mechanism will reset if you have been on for more than 10 minutes without disconnecting.
+1. Set the URL where the audio file is. It must be a .wav, .mp3, or .ogg.
+1. Enter an HTML compliant color code for the text color. There's no restriction.
+1. Enter an HTML compliant color code for the highlight color. There's no restriction.
+1. Add matching options to taste. "Exact Match" will only match whole words (e.g., "Mel" only pings on "Mel" and not "Melody"). Case sensitive will take into account using uppercase letters or not (e.g., "Mel" only pings on "Mel" and not "mel")
+1. You can enter words in the "Ping Tester" section. Focus away (i.e., click out of it) to test if it triggers a ping or not.
 
 ### Auto Joining
 This auto joins rooms that you put into it whenever you log in.
@@ -51,19 +40,13 @@ This sets up an auto-reply system in case you're away. To use:
 ### Other Settings
 * "PM Audio" sets which audio file to play. This is an URL and it must lead to a HTML5 compliant audio container (wav, mp3, or ogg are safe bets)
 * "Mute PMs" if you don't want PM audio pings
-* "No image icons" prevents links to small images from being replaced by said image.
+* You can toggle if you want browser notifications on.
 
 ## Random Numbers
 Generates a random number to send to the chat.
 * Coin toss: simple heads or tails generator
 * Dice Role: Rolls the specificed number of dice of a specified number of sides. An option to calculate the totals is avaialble.
 * General RNG: Generates a random number between a range.
-
-## Blocking
-Forces blocking on the client side to drop messages from ignored users. To use:
-1. Type in a name in the "User" textbox
-2. Press the "Block" button to block them
-3. To unblock them, select their name in the list and press the "Unblock" button
 
 ## Modding
 A set of tools to aid in moderating a room. Note this only works if you are actually a moderator and you own the username. To use:
@@ -80,15 +63,6 @@ This is to help mods track certain words that people in the chatroom shouldn't s
 1. Enter the words or phrases in the text field, separated by a pipe (|) without spaces in between.
 2. To disable this feature, empty out the text box.
 
-### Auto-kick and Auto-Ban
-This will automatically kick or ban a user based on the phrases in the text box.
-1. Enter the words or phrases in the text field, separated by a pipe (|) without spaces in between.
-2. To disable this feature, empty out the text box.
-
-### Perform mod action on flooding
-If filter flooding is enabled, then when flooding is detected, an action can be performed as well.
-1. Set the action to do when flooding is detected.
-
 ## Settings
 This allows you to import or export your settings.
 * Press the "Export" button to display the settings in the text box. Copy and save this somewhere.
@@ -98,19 +72,18 @@ This allows you to import or export your settings.
 ## Behind the scenes stuff
 ### / Commands
 These are commands you can input in the chattext box as a shortcut. The following are supported:
-* /coinflip - Does a coin toss
-* /roll [num]d[num] - Dice roll. If no argument is given, it rolls 1d1000 by default. This will display the totals.
+* ``Chat`` /coinflip: Does a coin toss 
+* ``Chat & PMs`` /roll [num]d[num]:  Dice roll. If no argument is given, it rolls 1d1000 by default. This will display the totals.
     * Example: /roll 2d6 will roll 2 dices with 6 sides.
-* /kick [username],[reason] - Kicks a person from the chat room with the reason. This must be done with the mod's chat tab selected.
+* ``Chat`` /random: Generates a random number based on the parameters in the RNG module
+* ``Chat`` /kick [username],[reason]: Kicks a person from the chat room with the reason. This must be done with the mod's chat tab selected.
     * Example: /kick Alice,Being rude
-* /ban [username],[reason] - Bans a person from the chat room with the reason (optional). This must be done with the mod's chat tab selected.
+* ``Chat`` /ban [username],[reason] - Bans a person from the chat room with the reason (optional). This must be done with the mod's chat tab selected.
     * Example: /ban Bob,Being rude
-* /unban [username],[reason] - Unbans a person from the chat room with the reason (optional). This must be done with the mod's chat tab selected.
+* ``Chat`` /unban [username],[reason] - Unbans a person from the chat room with the reason (optional). This must be done with the mod's chat tab selected.
     * Example: /unban Bob,Ban period expired
-* /color [HTML color] - Changes the text color of the current username
-    * Example: /color #123
-* /status [message] - Sets the current username's status
+* ``Chat`` /status [message] - Sets the current username's status
     * Example: /status I'm a message!
-* /away [message] - Sets the current username's status and sets it as "Away"
+* ``Chat`` /away [message] - Sets the current username's status and sets it as "Away"
     * Example: /away I'm a message!
     

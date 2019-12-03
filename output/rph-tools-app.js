@@ -358,6 +358,7 @@ var chatModule = (function () {
 	var chatSettings = {
 		'colorText': false,
 		'msgMargin': false,
+		'combineMsg': true,
 
 		'enablePings': true,
 		'pingNotify': false,
@@ -384,6 +385,10 @@ var chatModule = (function () {
 
 	var autoJoinTimer = null
 
+	var lastChatMsg = null
+
+	let pingUsed = false
+
 	const AUTOJOIN_TIMEOUT_SEC = 5 * 1000
 
 	const MAX_ROOMS = 30
@@ -401,10 +406,15 @@ var chatModule = (function () {
 			'		<label class="switch"><input type="checkbox" id="chatColorEnable"><span class="slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Use the user\'s color to stylize their text</label>' +
 			'	</div>' +
-			'	<div class="rpht-option-section option-section-bottom">' +
+			'	<div class="rpht-option-section">' +
 			'		<label class="rpht-label checkbox-label" for="chatMsgMarginEnable">Add padding between messages</label>' +
 			'		<label class="switch"><input type="checkbox" id="chatMsgMarginEnable"><span class="slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Adds some padding at the end of each message for readibility</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<label class="rpht-label checkbox-label" for="combineMsgEnable">Consecutive layout</label>' +
+			'		<label class="switch"><input type="checkbox" id="combineMsgEnable"><span class="slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Received messages are grouped by user and within the same minute for a cleaner layout</label>' +
 			'	</div>' +
 			'</div>' +
 			'<h4>Chat Pinging</h4>' +
@@ -492,6 +502,10 @@ var chatModule = (function () {
 
 		$('#chatMsgMarginEnable').change(() => {
 			chatSettings.msgMargin = getCheckBox('#chatMsgMarginEnable')
+			saveSettings()
+		})
+		$('#combineMsgEnable').change(() => {
+			chatSettings.combineMsg = getCheckBox('#combineMsgEnable')
 			saveSettings()
 		})
 
@@ -648,10 +662,13 @@ var chatModule = (function () {
 		}
 
 		chatSocket.on('msg', function (data) {
-			getUserById(data[data.length - 1].userid, (User) => {
-				let chatMsgHtml = thisRoom.$el.find('>div:last')[0].children
-				postMessage(thisRoom, data, chatMsgHtml, User, (modUserIdx !== -1))
-			})
+			for(let idx in data){
+				getUserById(data[idx].userid, (User) => {
+					let chatMsgHtml = thisRoom.$el[0].lastChild.children
+					postMessage(thisRoom, data[idx], chatMsgHtml, User, (modUserIdx !== -1))
+				})
+			}
+
 		})
 
 		getUserById(userId, (User) => {
@@ -683,29 +700,45 @@ var chatModule = (function () {
 	function postMessage(thisRoom, data, chatMsgHtml, User, isMod) {
 		let msgHtml = chatMsgHtml[1]
 		let msg = msgHtml.innerHTML
-		if (chatSettings.msgMargin) {
-			thisRoom.$el.find('>div:last').css('margin-bottom', '8px')
+		if (chatMsgHtml[1].children.length === 0) {
+			chatMsgHtml[0].children[0].innerHTML = makeTimestamp(data.time, true)
+			if (!chatSettings.combineMsg) {
+				$(thisRoom.$el[0].lastChild).find('.name').removeData('userid');
+			}	
 		}
-		chatMsgHtml[0].children[0].innerHTML = makeTimestamp(data.time, true)
+		if (chatSettings.msgMargin) {
+			thisRoom.$el.find('>div:last').addClass('msg-padding')
+		}
+		if (!chatSettings.combineMsg) {
+			chatMsgHtml[0].children[0].innerHTML = makeTimestamp(data.time, true)
+			$(thisRoom.$el[0].lastChild).find('.name').removeData('userid');
+		}
 
-		/* Add pinging higlights */
-		var testRegex = null
-		testRegex = matchPing(msg, chatSettings.triggers, chatSettings.case, chatSettings.exact)
-		if (testRegex !== null) {
-			msg = highlightPing(msg, testRegex, chatSettings.color,
-				chatSettings.highlight, chatSettings.bold,
-				chatSettings.italics)
-			highlightRoom(thisRoom, chatSettings.color, chatSettings.highlight)
-			pingSound.play()
-
-			/* Bring up the notification if enabled, but don't do it if the user
-			   pinged themselves*/
-			if (chatSettings.pingNotify && account.userids.includes(User.props.id) === false) {
-				let notification = new Notification(`${User.props.name} pinged you in ${thisRoom.props.name}`)
-				setTimeout(() => {
-					notification.close()
-				}, chatSettings.notifyTime)
+		/* Add pinging higlights if pings are enabled and this isn't the same
+		   chat block */
+		if (chatSettings.enablePings && !pingUsed) {
+			var testRegex = null
+			testRegex = matchPing(msg, chatSettings.triggers, chatSettings.case, chatSettings.exact)
+			if (testRegex !== null) {
+				msg = highlightPing(msg, testRegex, chatSettings.color,
+					chatSettings.highlight, chatSettings.bold,
+					chatSettings.italics)
+				highlightRoom(thisRoom, chatSettings.color, chatSettings.highlight)
+				pingSound.play()
+				pingUsed = true
+	
+				/* Bring up the notification if enabled, but don't do it if the user
+				   pinged themselves*/
+				if (chatSettings.pingNotify && account.userids.includes(User.props.id) === false) {
+					let notification = new Notification(`${User.props.name} pinged you in ${thisRoom.props.name}`)
+					setTimeout(() => {
+						notification.close()
+					}, chatSettings.notifyTime)
+				}
 			}
+		}
+		else if (lastChatMsg != chatMsgHtml) {
+			pingUsed = false
 		}
 
 		/* Process other's messages for issues if a mod */
@@ -729,13 +762,13 @@ var chatModule = (function () {
 
 		/* Check to see if there's a RNG marker, then process it if it's there */
 		if (msg.indexOf('\u200b') > -1) {
-			let msgData = data[0]
+			let msgData = data
 			let newMsg = ''
 
 			if (msgHtml.children.length > 0) {
 				newMsg += msgHtml.children[0].outerHTML
 			}
-			newMsg += `${parseMsg(parseRng(msgData))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
+			newMsg += ` ${parseMsg(parseRng(msgData))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
 			msg = newMsg
 		}
 
@@ -744,6 +777,7 @@ var chatModule = (function () {
 			rgbString = `style="color:#${User.props.color.toString()};"`
 		}
 		msgHtml.outerHTML = `<span ${rgbString}>${msg}</span>`
+		lastChatMsg = chatMsgHtml
 	}
 
 	/**
@@ -787,7 +821,6 @@ var chatModule = (function () {
 				if (rngModule) {
 					var die = 1
 					var sides = 20
-
 					if (cmdArgs.length > 1) {
 						die = parseInt(cmdArgs[1].split('d')[0])
 						sides = parseInt(cmdArgs[1].split('d')[1])
@@ -1117,12 +1150,14 @@ var chatModule = (function () {
 	 */
 	function loadSettings() {
 		let storedSettings = settingsModule.getSettings(localStorageName)
+		let sessionSettings = settingsModule.getSettings('sessionSettings')
 		if (storedSettings) {
 			chatSettings = Object.assign(chatSettings, storedSettings)
 		} else {
 			chatSettings = {
 				'colorText': false,
 				'msgMargin': false,
+				'combineMsg': false,
 
 				'enablePings': true,
 				'pingNotify': false,
@@ -1142,8 +1177,15 @@ var chatModule = (function () {
 			}
 		}
 
+		if (sessionSettings) {
+			chatSettings.joinFavorites = sessionSettings.joinFavorites
+			chatSettings.roomSession = sessionSettings.roomSession
+			chatSettings.favRooms = sessionSettings.favRooms
+		}
+
 		$('#chatColorEnable').prop("checked", chatSettings.colorText)
 		$('#chatMsgMarginEnable').prop("checked", chatSettings.msgMargin)
+		$('#combineMsgEnable').prop("checked", chatSettings.combineMsg) 
 
 		$('#notifyPingEnable').prop("checked", chatSettings.enablePings)
 		$('#notifyNotificationEnable').prop("checked", chatSettings.pingNotify)
@@ -1178,505 +1220,6 @@ var chatModule = (function () {
 	return {
 		init: init,
 		parseSlashCommand: parseSlashCommand,
-		loadSettings: loadSettings,
-		getHtml: getHtml,
-		toString: toString
-	}
-}());/**
- * This module handles the "Session" section in RPH Tools
- */
-var sessionModule = (function () {
-	var sessionSettings = {
-		'autoRefreshAttempts': 5,
-		'dcHappened': false,
-		'autoRefresh': false,
-		'chatTextboxSave': false,
-		'pmTextboxSave': false,
-		'refreshSecs': 15,
-		'joinFavorites': false,
-		'joinSession': false,
-		'roomSession': [],
-		'favRooms': [],
-		'chatTextboxes': [],
-		'pmTextboxes': []
-	}
-
-	var localStorageName = "sessionSettings"
-
-	var autoJoinTimer = null
-
-	var sessionShadow = []
-
-	var MAX_ROOMS = 30
-
-	var AUTOJOIN_TIMEOUT_SEC = 5 * 1000
-
-	var MAX_AUTO_REFRESH_ATTEMPTS = 5
-
-	var REFRESH_ATTEMPTS_TIMEOUT = 10 * 60 * 1000
-
-	var AUTOJOIN_INTERVAL = 2 * 1000
-
-	var html = {
-		'tabId': 'session-module',
-		'tabName': 'Sessions',
-		'tabContents': '<h3>Sessions</h3>' +
-			'<div>' +
-			'<h4>Auto Refresh</h4> <strong>Note:</strong> This will not re-join rooms with passwords.' +
-			'<br /><br />' +
-			'<label class="rpht_labels">Refresh on Disconnect: </label><input style="width: 40px;" type="checkbox" id="dcRefresh" name="dcRefresh">' +
-			'<br /><br />' +
-			'<label class="rpht_labels">Auto-refresh time: </label><input style="width: 64px;" type="number" id="refreshTime" name="refreshTime" max="60" min="5" value="10"> seconds' +
-			'<br /><br />' +
-			'<label class="rpht_labels">Save Chatbox Inputs: </label><input style="width: 40px;" type="checkbox" id="chatTextboxSave" name="roomSessioning">' +
-			'<br /><br />' +
-			'<label class="rpht_labels">Save PM Inputs: </label><input style="width: 40px;" type="checkbox" id="pmTextboxSave" name="roomSessioning">' +
-			'<br />' +
-			'<label class="rpht_labels" style="font-size: 12px; text-align: left;">This may not restore the inputs correctly if you have a PM open, but not an active session with the person.' + 
-			'<br />' +
-			'e.g., you\'ve started a new PM, but did not send one yet.</label>' +
-			'<br /><br />' +
-			'<button style="margin-left: 310px;" type="button" id="resetSession">Reset Session</button>' +
-			'</div><div>' +
-			'<h4>Auto Joining</h4>' +
-			'<label class="rpht_labels">Join favorites: </label><input style="width: 40px;" type="checkbox" id="favEnable" name="favEnable">' +
-			'<br /><br />' +
-			'<label class="rpht_labels">Restore last session: </label><input style="width: 40px;" type="checkbox" id="roomSessioning" name="roomSessioning">' +
-			'<br /><br />' +
-			'<label class="rpht_labels">Username: </label><select style="width: 300px;" id="favUserDropList"></select>' +
-			'<br /><br />' +
-			'<label class="rpht_labels">Room:  </label><input  type="text" id="favRoom" name="favRoom">' +
-			'<br /><br />' +
-			'<label class="rpht_labels">Password: </label><input  type="text" id="favRoomPw" name="favRoomPw">' +
-			'<br /><br />' +
-			'<button style="margin-left: 586px;" type="button" id="favAdd">Add</button>' +
-			'<p>Favorite rooms</p>' +
-			'<select style="width: 611px;" id="favRoomsList" size="10"></select><br><br>' +
-			'<button style="margin-left: 560px;" type="button" id="favRemove">Remove</button>' +
-			'<br>' +
-			'</div>'
-	}
-
-	function init() {
-		loadSettings()
-
-		$('#dcRefresh').click(() => {
-			sessionSettings.autoRefresh = getCheckBox('#dcRefresh')
-			settingsModule.saveSettings(localStorageName, sessionSettings)
-		})
-
-		$('#refreshTime').change(() => {
-			sessionSettings.refreshSecs = $('#refreshTime').val()
-			settingsModule.saveSettings(localStorageName, sessionSettings)
-		})
-
-		$('#chatTextboxSave').click( () => {
-			sessionSettings.chatTextboxSave = getCheckBox('#chatTextboxSave')
-			settingsModule.saveSettings(localStorageName, sessionSettings)
-		})
-
-		$('#pmTextboxSave').click( () => {
-			sessionSettings.pmTextboxSave = getCheckBox('#pmTextboxSave')
-			settingsModule.saveSettings(localStorageName, sessionSettings)
-		})
-
-		$('#roomSessioning').click(() => {
-			sessionSettings.joinSession = getCheckBox('#roomSessioning')
-			settingsModule.saveSettings(localStorageName, sessionSettings)
-		})
-
-		$('#favEnable').click(() => {
-			sessionSettings.joinFavorites = getCheckBox('#favEnable')
-			settingsModule.saveSettings(localStorageName, sessionSettings)
-		})
-
-		$('#favAdd').click(() => {
-			parseFavoriteRoom($('#favRoom').val())
-			settingsModule.saveSettings(localStorageName, sessionSettings)
-		})
-
-		$('#favRemove').click(() => {
-			removeFavoriteRoom()
-			settingsModule.saveSettings(localStorageName, sessionSettings)
-		})
-
-		$('#resetSession').click(() => {
-			clearRoomSession()
-			settingsModule.saveSettings(localStorageName, sessionSettings)
-		})
-
-		if (determineAutojoin()) {
-			autoJoinTimer = setInterval(autoJoiningHandler, AUTOJOIN_INTERVAL)
-			sessionSettings.dcHappened = false
-			settingsModule.saveSettings(localStorageName, sessionSettings)
-		} else {
-			clearRoomSession()
-		}
-
-		setTimeout(() => {
-			console.log('RPH Tools[connectionStabilityTimeout] - Connection considered stable')
-			sessionSettings.autoRefreshAttempts = MAX_AUTO_REFRESH_ATTEMPTS
-			settingsModule.saveSettings(localStorageName, sessionSettings)
-		}, REFRESH_ATTEMPTS_TIMEOUT)
-
-		socket.on('restore-pms', () => {
-			if (sessionSettings.pmTextboxSave){
-				setTimeout(() => {
-					var pmTextBoxes = $("#pm-bottom .textarea textarea")
-					for (var i = 0; i < pmTextBoxes.length; i++){
-						if (sessionSettings.pmTextboxes[i])
-							pmTextBoxes[i].value = sessionSettings.pmTextboxes[i]
-					}
-				}, 1000)
-			}
-		})
-
-		chatSocket.on('disconnect', () => {
-			var chatTextBoxes = $("#chat-bottom .textarea textarea")
-			var pmTextBoxes = $("#pm-bottom .textarea textarea")
-			sessionSettings.chatTextboxes = []
-			sessionSettings.pmTextboxes = []
-			for (var i = 0; i < chatTextBoxes.length; i++){
-				var textboxInfo = {
-					value: chatTextBoxes[i].value,
-					className: chatTextBoxes[i].className,
-				}
-				sessionSettings.chatTextboxes.push(textboxInfo)
-			}
-
-			for (var i = 0; i < pmTextBoxes.length; i++){
-				sessionSettings.pmTextboxes.push(pmTextBoxes[i].value)
-			}
-
-			settingsModule.saveSettings(localStorageName, sessionSettings)
-
-			if (sessionSettings.autoRefresh && sessionSettings.autoRefreshAttempts > 0) {
-				setTimeout(() => {
-					sessionSettings.autoRefreshAttempts -= 1
-					sessionSettings.dcHappened = true
-					settingsModule.saveSettings(localStorageName, sessionSettings)
-					window.onbeforeunload = null
-					window.location.reload(true)
-				}, sessionSettings.refreshSecs * 1000)
-			} else if (sessionSettings.autoRefresh) {
-				$('<div id="rpht-max-refresh" class="inner">' +
-					'<p>Max auto refresh attempts tried. You will need to manually refresh.</p>' +
-					'</div>'
-				).dialog({
-					open: function (event, ui) {},
-					buttons: {
-						Cancel: () => {
-							$(this).dialog("close")
-						}
-					},
-				}).dialog('open')
-			}
-		})
-
-		socket.on('account-users', () => {
-			setTimeout(() => {
-				$('#favUserDropList').empty()
-				var namesToIds = getSortedNames()
-				for (var name in namesToIds) {
-					addToDroplist(namesToIds[name], name, "#favUserDropList")
-				}
-			}, 3000)
-		})
-	}
-
-	/**
-	 * Determining auto-joining should be done
-	 * 1. Joining favorites & there are favorite rooms
-	 * 2. Join last session & there are rooms in the session
-	 * 3. Auto refresh & disconnect happened & there are refresh attempts left
-	 */
-	function determineAutojoin() {
-		var autoJoin = false
-
-		if (sessionSettings.joinFavorites === true &&
-			sessionSettings.favRooms.length > 0) {
-			autoJoin = true
-		}
-
-		if (sessionSettings.joinSession === true &&
-			sessionSettings.roomSession.length > 0) {
-			sessionShadow = sessionSettings.roomSession
-			autoJoin = true
-		}
-
-		if (sessionSettings.autoRefresh &&
-			sessionSettings.dcHappened &&
-			sessionSettings.autoRefreshAttempts > 0) {
-			sessionShadow = sessionSettings.roomSession
-			autoJoin = true
-		}
-
-		return autoJoin
-	}
-
-	/**
-	 * Handler for the auto-joining mechanism.
-	 **/
-
-	function autoJoiningHandler() {
-		/* Don't run this if there's no rooms yet. */
-		if (roomnames.length === 0) {
-			return
-		}
-
-		$('<div id="rpht-autojoin" class="inner">' +
-			'<p>Autojoining or restoring session.</p>' +
-			'<p>Press "Cancel" to stop autojoin or session restore.</p>' +
-			'</div>'
-		).dialog({
-			open: function (event, ui) {
-				setTimeout(() => {
-					$('#rpht-autojoin').dialog('close')
-				}, AUTOJOIN_TIMEOUT_SEC)
-			},
-			buttons: {
-				Cancel: () => {
-					clearTimeout(autoJoinTimer)
-					$(this).dialog("close")
-				}
-			},
-		}).dialog('open')
-
-		clearTimeout(autoJoinTimer)
-		autoJoinTimer = setTimeout(joinRooms, AUTOJOIN_TIMEOUT_SEC)
-	}
-
-	/**
-	 * Join rooms in the favorites and what was in the session.
-	 */
-	function joinRooms() {
-		if (sessionSettings.joinFavorites === true) {
-			joinFavoriteRooms()
-		}
-
-		setTimeout(() => {
-			if (sessionSettings.autoRefresh || sessionSettings.joinSession) {
-				console.log('Joining sessioned rooms', sessionShadow)
-				clearRoomSession()
-				joinSessionedRooms()
-			}
-		}, 1000)
-		clearTimeout(autoJoinTimer)
-	}
-
-	/**
-	 * Join rooms that were in the last session.
-	 */
-	function joinSessionedRooms() {
-		for (var i = 0; i < sessionShadow.length; i++) {
-			var room = sessionShadow[i]
-			var roomJoined = arrayObjectIndexOf(rph.roomsJoined, 'roomname', room.roomname) > -1
-			var userJoined = arrayObjectIndexOf(rph.roomsJoined, 'user', room.user) > -1
-			var alreadyInRoom = roomJoined && userJoined
-			if (!alreadyInRoom) {
-				chatSocket.emit('join', {
-					name: room.roomname,
-					userid: room.user
-				})
-			}
-		}
-
-		delete sessionShadow
-		if (sessionSettings.chatTextboxSave){
-			populateChatTextboxes()
-		}
-	}
-
-	/** 
-	 * Joins all the rooms in the favorite rooms list
-	 */
-	function joinFavoriteRooms() {
-		for (var i = 0; i < sessionSettings.favRooms.length; i++) {
-			var favRoom = sessionSettings.favRooms[i]
-			chatSocket.emit('join', {
-				name: favRoom.room,
-				userid: favRoom.userId,
-				pw: favRoom.roomPw
-			})
-		}
-
-		if (sessionSettings.chatTextboxSave){
-			populateChatTextboxes()
-		}
-	}
-
-	function populateChatTextboxes () {
-		setTimeout(() => {
-			var chatTextBoxes = $("#chat-bottom .textarea textarea")
-			for (var i = 0; i < chatTextBoxes.length; i++){
-				var idx = arrayObjectIndexOf(sessionSettings.chatTextboxes, 'className', chatTextBoxes[i].className)
-				if (idx > -1) {
-					chatTextBoxes[i].value = sessionSettings.chatTextboxes[idx].value
-				}
-			}
-		}, 250)
-	}
-
-	function addRoomToSession(roomname, userid) {
-		var alreadyInSession = false
-		var roomSession = sessionSettings.roomSession
-		for (var i = 0; i < roomSession.length && alreadyInSession === false; i++) {
-			var room = roomSession[i]
-			if (room.roomname == roomname && room.user == userid) {
-				alreadyInSession = true
-			}
-		}
-
-		if (!alreadyInSession) {
-			console.log('RPH Tools[addRoomToSession]: Adding room to session:', roomname, userid)
-			sessionSettings.roomSession.push({
-				'roomname': roomname,
-				'user': userid
-			})
-			settingsModule.saveSettings(localStorageName, sessionSettings)
-		}
-	}
-
-	function removeRoomFromSession(roomname, userid) {
-		var roomSession = sessionSettings.roomSession
-		for (var i = 0; i < roomSession.length; i++) {
-			var room = roomSession[i]
-			if (room.roomname == roomname && room.user == userid) {
-				console.log('RPH Tools[removeRoomFromSession]: Removing room -', room)
-				sessionSettings.roomSession.splice(i, 1)
-				settingsModule.saveSettings(localStorageName, sessionSettings)
-			}
-		}
-	}
-
-	/**
-	 * Clear the room session.
-	 */
-	function clearRoomSession() {
-		sessionSettings.roomSession = []
-		settingsModule.saveSettings(localStorageName, sessionSettings)
-	}
-
-	/** 
-	 * Adds an entry to the Favorite Chat Rooms list from an input
-	 * @param {string} roomname - Name of the room
-	 */
-	function parseFavoriteRoom(roomname) {
-		var room = getRoom(roomname)
-
-		if (room === undefined) {
-			markProblem('favRoom', true)
-			return
-		}
-
-		if (sessionSettings.favRooms.length < MAX_ROOMS) {
-			var selectedFav = $('#favUserDropList option:selected')
-			var hashStr = $('#favRoom').val() + selectedFav.html()
-			var favRoomObj = {
-				_id: hashStr.hashCode(),
-				user: selectedFav.html(),
-				userId: parseInt(selectedFav.val()),
-				room: $('#favRoom').val(),
-				roomPw: $('#favRoomPw').val()
-			}
-			addFavoriteRoom(favRoomObj)
-			markProblem('favRoom', false)
-		}
-	}
-
-	/**
-	 * Adds a favorite room to the settings list
-	 * @param {Object} favRoomObj - Object containing the favorite room parameters.
-	 */
-	function addFavoriteRoom(favRoomObj) {
-		if (arrayObjectIndexOf(sessionSettings.favRooms, "_id", favRoomObj._id) === -1) {
-			$('#favRoomsList').append(
-				'<option value="' + favRoomObj._id + '">' +
-				favRoomObj.user + ": " + favRoomObj.room + '</option>'
-			)
-			sessionSettings.favRooms.push(favRoomObj)
-		}
-		if (sessionSettings.favRooms.length >= MAX_ROOMS) {
-			$('#favAdd').text("Favorites Full")
-			$('#favAdd')[0].disabled = true
-		}
-	}
-
-	/** 
-	 * Removes an entry to the Favorite Chat Rooms list
-	 */
-	function removeFavoriteRoom() {
-		var favItem = document.getElementById("favRoomsList")
-		var favItemId = $('#favRoomsList option:selected').val()
-		favItem.remove(favItem.selectedIndex)
-		for (var idx = 0; idx < sessionSettings.favRooms.length; idx++) {
-			if (sessionSettings.favRooms[idx]._id == favItemId) {
-				sessionSettings.favRooms.splice(idx, 1)
-				break
-			}
-		}
-		if (sessionSettings.favRooms.length < 10) {
-			$('#favAdd').text("Add")
-			$('#favAdd')[0].disabled = false
-		}
-	}
-
-	function loadSettings() {
-		var storedSettings = settingsModule.getSettings(localStorageName)
-
-		if (storedSettings) {
-			for (var key in storedSettings) {
-				sessionSettings[key] = storedSettings[key]
-			}
-		}
-		else {
-			sessionSettings = {
-				'autoRefreshAttempts': 5,
-				'dcHappened': false,
-				'autoRefresh': false,
-				'refreshSecs': 15,
-				'joinFavorites': false,
-				'joinSession': false,
-				'roomSession': [],
-				'favRooms': [],
-			}
-		}
-
-		$('#favRoomsList').empty()
-
-		$('#dcRefresh').prop("checked", sessionSettings.autoRefresh)
-		$('#refreshTime').val(sessionSettings.refreshSecs)
-		$('#chatTextboxSave').prop("checked", sessionSettings.chatTextboxSave)
-		$('#pmTextboxSave').prop("checked", sessionSettings.pmTextboxSave)
-		$('input#favEnable').prop("checked", sessionSettings.joinFavorites)
-		$('#roomSessioning').prop("checked", sessionSettings.joinSession)
-
-		for (var i = 0; i < sessionSettings.favRooms.length; i++) {
-			var favRoomObj = sessionSettings.favRooms[i]
-			$('#favRoomsList').append(
-				'<option value="' + favRoomObj._id + '">' +
-				favRoomObj.user + ": " + favRoomObj.room + '</option>'
-			)
-		}
-
-		if (sessionSettings.favRooms.length >= MAX_ROOMS) {
-			$('#favAdd').text("Favorites Full")
-			$('#favAdd')[0].disabled = true
-		}
-	}
-
-	function getHtml() {
-		return html
-	}
-
-	function toString() {
-		return 'Session Module'
-	}
-
-	return {
-		init: init,
-		addRoomToSession: addRoomToSession,
-		removeRoomFromSession: removeRoomFromSession,
 		loadSettings: loadSettings,
 		getHtml: getHtml,
 		toString: toString
@@ -1806,6 +1349,9 @@ var pmModule = (function () {
 			pmSettings.notify = $('#pmNotify').is(":checked")
 			settingsModule.saveSettings(localStorageName, pmSettings)
 		})
+
+
+		$('#pm-msgs span').css('opacity', 0.85)
 		socket.on('pm', (data) => {
 			/* Check if the user is blocked */
 			if (account.ignores.indexOf(data.to) > -1) {
@@ -1844,16 +1390,17 @@ var pmModule = (function () {
 	 */
 	function handleIncomingPm(data, pm) {
 		let lastMsg = pm.$msgs[0].lastChild
-		let rgbString = ''
+		let styleString = 'style="'
 
 		if (lastMsg.lastChild.data.charAt(1) === '/') {
 			lastMsg.lastChild.data = ` ${parseCommand(data)}`
 		}
 
 		if(pmSettings.colorText) {
-			rgbString = `style="color: #${pm.to.props.color.toString()}"`
+			styleString += `color: #${pm.to.props.color.toString()};`
 		}
-		lastMsg.innerHTML = `${lastMsg.children[0].outerHTML}<span ${rgbString}>${lastMsg.children[1].outerHTML}${lastMsg.lastChild.data }</span>`
+		styleString += `opacity: 1.0;"`
+		lastMsg.innerHTML = `${lastMsg.children[0].outerHTML}<span ${styleString}>${lastMsg.children[1].outerHTML}${lastMsg.lastChild.data }</span>`
 	}
 
 	/**
@@ -1861,15 +1408,27 @@ var pmModule = (function () {
 	 * @param {object } data Data containing the PM.
 	 */
 	function handleOutgoingPm(data, pm) {
-		let pmHtml = makePmMessage(data, pm.from)
-		
+		let pmMsgHtml = null
+		let styleString = 'style="'
 		for(let i = pm.$msgs[0].children.length -1; i > -1; i--) {
 			let msgHtml = pm.$msgs[0].children[i].innerHTML
 			if (msgHtml.match(pm.from.props.name, 'i')){
-				pm.$msgs[0].children[i].innerHTML = pmHtml
+				pmMsgHtml = pm.$msgs[0].children[i]
 				break
 			}
 		}
+		if (!pmMsgHtml) {return}
+		let msg = pmMsgHtml.lastChild.data
+		if (msg.charAt(1) === '/') {
+			msg = ` ${parseCommand(data)}`
+		}
+		if(pmSettings.colorText) {
+			styleString += `color: #${pm.from.props.color.toString()};`
+		}
+		styleString += `opacity: 1.0;"`
+		$(pmMsgHtml.lastChild).remove()
+		$(pmMsgHtml).append(`<span ${styleString}>${msg}</span>`)
+
 		if (awayMessages[data.from] && !awayMessages[data.from].usedPmAwayMsg) {
 			awayMessages[data.from].enabled = false
 			$('#pmNamesDroplist option').filter(function () {
@@ -1877,29 +1436,6 @@ var pmModule = (function () {
 			}).css("background-color", "")
 			awayMessages[data.from].usedPmAwayMsg = false
 		}
-	}
-
-	function makePmMessage(data, userProps) {
-		let timestampStr = makeTimestamp(data.time, true)
-		let classes = ''
-		let message = parseMsg(data.msg);
-		let rgbString = ''
-
-		if (message.charAt(0) === '/') {
-			message = parseCommand(data)
-		}
-
-		if(pmSettings.colorText) {
-			rgbString = ` style="color: #${userProps.props.color.toString()}"`
-		}
-
-		if( message.charAt(0) === '/' && message.indexOf('me') === 1 ){
-			classes += 'action ';
-			message = message.slice(3) + ' ';
-		}
-
-		return `<p class="${classes}"${rgbString}><span style="color: #FFF;">${timestampStr}</span> ` + 
-				`<strong class="user">${(userProps.props.vanity || userProps.props.name)}${((classes === '') ? ':' : '')}</strong> ${message}</p>`
 	}
 
 	function parseCommand(data) {
@@ -2237,138 +1773,6 @@ var rngModule = (function () {
 		genRandomNum,
 		getHtml,
 		toString,
-	}
-}());/**
- * This module handles adding blocking of users. This is meant to supersede
- * RPH's blocking mechanisms since it isn't always reliable.
- */
-var blockingModule = (function () {
-	var blockedUsers = []
-
-	var localStorageName = 'blockingSettings'
-
-	var html = {
-		'tabId': 'blocking-module',
-		'tabName': 'Blocking',
-		'tabContents': '<h3>User blocking</h3>' +
-			'<br /><br />' +
-			'<label class="rpht_labels">User:</label><input type="text" id="nameCheckTextbox" name="nameCheckTextbox" placeholder="User to block">' +
-			'<br /><br />' +
-			'<button style="margin-left: 579px;" type="button" id="blockButton">Block</button></ br>' +
-			'<p>Blocked users</p>' +
-			'<select style="width: 611px;" size="12" id="blockedDropList"></select>' +
-			'<br /><br />' +
-			'<button style="margin-left: 561px;" type="button" id="unblockButton">Unblock</button>'
-	}
-
-	function init() {
-		loadSettings()
-
-		$('#blockButton').click(function () {
-			var username = $('#nameCheckTextbox').val()
-			if (username) {
-				getUserByName(username, function (user) {
-					addToBlockList(user)
-					user.blocked = true
-					settingsModule.saveSettings(localStorageName, blockedUsers)
-				})
-			}
-		})
-
-		$('#unblockButton').click(function () {
-			var names = document.getElementById("blockedDropList")
-			var userId = $('#blockedDropList option:selected').val()
-			getUserById(userId, function (user) {
-				socket.emit('unblock', {
-					'id': user.props.id
-				})
-				names.remove(names.selectedIndex)
-				user.blocked = false
-				blockedUsers.splice(blockedUsers.indexOf(userId), 1)
-				settingsModule.saveSettings(localStorageName, blockedUsers)
-			})
-		})
-
-		socket.on('ignores', function (data) {
-			getUserById(data.ids[0], function (user) {
-				addToBlockList(user)
-				user.blocked = true
-				settingsModule.saveSettings(localStorageName, blockedUsers)
-			})
-		})
-
-		$('#blockedDropList').empty()
-		blockedUsers.forEach(function (blockedUser) {
-			$('#blockedDropList').append('<option value="' + blockedUser.id + '">' +
-				blockedUser.name + '</option>')
-		})
-
-		reblockList()
-
-		/* Applies blocking every minute, just to be sure. */
-		setInterval(reblockList, 60 * 1000)
-	}
-
-	/**
-	 * Adds a user to the native and RPHT block list.
-	 * @param {object} User object for the username being blocked
-	 */
-	function addToBlockList(user) {
-		var inList = false
-
-		for (var i = 0; i < blockedUsers.length && !inList; i++) {
-			if (user.props.id == blockedUsers[i].id) {
-				inList = true
-			}
-		}
-
-		if (!inList) {
-			blockedUsers.push({
-				id: user.props.id,
-				name: user.props.name
-			})
-			$('#blockedDropList').append('<option value="' + user.props.id + '">' +
-				user.props.name + '</option>')
-		}
-	}
-
-	/**
-	 * Blocks everyone on the list. Used to refresh blocking.
-	 */
-	function reblockList() {
-		blockedUsers.forEach(function (blockedUser) {
-			getUserById(blockedUser.id, function (user) {
-				addToBlockList(user)
-				user.blocked = true
-			})
-		})
-	}
-
-	function loadSettings() {
-		var storedSettings = settingsModule.getSettings(localStorageName)
-		if (storedSettings) {
-			blockedUsers = storedSettings
-		}
-		else {
-			blockedUsers = []
-		}
-		$('#blockedDropList').empty()
-		reblockList()
-	}
-
-	function getHtml() {
-		return html
-	}
-
-	function toString() {
-		return 'Blocking Module'
-	}
-
-	return {
-		init: init,
-		loadSettings: loadSettings,
-		getHtml: getHtml,
-		toString: toString,
 	}
 }());/**
  * This module handles chat modding features. These include an easier way to
@@ -2835,6 +2239,7 @@ var rphToolsModule = (function () {
 		'.rpht-checkbox{height:16px;width:16px}' +
 		'input.rpht-short-input{width:200px}' +
 		'input.rpht-long-input{max-width:100%}' +
+		'.msg-padding{margin-bottom: 6px}'+
 		'.switch{position:relative;right:12px;width:50px;height:24px;float:right}' +
 		'.switch input{opacity:0;width:0;height:0}' +
 		'.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;-webkit-transition:.4s;transition:.4s}' +

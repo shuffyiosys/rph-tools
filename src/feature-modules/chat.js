@@ -5,6 +5,7 @@ var chatModule = (function () {
 	var chatSettings = {
 		'colorText': false,
 		'msgMargin': false,
+		'combineMsg': true,
 
 		'enablePings': true,
 		'pingNotify': false,
@@ -31,6 +32,10 @@ var chatModule = (function () {
 
 	var autoJoinTimer = null
 
+	var lastChatMsg = null
+
+	let pingUsed = false
+
 	const AUTOJOIN_TIMEOUT_SEC = 5 * 1000
 
 	const MAX_ROOMS = 30
@@ -48,10 +53,15 @@ var chatModule = (function () {
 			'		<label class="switch"><input type="checkbox" id="chatColorEnable"><span class="slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Use the user\'s color to stylize their text</label>' +
 			'	</div>' +
-			'	<div class="rpht-option-section option-section-bottom">' +
+			'	<div class="rpht-option-section">' +
 			'		<label class="rpht-label checkbox-label" for="chatMsgMarginEnable">Add padding between messages</label>' +
 			'		<label class="switch"><input type="checkbox" id="chatMsgMarginEnable"><span class="slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Adds some padding at the end of each message for readibility</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<label class="rpht-label checkbox-label" for="combineMsgEnable">Consecutive layout</label>' +
+			'		<label class="switch"><input type="checkbox" id="combineMsgEnable"><span class="slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Received messages are grouped by user and within the same minute for a cleaner layout</label>' +
 			'	</div>' +
 			'</div>' +
 			'<h4>Chat Pinging</h4>' +
@@ -139,6 +149,10 @@ var chatModule = (function () {
 
 		$('#chatMsgMarginEnable').change(() => {
 			chatSettings.msgMargin = getCheckBox('#chatMsgMarginEnable')
+			saveSettings()
+		})
+		$('#combineMsgEnable').change(() => {
+			chatSettings.combineMsg = getCheckBox('#combineMsgEnable')
 			saveSettings()
 		})
 
@@ -295,10 +309,13 @@ var chatModule = (function () {
 		}
 
 		chatSocket.on('msg', function (data) {
-			getUserById(data[data.length - 1].userid, (User) => {
-				let chatMsgHtml = thisRoom.$el.find('>div:last')[0].children
-				postMessage(thisRoom, data, chatMsgHtml, User, (modUserIdx !== -1))
-			})
+			for(let idx in data){
+				getUserById(data[idx].userid, (User) => {
+					let chatMsgHtml = thisRoom.$el[0].lastChild.children
+					postMessage(thisRoom, data[idx], chatMsgHtml, User, (modUserIdx !== -1))
+				})
+			}
+
 		})
 
 		getUserById(userId, (User) => {
@@ -330,29 +347,45 @@ var chatModule = (function () {
 	function postMessage(thisRoom, data, chatMsgHtml, User, isMod) {
 		let msgHtml = chatMsgHtml[1]
 		let msg = msgHtml.innerHTML
-		if (chatSettings.msgMargin) {
-			thisRoom.$el.find('>div:last').css('margin-bottom', '8px')
+		if (chatMsgHtml[1].children.length === 0) {
+			chatMsgHtml[0].children[0].innerHTML = makeTimestamp(data.time, true)
+			if (!chatSettings.combineMsg) {
+				$(thisRoom.$el[0].lastChild).find('.name').removeData('userid');
+			}	
 		}
-		chatMsgHtml[0].children[0].innerHTML = makeTimestamp(data.time, true)
+		if (chatSettings.msgMargin) {
+			thisRoom.$el.find('>div:last').addClass('msg-padding')
+		}
+		if (!chatSettings.combineMsg) {
+			chatMsgHtml[0].children[0].innerHTML = makeTimestamp(data.time, true)
+			$(thisRoom.$el[0].lastChild).find('.name').removeData('userid');
+		}
 
-		/* Add pinging higlights */
-		var testRegex = null
-		testRegex = matchPing(msg, chatSettings.triggers, chatSettings.case, chatSettings.exact)
-		if (testRegex !== null) {
-			msg = highlightPing(msg, testRegex, chatSettings.color,
-				chatSettings.highlight, chatSettings.bold,
-				chatSettings.italics)
-			highlightRoom(thisRoom, chatSettings.color, chatSettings.highlight)
-			pingSound.play()
-
-			/* Bring up the notification if enabled, but don't do it if the user
-			   pinged themselves*/
-			if (chatSettings.pingNotify && account.userids.includes(User.props.id) === false) {
-				let notification = new Notification(`${User.props.name} pinged you in ${thisRoom.props.name}`)
-				setTimeout(() => {
-					notification.close()
-				}, chatSettings.notifyTime)
+		/* Add pinging higlights if pings are enabled and this isn't the same
+		   chat block */
+		if (chatSettings.enablePings && !pingUsed) {
+			var testRegex = null
+			testRegex = matchPing(msg, chatSettings.triggers, chatSettings.case, chatSettings.exact)
+			if (testRegex !== null) {
+				msg = highlightPing(msg, testRegex, chatSettings.color,
+					chatSettings.highlight, chatSettings.bold,
+					chatSettings.italics)
+				highlightRoom(thisRoom, chatSettings.color, chatSettings.highlight)
+				pingSound.play()
+				pingUsed = true
+	
+				/* Bring up the notification if enabled, but don't do it if the user
+				   pinged themselves*/
+				if (chatSettings.pingNotify && account.userids.includes(User.props.id) === false) {
+					let notification = new Notification(`${User.props.name} pinged you in ${thisRoom.props.name}`)
+					setTimeout(() => {
+						notification.close()
+					}, chatSettings.notifyTime)
+				}
 			}
+		}
+		else if (lastChatMsg != chatMsgHtml) {
+			pingUsed = false
 		}
 
 		/* Process other's messages for issues if a mod */
@@ -376,13 +409,13 @@ var chatModule = (function () {
 
 		/* Check to see if there's a RNG marker, then process it if it's there */
 		if (msg.indexOf('\u200b') > -1) {
-			let msgData = data[0]
+			let msgData = data
 			let newMsg = ''
 
 			if (msgHtml.children.length > 0) {
 				newMsg += msgHtml.children[0].outerHTML
 			}
-			newMsg += `${parseMsg(parseRng(msgData))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
+			newMsg += ` ${parseMsg(parseRng(msgData))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
 			msg = newMsg
 		}
 
@@ -391,6 +424,7 @@ var chatModule = (function () {
 			rgbString = `style="color:#${User.props.color.toString()};"`
 		}
 		msgHtml.outerHTML = `<span ${rgbString}>${msg}</span>`
+		lastChatMsg = chatMsgHtml
 	}
 
 	/**
@@ -434,7 +468,6 @@ var chatModule = (function () {
 				if (rngModule) {
 					var die = 1
 					var sides = 20
-
 					if (cmdArgs.length > 1) {
 						die = parseInt(cmdArgs[1].split('d')[0])
 						sides = parseInt(cmdArgs[1].split('d')[1])
@@ -764,12 +797,14 @@ var chatModule = (function () {
 	 */
 	function loadSettings() {
 		let storedSettings = settingsModule.getSettings(localStorageName)
+		let sessionSettings = settingsModule.getSettings('sessionSettings')
 		if (storedSettings) {
 			chatSettings = Object.assign(chatSettings, storedSettings)
 		} else {
 			chatSettings = {
 				'colorText': false,
 				'msgMargin': false,
+				'combineMsg': false,
 
 				'enablePings': true,
 				'pingNotify': false,
@@ -789,8 +824,15 @@ var chatModule = (function () {
 			}
 		}
 
+		if (sessionSettings) {
+			chatSettings.joinFavorites = sessionSettings.joinFavorites
+			chatSettings.roomSession = sessionSettings.roomSession
+			chatSettings.favRooms = sessionSettings.favRooms
+		}
+
 		$('#chatColorEnable').prop("checked", chatSettings.colorText)
 		$('#chatMsgMarginEnable').prop("checked", chatSettings.msgMargin)
+		$('#combineMsgEnable').prop("checked", chatSettings.combineMsg) 
 
 		$('#notifyPingEnable').prop("checked", chatSettings.enablePings)
 		$('#notifyNotificationEnable').prop("checked", chatSettings.pingNotify)

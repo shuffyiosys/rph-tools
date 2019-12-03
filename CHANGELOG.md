@@ -1,3 +1,18 @@
+RPH Tools (4.2.0)
+---------------
+* Overhaul of the UI. All checkboxes are toggle switches now, and most options have descriptive text explanaing what that option does.
+* Added option to toggle user colors in chat or PMs
+* Added the option to show browser notifications when pinged in Chat or when receiving a PM.
+* Added option to pad out messages in the chat room
+* Added option to separate messages as they come in, or combine them by user and time
+* Added a command processor to PMs. So far only `/roll` is supported
+* Removed the Session module, as RPH's Socket.IO auto-reconnects. Favorite Rooms were moved to the Chat Module
+* Removed the Blocking module, as RPH's seems to work
+
+RPH Tools (4.1.8)
+---------------
+* Added Rock, Paper, Scissors command
+
 RPH Tools (4.1.7)
 ---------------
 * General code clean up

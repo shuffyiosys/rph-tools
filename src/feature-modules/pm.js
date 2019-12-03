@@ -123,6 +123,7 @@ var pmModule = (function () {
 			pmSettings.notify = $('#pmNotify').is(":checked")
 			settingsModule.saveSettings(localStorageName, pmSettings)
 		})
+		$('#pm-msgs span').css('opacity', 0.85)
 		socket.on('pm', (data) => {
 			/* Check if the user is blocked */
 			if (account.ignores.indexOf(data.to) > -1) {
@@ -161,16 +162,17 @@ var pmModule = (function () {
 	 */
 	function handleIncomingPm(data, pm) {
 		let lastMsg = pm.$msgs[0].lastChild
-		let rgbString = ''
+		let styleString = 'style="'
 
 		if (lastMsg.lastChild.data.charAt(1) === '/') {
 			lastMsg.lastChild.data = ` ${parseCommand(data)}`
 		}
 
 		if(pmSettings.colorText) {
-			rgbString = `style="color: #${pm.to.props.color.toString()}"`
+			styleString += `color: #${pm.to.props.color.toString()};`
 		}
-		lastMsg.innerHTML = `${lastMsg.children[0].outerHTML}<span ${rgbString}>${lastMsg.children[1].outerHTML}${lastMsg.lastChild.data }</span>`
+		styleString += `opacity: 1.0;"`
+		lastMsg.innerHTML = `${lastMsg.children[0].outerHTML}<span ${styleString}>${lastMsg.children[1].outerHTML}${lastMsg.lastChild.data }</span>`
 	}
 
 	/**
@@ -178,15 +180,27 @@ var pmModule = (function () {
 	 * @param {object } data Data containing the PM.
 	 */
 	function handleOutgoingPm(data, pm) {
-		let pmHtml = makePmMessage(data, pm.from)
-		
+		let pmMsgHtml = null
+		let styleString = 'style="'
 		for(let i = pm.$msgs[0].children.length -1; i > -1; i--) {
 			let msgHtml = pm.$msgs[0].children[i].innerHTML
 			if (msgHtml.match(pm.from.props.name, 'i')){
-				pm.$msgs[0].children[i].innerHTML = pmHtml
+				pmMsgHtml = pm.$msgs[0].children[i]
 				break
 			}
 		}
+		if (!pmMsgHtml) {return}
+		let msg = pmMsgHtml.lastChild.data
+		if (msg.charAt(1) === '/') {
+			msg = ` ${parseCommand(data)}`
+		}
+		if(pmSettings.colorText) {
+			styleString += `color: #${pm.from.props.color.toString()};`
+		}
+		styleString += `opacity: 1.0;"`
+		$(pmMsgHtml.lastChild).remove()
+		$(pmMsgHtml).append(`<span ${styleString}>${msg}</span>`)
+
 		if (awayMessages[data.from] && !awayMessages[data.from].usedPmAwayMsg) {
 			awayMessages[data.from].enabled = false
 			$('#pmNamesDroplist option').filter(function () {
@@ -194,29 +208,6 @@ var pmModule = (function () {
 			}).css("background-color", "")
 			awayMessages[data.from].usedPmAwayMsg = false
 		}
-	}
-
-	function makePmMessage(data, userProps) {
-		let timestampStr = makeTimestamp(data.time, true)
-		let classes = ''
-		let message = parseMsg(data.msg);
-		let rgbString = ''
-
-		if (message.charAt(0) === '/') {
-			message = parseCommand(data)
-		}
-
-		if(pmSettings.colorText) {
-			rgbString = ` style="color: #${userProps.props.color.toString()}"`
-		}
-
-		if( message.charAt(0) === '/' && message.indexOf('me') === 1 ){
-			classes += 'action ';
-			message = message.slice(3) + ' ';
-		}
-
-		return `<p class="${classes}"${rgbString}><span style="color: #FFF;">${timestampStr}</span> ` + 
-				`<strong class="user">${(userProps.props.vanity || userProps.props.name)}${((classes === '') ? ':' : '')}</strong> ${message}</p>`
 	}
 
 	function parseCommand(data) {
