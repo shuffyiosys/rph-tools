@@ -371,8 +371,7 @@ var chatModule = (function () {
 
 		/* Check to see if there's a RNG marker, then process it if it's there */
 		if (msg.indexOf('\u200b') > -1) {
-			$(chatMsgHtml.children[1].lastChild)[0].data = ' '
-			$(chatMsgHtml.children[1]).append(`<span>${parseMsg(parseRng(data))} <span style="background:#4A4; color: #FFF;"> &#9745; </span></span>`)
+			msg = `${parseMsg(parseRng(data))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
 		}
 
 		/* Add pings */
