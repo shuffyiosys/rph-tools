@@ -130,7 +130,6 @@ var pmModule = (function () {
 				return;
 			}
 			rph.getPm({'from':data.from, 'to':data.to}, function(pm){
-				console.log(data, pm)
 				handleIncomingPm(data, pm)
 				pm.typingStop()
 			})

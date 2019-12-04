@@ -89,7 +89,7 @@ var settingsModule = (function () {
 			localStorage.setItem(SETTINGS_NAME, JSON.stringify({}))
 			rphToolsModule.getAllModules().forEach((module) => {
 				if (module.loadSettings){
-					console.log("Reloading", module.toString())
+					console.log(`RPH Tools[Settings Module]: ${module.toString()}`)
 					module.loadSettings()
 				}
 			})

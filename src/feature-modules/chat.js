@@ -61,7 +61,7 @@ var chatModule = (function () {
 			'	<div class="rpht-option-section option-section-bottom">' +
 			'		<label class="rpht-label checkbox-label" for="combineMsgEnable">Consecutive layout</label>' +
 			'		<label class="switch"><input type="checkbox" id="combineMsgEnable"><span class="slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">Received messages are grouped by user and within the same minute for a cleaner layout</label>' +
+			'		<label class="rpht-label descript-label">Cleans up the left sidebar by not including user names if they post consecutively and not including timestamps if in the same minute</label>' +
 			'	</div>' +
 			'</div>' +
 			'<h4>Chat Pinging</h4>' +
@@ -225,8 +225,7 @@ var chatModule = (function () {
 
 		$('#pingPreviewInput').blur(() => {
 			var msg = getInput('#pingPreviewInput')
-			var testRegex = matchPing(msg, chatSettings.triggers, chatSettings.case,
-				chatSettings.exact)
+			var testRegex = matchPing(msg)
 			if (testRegex !== null) {
 				msg = highlightPing(msg, testRegex, chatSettings.color,
 					chatSettings.highlight, chatSettings.bold,
@@ -310,11 +309,14 @@ var chatModule = (function () {
 
 		if (chatSocket._callbacks.$msg.length === 1) {
 			chatSocket.on('msg', (data) => {
-				for(let idx in data){
-					getUserById(data[idx].userid, (User) => {
-						postMessage(getRoom(data[idx].room), data[idx], User, (modUserIdx !== -1))
-					})
+				let msgData = data[data.length -1]
+				let chatMsgHtml = thisRoom.$el[0].lastChild
+				if (!chatMsgHtml || $(chatMsgHtml).hasClass('sys') || $(chatMsgHtml).hasClass('join')) {
+					return
 				}
+				getUserById(msgData.userid, (User) => {
+					modifyMessage(getRoom(msgData.room), msgData, User, (modUserIdx !== -1))
+				})
 			})
 		}
 		
@@ -343,36 +345,43 @@ var chatModule = (function () {
 	 * @param {object} thisRoom The room that the message is for.
 	 * @param {object} data The message for the room
 	 */
-	function postMessage(thisRoom, data, User, isMod) {
-		let chatMsgHtml = thisRoom.$el.find('>div:last')[0]
+	function modifyMessage(thisRoom, data, User, isMod) {
+		let chatMsgHtml = thisRoom.$el[0].lastChild
 		let sideBarHtml = chatMsgHtml.children[0]
-		let msg = chatMsgHtml.children[1].innerHTML
+		let msgHtml = chatMsgHtml.children[1]
+		let nameHtml = ''
+		let msg = ''
+		var moddingModule = rphToolsModule.getModule('Modding Module')
 
-		
-		if (chatMsgHtml.children.length === 0) {
-			sideBarHtml.children[0].innerHTML = makeTimestamp(data.time, true)
-			if (!chatSettings.combineMsg) {
-				$(thisRoom.$el[0].lastChild).find('.name').removeData('userid');
-			}	
+		if (msgHtml.children[0] && msgHtml.children[0].tagName === 'A') {
+			meAction = true
+			nameHtml = msgHtml.children[0].outerHTML
+			$(msgHtml.children[0]).remove()
 		}
+		msg = msgHtml.innerHTML
+
 		if (chatSettings.msgMargin) {
-			thisRoom.$el.find('>div:last').addClass('msg-padding')
+			$(chatMsgHtml).addClass('msg-padding')
 		}
 		if (!chatSettings.combineMsg) {
 			sideBarHtml.children[0].innerHTML = makeTimestamp(data.time, true)
-			$(thisRoom.$el[0].lastChild).find('.name').removeData('userid');
+			$(chatMsgHtml).find('.name').removeData('userid');
+			pingUsed = false
 		}
 
-		/* Add pinging higlights if pings are enabled and this isn't the same
-		   chat block */
+		/* Check to see if there's a RNG marker, then process it if it's there */
+		if (msg.indexOf('\u200b') > -1) {
+			$(chatMsgHtml.children[1].lastChild)[0].data = ' '
+			$(chatMsgHtml.children[1]).append(`<span>${parseMsg(parseRng(data))} <span style="background:#4A4; color: #FFF;"> &#9745; </span></span>`)
+		}
+
+		/* Add pings */
 		if (chatSettings.enablePings && !pingUsed) {
 			var testRegex = null
-			testRegex = matchPing(msg, chatSettings.triggers, chatSettings.case, chatSettings.exact)
-			if (testRegex !== null) {
-				msg = highlightPing(msg, testRegex, chatSettings.color,
-					chatSettings.highlight, chatSettings.bold,
-					chatSettings.italics)
-				highlightRoom(thisRoom, chatSettings.color, chatSettings.highlight)
+			testRegex = matchPing(msg)
+			if (testRegex) {
+				msg = highlightPing(msg, testRegex)
+				highlightRoom(thisRoom)
 				pingSound.play()
 				pingUsed = true
 	
@@ -380,9 +389,7 @@ var chatModule = (function () {
 				   pinged themselves*/
 				if (chatSettings.pingNotify && account.userids.includes(User.props.id) === false) {
 					let notification = new Notification(`${User.props.name} pinged you in ${thisRoom.props.name}`)
-					setTimeout(() => {
-						notification.close()
-					}, chatSettings.notifyTime)
+					setTimeout(() => {notification.close()}, chatSettings.notifyTime)
 				}
 			}
 		}
@@ -391,30 +398,21 @@ var chatModule = (function () {
 		}
 
 		/* Process other's messages for issues if a mod */
-		if (isMod && account.userids.includes(User.props.id) === false) {
-			var moddingModule = rphToolsModule.getModule('Modding Module')
-			if (moddingModule !== null) {
-				var alertWords = moddingModule.getAlertWords()
-				testRegex = matchPing(msg, alertWords, false, true)
-
-				// Process alert
-				if (alertWords) {
-					var alertRegex = new RegExp(alertWords, 'gi')
-					if (msg.match(alertRegex)) {
-						msg = highlightPing(msg, alertRegex, "#EEE", "#E00", true, false)
-						highlightRoom(thisRoom, "#EEE", "#E00")
-						moddingModule.playAlert()
-					}
-				}
+		if (isMod && moddingModule && account.userids.includes(User.props.id) === false) {
+			let alertRegex = null
+			let alertWords = moddingModule.getAlertWords()
+			alertRegex = matchPing(msg, alertWords, false, true)
+			// Process alert
+			if (alertRegex) {
+				msg = highlightPing(msg, alertRegex, true)
+				highlightRoom(thisRoom, true)
+				moddingModule.playAlert()
 			}
 		}
-
-		/* Check to see if there's a RNG marker, then process it if it's there */
-		if (msg.indexOf('\u200b') > -1) {
-			$(thisRoom.$el.find('>div:last')[0].children[1]).html(`${parseMsg(parseRng(data))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`)
-		}
+		msgHtml.outerHTML = `<span>${nameHtml}${msg}</span>`
+		/* Finally, add text color */
 		if (chatSettings.colorText) {
-			$(thisRoom.$el.find('>div:last')[0].children[1]).css('color', `#${User.props.color.toString()}`)
+			$(chatMsgHtml.children[1]).css('color', `#${User.props.color.toString()}`)
 		}
 		lastChatMsg = chatMsgHtml
 	}
@@ -526,38 +524,25 @@ var chatModule = (function () {
 	 * @param {string} msg - The message for the chat
 	 * @returns Returns the match or null
 	 */
-	function matchPing(msg, triggers, caseSensitive, exactMatch) {
-		if (!triggers) {
-			return null
-		} else if (triggers.length === 0) {
-			return null
-		}
-
-		var testRegex = null
-		var pingNames = triggers.split(',')
-		var regexParam = (caseSensitive ? "m" : 'im')
-		if (triggers.length === 0) {
-			return testRegex
-		}
-
+	function matchPing(msg, triggers=chatSettings.triggers, caseSensitive=chatSettings.case, exactMatch=chatSettings.exact) {
+		let result = null
+		let pingNames = triggers.split(',')
+		let regexParam = (caseSensitive ? "m" : 'im')
 		for (i = 0; i < pingNames.length; i++) {
-			if (pingNames[i] !== "") {
-				var regexPattern = pingNames[i].trim()
-				if (exactMatch === true) {
-					regexPattern = "\\b" + pingNames[i].trim() + "\\b"
-				}
-
-				/* Check if search term is not in a link. */
-				let regex = new RegExp('href=".*?' + pingNames[i] + '.*?"', '')
-				if (regex.test(msg) === false) {
-					testRegex = new RegExp(regexPattern, regexParam)
-					if (msg.match(testRegex)) {
-						return testRegex
-					}
-				}
+			let trigger = pingNames[i].trim()
+			if (trigger === "") {
+				continue
+			}
+			let regexPattern = (exactMatch) ? `\\b${trigger}\\b` : trigger
+			let urlRegex = new RegExp(`href=".*?${trigger}.*?"`, '')
+			let testRegex = new RegExp(regexPattern, regexParam)
+			/* Check if search term is not in a link as well */
+			if (!urlRegex.test(msg)&& testRegex.test(msg)) {
+				result = testRegex
+				break
 			}
 		}
-		return null
+		return result
 	}
 
 	/**
@@ -566,19 +551,21 @@ var chatModule = (function () {
 	 * @param {regex} testRegex - Regular expression to use to match the term.
 	 * @returns Modified message
 	 */
-	function highlightPing(msg, testRegex, color, highlight, bold, italicize) {
-		var boldStyle = ""
-		var italicsStyle = ""
+	function highlightPing(msg, testRegex, alert=false) {
+		if (alert) {
+			msg = msg.replace(testRegex,  `<span class="alert-ping">${msg.match(testRegex)}</span>`)
+		}
+		else {
+			let styleText = `color: ${chatSettings.color}; background: ${chatSettings.highlight};`
 
-		if (bold === true) {
-			boldStyle = "font-weight: bold; "
+			if (chatSettings.bold === true) {
+				styleText += ' font-weight: bold;'
+			}
+			if (chatSettings.italics === true) {
+				styleText += ' font-style:italic;'
+			}
+			msg = msg.replace(testRegex,  `<span style="${styleText}">${msg.match(testRegex)}</span>`)
 		}
-		if (italicize === true) {
-			italicsStyle = "font-style:italic; "
-		}
-		msg = msg.replace(testRegex, '<span style="color: ' + color +
-			'; background: ' + highlight + '; ' + boldStyle +
-			italicsStyle + '">' + msg.match(testRegex) + '</span>')
 		return msg
 	}
 
@@ -586,10 +573,17 @@ var chatModule = (function () {
 	 * Adds a highlight to the room's tab
 	 * @param {object} thisRoom - Room where the ping happened.
 	 */
-	function highlightRoom(thisRoom, color, highlight) {
+	function highlightRoom(thisRoom, alert=false) {
 		if (!thisRoom.isActive()) {
-			thisRoom.$tabs[0].css('background-color', highlight)
-			thisRoom.$tabs[0].css('color', color)
+
+			if (alert) {
+				thisRoom.$tabs[0].css('background-color', '#F00')
+				thisRoom.$tabs[0].css('color', '#FFF')
+			}
+			else {
+				thisRoom.$tabs[0].css('background-color', chatSettings.highlight)
+				thisRoom.$tabs[0].css('color', chatSettings.color)
+			}
 
 			thisRoom.$tabs[0].click(() => {
 				thisRoom.$tabs[0].css('background-color', '#333')

@@ -44,7 +44,6 @@ function validateSetting(settingId, setting) {
 	}
 	else if (setting === "color-allrange") {
 		input = input.replace('#', '')
-		console.log("checking all color ranges", validateColor(input), input)
 		validInput = validateColor(input)
 	}
 	else if (setting === "color") {
