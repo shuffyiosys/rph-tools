@@ -723,7 +723,7 @@ var chatModule = (function () {
 
 		/* Check to see if there's a RNG marker, then process it if it's there */
 		if (msg.indexOf('\u200b') > -1) {
-			msg = `${parseMsg(parseRng(data))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
+			msg = ` ${parseMsg(parseRng(data))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
 		}
 
 		/* Add pings */
@@ -1345,11 +1345,8 @@ var pmModule = (function () {
 			})
 		})
 
-		socket.onOutgoing('pm', (data) => {
-			if (account.ignores.indexOf(data.to) > -1) {
-				return;
-			}
-			rph.getPm({'from':data.from, 'to':data.to}, function(pm){
+		socket.on('pm-confirmation', (data) => {
+			rph.getPm({'from':data.to, 'to':data.from}, function(pm){
 				handleOutgoingPm(data, pm)
 			})
 		})
@@ -1390,7 +1387,7 @@ var pmModule = (function () {
 	 */
 	function handleOutgoingPm(data, pm) {
 		let pmMsgHtml = null
-		let styleString = 'style="'
+		let styleString = ''
 		for(let i = pm.$msgs[0].children.length -1; i > -1; i--) {
 			let msgHtml = pm.$msgs[0].children[i].innerHTML
 			if (msgHtml.match(pm.from.props.name, 'i')){
@@ -1398,18 +1395,24 @@ var pmModule = (function () {
 				break
 			}
 		}
+		
 		if (!pmMsgHtml) {return}
-		let msg = pmMsgHtml.lastChild.data
+		let timestampHtml = pmMsgHtml.children[0].outerHTML
+		let usernameHtml =  pmMsgHtml.children[1].outerHTML
+		$(pmMsgHtml.children[0]).remove()
+		$(pmMsgHtml.children[0]).remove()
+		let msg = pmMsgHtml.innerHTML
 		if (msg.charAt(1) === '/') {
 			msg = ` ${parseCommand(data)}`
 		}
 		if(pmSettings.colorText) {
 			styleString += `color: #${pm.from.props.color.toString()};`
 		}
-		styleString += `opacity: 1.0;"`
-		$(pmMsgHtml.lastChild).remove()
-		$(pmMsgHtml).append(`<span ${styleString}>${msg}</span>`)
-
+		styleString += `opacity: 1.0;`
+		if (styleString) {
+			styleString = `style"${styleString}"`
+		}
+		pmMsgHtml.innerHTML = `${timestampHtml} ${usernameHtml} <span ${styleString}>${msg}</span>`
 		if (awayMessages[data.from] && !awayMessages[data.from].usedPmAwayMsg) {
 			awayMessages[data.from].enabled = false
 			$('#pmNamesDroplist option').filter(function () {
