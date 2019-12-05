@@ -157,18 +157,16 @@ var pmModule = (function () {
 	 * @param {object } data Data containing the PM.
 	 */
 	function handleIncomingPm(data, pm) {
-		let lastMsg = pm.$msgs[0].lastChild
-		let styleString = 'style="'
-
-		if (lastMsg.lastChild.data.charAt(1) === '/') {
-			lastMsg.lastChild.data = ` ${parseCommand(data)}`
+		let pmMsgHtml = null
+		for(let i = pm.$msgs[0].children.length -1; i > -1; i--) {
+			let msgHtml = pm.$msgs[0].children[i].innerHTML
+			if (msgHtml.match(pm.to.props.name, 'i')){
+				pmMsgHtml = pm.$msgs[0].children[i]
+				break
+			}
 		}
-
-		if(pmSettings.colorText) {
-			styleString += `color: #${pm.to.props.color.toString()};`
-		}
-		styleString += `opacity: 1.0;"`
-		lastMsg.innerHTML = `${lastMsg.children[0].outerHTML}<span ${styleString}>${lastMsg.children[1].outerHTML}${lastMsg.lastChild.data }</span>`
+		if (!pmMsgHtml) {return}
+		buildPmMessage(pmMsgHtml, data, pm.to.props.color.toString())
 	}
 
 	/**
@@ -177,7 +175,6 @@ var pmModule = (function () {
 	 */
 	function handleOutgoingPm(data, pm) {
 		let pmMsgHtml = null
-		let styleString = ''
 		for(let i = pm.$msgs[0].children.length -1; i > -1; i--) {
 			let msgHtml = pm.$msgs[0].children[i].innerHTML
 			if (msgHtml.match(pm.from.props.name, 'i')){
@@ -185,24 +182,8 @@ var pmModule = (function () {
 				break
 			}
 		}
-		
 		if (!pmMsgHtml) {return}
-		let timestampHtml = pmMsgHtml.children[0].outerHTML
-		let usernameHtml =  pmMsgHtml.children[1].outerHTML
-		$(pmMsgHtml.children[0]).remove()
-		$(pmMsgHtml.children[0]).remove()
-		let msg = pmMsgHtml.innerHTML
-		if (msg.charAt(1) === '/') {
-			msg = ` ${parseCommand(data)}`
-		}
-		if(pmSettings.colorText) {
-			styleString += `color: #${pm.from.props.color.toString()};`
-		}
-		styleString += `opacity: 1.0;`
-		if (styleString) {
-			styleString = `style"${styleString}"`
-		}
-		pmMsgHtml.innerHTML = `${timestampHtml} ${usernameHtml} <span ${styleString}>${msg}</span>`
+		buildPmMessage(pmMsgHtml, data, pm.from.props.color.toString())
 		if (awayMessages[data.from] && !awayMessages[data.from].usedPmAwayMsg) {
 			awayMessages[data.from].enabled = false
 			$('#pmNamesDroplist option').filter(function () {
@@ -210,6 +191,26 @@ var pmModule = (function () {
 			}).css("background-color", "")
 			awayMessages[data.from].usedPmAwayMsg = false
 		}
+	}
+
+	function buildPmMessage(pmMsgHtml, data, colorString) {
+		let styleString = ''
+		let timestampHtml = pmMsgHtml.children[0].outerHTML
+		let usernameHtml =  pmMsgHtml.children[1].outerHTML
+		$(pmMsgHtml.children[0]).remove()
+		$(pmMsgHtml.children[0]).remove()
+		let msg = pmMsgHtml.innerHTML.trim()
+		if (msg.charAt(0) === '/') {
+			msg = ` ${parseCommand(data)}`
+		}
+		if(pmSettings.colorText) {
+			styleString += `color: #${colorString};`
+		}
+		styleString += `opacity: 1.0;`
+		if (styleString) {
+			styleString = `style="${styleString}"`
+		}
+		pmMsgHtml.innerHTML = `${timestampHtml} ${usernameHtml} <span ${styleString}>${msg}</span>`
 	}
 
 	function parseCommand(data) {

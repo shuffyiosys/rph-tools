@@ -1,3 +1,8 @@
+RPH Tools (4.2.1)
+---------------
+* Changed how chat message processing works
+* Colorize chat messages is on by default now
+
 RPH Tools (4.2.0)
 ---------------
 * Overhaul of the UI. All checkboxes are toggle switches now, and most options have descriptive text explanaing what that option does.

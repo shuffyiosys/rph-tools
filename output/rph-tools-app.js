@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.2.0
+// @version    4.2.1
 // @description Adds extended settings to RPH
 // @match      https://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.2.0'
+const VERSION_STRING = '4.2.1'
 
 const SETTINGS_NAME = "rph_tools_settings"
 /**
@@ -355,9 +355,8 @@ function sendChatMessage(inputTextBox, Room, User) {
  ****/
 var chatModule = (function () {
 	var chatSettings = {
-		'colorText': false,
+		'colorText': true,
 		'msgMargin': false,
-		'combineMsg': true,
 
 		'enablePings': true,
 		'pingNotify': false,
@@ -384,10 +383,6 @@ var chatModule = (function () {
 
 	var autoJoinTimer = null
 
-	var lastChatMsg = null
-
-	let pingUsed = false
-
 	const AUTOJOIN_TIMEOUT_SEC = 5 * 1000
 
 	const MAX_ROOMS = 30
@@ -405,15 +400,10 @@ var chatModule = (function () {
 			'		<label class="switch"><input type="checkbox" id="chatColorEnable"><span class="slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Use the user\'s color to stylize their text</label>' +
 			'	</div>' +
-			'	<div class="rpht-option-section">' +
+			'	<div class="rpht-option-section option-section-bottom">' +
 			'		<label class="rpht-label checkbox-label" for="chatMsgMarginEnable">Add padding between messages</label>' +
 			'		<label class="switch"><input type="checkbox" id="chatMsgMarginEnable"><span class="slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Adds some padding at the end of each message for readibility</label>' +
-			'	</div>' +
-			'	<div class="rpht-option-section option-section-bottom">' +
-			'		<label class="rpht-label checkbox-label" for="combineMsgEnable">Consecutive layout</label>' +
-			'		<label class="switch"><input type="checkbox" id="combineMsgEnable"><span class="slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">Cleans up the left sidebar by not including user names if they post consecutively and not including timestamps if in the same minute</label>' +
 			'	</div>' +
 			'</div>' +
 			'<h4>Chat Pinging</h4>' +
@@ -659,19 +649,16 @@ var chatModule = (function () {
 			}
 		}
 
-		if (chatSocket._callbacks.$msg.length === 1) {
-			chatSocket.on('msg', (data) => {
-				let msgData = data[data.length -1]
-				let chatMsgHtml = thisRoom.$el[0].lastChild
-				if (!chatMsgHtml || $(chatMsgHtml).hasClass('sys') || $(chatMsgHtml).hasClass('join')) {
-					return
-				}
-				getUserById(msgData.userid, (User) => {
-					modifyMessage(getRoom(msgData.room), msgData, User, (modUserIdx !== -1))
+
+		chatSocket._callbacks.$msg.pop()
+		chatSocket.on('msg', (data) => {
+			for (const msgData of data) {
+				getUserById(msgData.userid, function(User){
+					postMessage(getRoom(msgData.room), User, msgData, (modUserIdx !== -1))
 				})
-			})
-		}
-		
+			}
+		})
+
 		getUserById(userId, (User) => {
 			addNameToUI(thisRoom, User)
 			if (moddingModule !== null && modUserIdx === userId) {
@@ -691,35 +678,10 @@ var chatModule = (function () {
 			})
 		})
 	}
-	/**
-	 * Takes a message received in the chat and processes it for pinging or 
-	 * otherwise
-	 * @param {object} thisRoom The room that the message is for.
-	 * @param {object} data The message for the room
-	 */
-	function modifyMessage(thisRoom, data, User, isMod) {
-		let chatMsgHtml = thisRoom.$el[0].lastChild
-		let sideBarHtml = chatMsgHtml.children[0]
-		let msgHtml = chatMsgHtml.children[1]
-		let nameHtml = ''
-		let msg = ''
-		var moddingModule = rphToolsModule.getModule('Modding Module')
 
-		if (msgHtml.children[0] && msgHtml.children[0].tagName === 'A') {
-			meAction = true
-			nameHtml = msgHtml.children[0].outerHTML
-			$(msgHtml.children[0]).remove()
-		}
-		msg = msgHtml.innerHTML
-
-		if (chatSettings.msgMargin) {
-			$(chatMsgHtml).addClass('msg-padding')
-		}
-		if (!chatSettings.combineMsg) {
-			sideBarHtml.children[0].innerHTML = makeTimestamp(data.time, true)
-			$(chatMsgHtml).find('.name').removeData('userid');
-			pingUsed = false
-		}
+	function postMessage(thisRoom, User, data, isMod) {
+		let timestamp = makeTimestamp(data.time);
+		let msg = parseMsg(data.msg);
 
 		/* Check to see if there's a RNG marker, then process it if it's there */
 		if (msg.indexOf('\u200b') > -1) {
@@ -727,29 +689,27 @@ var chatModule = (function () {
 		}
 
 		/* Add pings */
-		if (chatSettings.enablePings && !pingUsed) {
-			var testRegex = null
+		if (chatSettings.enablePings) {
+			let testRegex = null
 			testRegex = matchPing(msg)
 			if (testRegex) {
 				msg = highlightPing(msg, testRegex)
 				highlightRoom(thisRoom)
 				pingSound.play()
-				pingUsed = true
-	
+
 				/* Bring up the notification if enabled, but don't do it if the user
-				   pinged themselves*/
-				if (chatSettings.pingNotify && account.userids.includes(User.props.id) === false) {
+					pinged themselves*/
+				if (chatSettings.pingNotify && account.userids.includes(data.userid) === false) {
 					let notification = new Notification(`${User.props.name} pinged you in ${thisRoom.props.name}`)
-					setTimeout(() => {notification.close()}, chatSettings.notifyTime)
+					setTimeout(() => {
+						notification.close()
+					}, chatSettings.notifyTime)
 				}
 			}
 		}
-		else if (lastChatMsg != chatMsgHtml) {
-			pingUsed = false
-		}
 
 		/* Process other's messages for issues if a mod */
-		if (isMod && moddingModule && account.userids.includes(User.props.id) === false) {
+		if (isMod && moddingModule && account.userids.includes(data.userid) === false) {
 			let alertRegex = null
 			let alertWords = moddingModule.getAlertWords()
 			alertRegex = matchPing(msg, alertWords, false, true)
@@ -760,12 +720,73 @@ var chatModule = (function () {
 				moddingModule.playAlert()
 			}
 		}
-		msgHtml.outerHTML = `<span>${nameHtml}${msg}</span>`
-		/* Finally, add text color */
-		if (chatSettings.colorText) {
-			$(chatMsgHtml.children[1]).css('color', `#${User.props.color.toString()}`)
+
+		let classes = ''
+		let msgHtml = ''
+		let colorStyle = (chatSettings.colorText) ? `style="color: #${User.props.color.toString()}"` : ``
+
+		if (msg.charAt(0) === '/' && msg.slice(1, 3) === 'me') {
+			classes += 'action ';
+			msg = msg.slice(3);
+			msgHtml = thisRoom.appendMessage(
+				`<span class="first"><span class="timestamp">${timestamp}</span></span>
+				 	<span ${colorStyle}><a class="name" title="${timestamp}">${data.userid}</a>${msg}</span>`
+			).addClass(classes);
+		} else {
+			msgHtml = thisRoom.appendMessage(
+				`<span class="first"><span class="timestamp">${timestamp}</span><a class="name" title="${timestamp}">${data.userid}</a></span>
+				<span ${colorStyle}>${msg}</span>`
+			).addClass(classes);
+			msgHtml.find('.name').data('userid', data.userid);
 		}
-		lastChatMsg = chatMsgHtml
+		msgHtml.find('br:gt(10)').remove();
+
+		if (chatSettings.msgMargin) {
+			classes += 'msg-padding '
+		}
+		if( User.friendOf ){
+			classes += 'friend ';
+		}
+		if( isOwnUser(User) ){
+			classes += 'self ';
+		}
+		if( isOwnerOf(thisRoom, User) ){
+			classes += 'owner ';
+		} else if( isModOf(thisRoom, User) ){
+			classes += 'mod ';
+		}
+		if( isInGroup(thisRoom, User) ){
+			classes += 'group-member ';
+		}
+		msgHtml.addClass(classes);
+		msgHtml.find('.name').text(User.props.vanity || User.props.name)
+			.attr('data-content', (User.props.vanity || User.props.name))
+			.attr('title', User.props.name);
+		if( msgHtml.find('.name').length > 0 ){
+			if( Array.isArray(User.props.color) ){
+				User.props.color.forEach( (hex, i) => {
+					msgHtml.find('.name').get(0).style.setProperty('--color'+(i+1), '#'+User.props.color[i])
+				})
+			}
+		}
+		if( User.props.fade ){
+			if( User.props.fade == 1 ){
+				msgHtml.find('.name').addClass('vertical-fade');
+			} else if( User.props.fade == 2 ){
+				msgHtml.find('.name').addClass('horizontal-fade');
+			} else if( User.props.fade == 3 ){
+				msgHtml.find('.name').addClass('radial-fade')
+			}
+		}
+		if( User.props.color.length > 1 ){
+			let numColorClass = '-color';
+			if( User.props.color.length == 2 ){
+				numColorClass = 'two'+numColorClass;
+			} else {
+				numColorClass = 'three'+numColorClass;
+			}
+			msgHtml.find('.name').addClass(numColorClass);
+		}
 	}
 
 	/**
@@ -875,7 +896,10 @@ var chatModule = (function () {
 	 * @param {string} msg - The message for the chat
 	 * @returns Returns the match or null
 	 */
-	function matchPing(msg, triggers=chatSettings.triggers, caseSensitive=chatSettings.case, exactMatch=chatSettings.exact) {
+	function matchPing(msg, triggers = chatSettings.triggers, caseSensitive = chatSettings.case, exactMatch = chatSettings.exact) {
+		if (triggers.length === 0){
+			return
+		}
 		let result = null
 		let pingNames = triggers.split(',')
 		let regexParam = (caseSensitive ? "m" : 'im')
@@ -888,7 +912,7 @@ var chatModule = (function () {
 			let urlRegex = new RegExp(`href=".*?${trigger}.*?"`, '')
 			let testRegex = new RegExp(regexPattern, regexParam)
 			/* Check if search term is not in a link as well */
-			if (!urlRegex.test(msg)&& testRegex.test(msg)) {
+			if (!urlRegex.test(msg) && testRegex.test(msg)) {
 				result = testRegex
 				break
 			}
@@ -902,11 +926,10 @@ var chatModule = (function () {
 	 * @param {regex} testRegex - Regular expression to use to match the term.
 	 * @returns Modified message
 	 */
-	function highlightPing(msg, testRegex, alert=false) {
+	function highlightPing(msg, testRegex, alert = false) {
 		if (alert) {
-			msg = msg.replace(testRegex,  `<span class="alert-ping">${msg.match(testRegex)}</span>`)
-		}
-		else {
+			msg = msg.replace(testRegex, `<span class="alert-ping">${msg.match(testRegex)}</span>`)
+		} else {
 			let styleText = `color: ${chatSettings.color}; background: ${chatSettings.highlight};`
 
 			if (chatSettings.bold === true) {
@@ -915,7 +938,7 @@ var chatModule = (function () {
 			if (chatSettings.italics === true) {
 				styleText += ' font-style:italic;'
 			}
-			msg = msg.replace(testRegex,  `<span style="${styleText}">${msg.match(testRegex)}</span>`)
+			msg = msg.replace(testRegex, `<span style="${styleText}">${msg.match(testRegex)}</span>`)
 		}
 		return msg
 	}
@@ -924,14 +947,13 @@ var chatModule = (function () {
 	 * Adds a highlight to the room's tab
 	 * @param {object} thisRoom - Room where the ping happened.
 	 */
-	function highlightRoom(thisRoom, alert=false) {
+	function highlightRoom(thisRoom, alert = false) {
 		if (!thisRoom.isActive()) {
 
 			if (alert) {
 				thisRoom.$tabs[0].css('background-color', '#F00')
 				thisRoom.$tabs[0].css('color', '#FFF')
-			}
-			else {
+			} else {
 				thisRoom.$tabs[0].css('background-color', chatSettings.highlight)
 				thisRoom.$tabs[0].css('color', chatSettings.color)
 			}
@@ -1141,7 +1163,6 @@ var chatModule = (function () {
 			chatSettings = {
 				'colorText': false,
 				'msgMargin': false,
-				'combineMsg': false,
 
 				'enablePings': true,
 				'pingNotify': false,
@@ -1169,7 +1190,7 @@ var chatModule = (function () {
 
 		$('#chatColorEnable').prop("checked", chatSettings.colorText)
 		$('#chatMsgMarginEnable').prop("checked", chatSettings.msgMargin)
-		$('#combineMsgEnable').prop("checked", chatSettings.combineMsg) 
+		$('#combineMsgEnable').prop("checked", chatSettings.combineMsg)
 
 		$('#notifyPingEnable').prop("checked", chatSettings.enablePings)
 		$('#notifyNotificationEnable').prop("checked", chatSettings.pingNotify)
@@ -1367,18 +1388,16 @@ var pmModule = (function () {
 	 * @param {object } data Data containing the PM.
 	 */
 	function handleIncomingPm(data, pm) {
-		let lastMsg = pm.$msgs[0].lastChild
-		let styleString = 'style="'
-
-		if (lastMsg.lastChild.data.charAt(1) === '/') {
-			lastMsg.lastChild.data = ` ${parseCommand(data)}`
+		let pmMsgHtml = null
+		for(let i = pm.$msgs[0].children.length -1; i > -1; i--) {
+			let msgHtml = pm.$msgs[0].children[i].innerHTML
+			if (msgHtml.match(pm.to.props.name, 'i')){
+				pmMsgHtml = pm.$msgs[0].children[i]
+				break
+			}
 		}
-
-		if(pmSettings.colorText) {
-			styleString += `color: #${pm.to.props.color.toString()};`
-		}
-		styleString += `opacity: 1.0;"`
-		lastMsg.innerHTML = `${lastMsg.children[0].outerHTML}<span ${styleString}>${lastMsg.children[1].outerHTML}${lastMsg.lastChild.data }</span>`
+		if (!pmMsgHtml) {return}
+		buildPmMessage(pmMsgHtml, data, pm.to.props.color.toString())
 	}
 
 	/**
@@ -1387,7 +1406,6 @@ var pmModule = (function () {
 	 */
 	function handleOutgoingPm(data, pm) {
 		let pmMsgHtml = null
-		let styleString = ''
 		for(let i = pm.$msgs[0].children.length -1; i > -1; i--) {
 			let msgHtml = pm.$msgs[0].children[i].innerHTML
 			if (msgHtml.match(pm.from.props.name, 'i')){
@@ -1395,24 +1413,8 @@ var pmModule = (function () {
 				break
 			}
 		}
-		
 		if (!pmMsgHtml) {return}
-		let timestampHtml = pmMsgHtml.children[0].outerHTML
-		let usernameHtml =  pmMsgHtml.children[1].outerHTML
-		$(pmMsgHtml.children[0]).remove()
-		$(pmMsgHtml.children[0]).remove()
-		let msg = pmMsgHtml.innerHTML
-		if (msg.charAt(1) === '/') {
-			msg = ` ${parseCommand(data)}`
-		}
-		if(pmSettings.colorText) {
-			styleString += `color: #${pm.from.props.color.toString()};`
-		}
-		styleString += `opacity: 1.0;`
-		if (styleString) {
-			styleString = `style"${styleString}"`
-		}
-		pmMsgHtml.innerHTML = `${timestampHtml} ${usernameHtml} <span ${styleString}>${msg}</span>`
+		buildPmMessage(pmMsgHtml, data, pm.from.props.color.toString())
 		if (awayMessages[data.from] && !awayMessages[data.from].usedPmAwayMsg) {
 			awayMessages[data.from].enabled = false
 			$('#pmNamesDroplist option').filter(function () {
@@ -1420,6 +1422,26 @@ var pmModule = (function () {
 			}).css("background-color", "")
 			awayMessages[data.from].usedPmAwayMsg = false
 		}
+	}
+
+	function buildPmMessage(pmMsgHtml, data, colorString) {
+		let styleString = ''
+		let timestampHtml = pmMsgHtml.children[0].outerHTML
+		let usernameHtml =  pmMsgHtml.children[1].outerHTML
+		$(pmMsgHtml.children[0]).remove()
+		$(pmMsgHtml.children[0]).remove()
+		let msg = pmMsgHtml.innerHTML.trim()
+		if (msg.charAt(0) === '/') {
+			msg = ` ${parseCommand(data)}`
+		}
+		if(pmSettings.colorText) {
+			styleString += `color: #${colorString};`
+		}
+		styleString += `opacity: 1.0;`
+		if (styleString) {
+			styleString = `style="${styleString}"`
+		}
+		pmMsgHtml.innerHTML = `${timestampHtml} ${usernameHtml} <span ${styleString}>${msg}</span>`
 	}
 
 	function parseCommand(data) {
@@ -2223,7 +2245,7 @@ var rphToolsModule = (function () {
 		'.rpht-checkbox{height:16px;width:16px}' +
 		'input.rpht-short-input{width:200px}' +
 		'input.rpht-long-input{max-width:100%}' +
-		'.msg-padding{padding-top: 4px; padding-bottom: 4px}'+
+		'.msg-padding{padding-top: 2px; padding-bottom: 2px}'+
 		'.alert-ping{background:#F00; color: #FFF; font-weight: bold;}' +
 		'.switch{position:relative;right:12px;width:50px;height:24px;float:right}' +
 		'.switch input{opacity:0;width:0;height:0}' +

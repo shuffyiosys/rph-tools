@@ -19,7 +19,7 @@ var rphToolsModule = (function () {
 		'.rpht-checkbox{height:16px;width:16px}' +
 		'input.rpht-short-input{width:200px}' +
 		'input.rpht-long-input{max-width:100%}' +
-		'.msg-padding{padding-top: 4px; padding-bottom: 4px}'+
+		'.msg-padding{padding-top: 2px; padding-bottom: 2px}'+
 		'.alert-ping{background:#F00; color: #FFF; font-weight: bold;}' +
 		'.switch{position:relative;right:12px;width:50px;height:24px;float:right}' +
 		'.switch input{opacity:0;width:0;height:0}' +
