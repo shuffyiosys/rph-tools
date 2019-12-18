@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.2.1
+// @version    4.2.2
 // @description Adds extended settings to RPH
 // @match      https://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.2.1'
+const VERSION_STRING = '4.2.2'
 
 const SETTINGS_NAME = "rph_tools_settings"
 /**
@@ -256,10 +256,6 @@ String.prototype.hashCode = function () {
 	return hash
 }
 
-
-var chatHistory = {}
-var chatHistIdx = 0
-
 /**
  * Modified handler for keyup events from the chat textbox
  * @param {object} ev - Event
@@ -267,113 +263,53 @@ var chatHistIdx = 0
  * @param {oject} Room - Room the textbox is attached to
  */
 function intputChatText(ev, User, Room) {
-	var inputTextBox = null
-	var roomTextboxName = ""
-	Room.$tabs.forEach(function (roomTab) {
-		var classesLen = roomTab[0].classList.length
-		if (roomTab[0].classList[classesLen - 1] === 'active') {
-			inputTextBox = $('textarea.' + User.props.id + '_' + makeSafeForCss(Room.props.name))
-			roomTextboxName = 'textarea.' + User.props.id + '_' + makeSafeForCss(Room.props.name)
-			if (!chatHistory[roomTextboxName]){
-				chatHistory[roomTextboxName] = {}
-			}
-		}
-	})
+	let inputTextarea = $(`textarea.${User.props.id}_${makeSafeForCss(Room.props.name)}.active`)
+	let message = inputTextarea.val().trim()
 
-	if (ev.keyCode === 13 && ev.ctrlKey === false && ev.shiftKey === false && inputTextBox.val() !== '' && inputTextBox.val().trim() !== '') {
-		var newMessage = inputTextBox.val()
-
-		if (newMessage.length > 4000) {
-			Room.appendMessage(
-				'<span class="first">&nbsp;</span>\n\
-			<span title="' + makeTimestamp(false, true) + '">Message too long</span>'
-			).addClass('sys')
-			return
-		}
-
-		chatHistory[roomTextboxName][0] = newMessage
-
-		if (newMessage[0] === '/' && newMessage.substring(0, 2) !== '//' && chatModule) {
-			chatModule.parseSlashCommand(inputTextBox, Room, User)
-		} else {
-			sendChatMessage(inputTextBox, Room, User)
-		}
+	if (message.length > 4000) {
+		Room.appendMessage(
+			`<span class="first">&nbsp;</span><span title="${makeTimestamp(null, true)}">Message too long</span>`
+		).addClass('sys')
+		return
+	} else if (message.length === 0) {
+		return
+	} else if (ev.keyCode !== 13 || ev.shiftKey === true || ev.ctrlKey === true) {
+		return
 	}
-	/* Up */
-	else if (ev.keyCode === 38 && 
-			 inputTextBox.prop("selectionStart") === 0 && 
-			 chatHistIdx === 0) 
-	{
-		chatHistory[roomTextboxName][1] = inputTextBox.val()
-		inputTextBox.val(chatHistory[roomTextboxName][0])
-		chatHistIdx = 1
-	}
-	/* Down */
-	else if (ev.keyCode === 40 && 
-			 (inputTextBox.prop("selectionStart") === inputTextBox.val().length) && 
-			 chatHistIdx === 1 ) 
-	{
-		chatHistory[roomTextboxName][0] = inputTextBox.val()
-		inputTextBox.val(chatHistory[roomTextboxName][1])
-		chatHistIdx = 0
-	}
-}
 
-function sendChatMessage(inputTextBox, Room, User) {
-	var newMessage = inputTextBox.val()
-	var thisTab = rph.tabs[User.props.id]
-	var newLength = newMessage.length
-	Room.sendMessage(newMessage, User.props.id)
-	inputTextBox.val('')
+	Room.sendMessage(message, User.props.id)
+	inputTextarea.val('')
 
-	if (newMessage.match(/\n/gi)) {
-		newLength = newLength + (newMessage.match(/\n/gi).length * 250)
+	let thisTab = rph.tabs[User.props.id]
+	let newLength = message.length
+	let curTime = Math.round(new Date().getTime() / 1000)
+
+	if (message.includes('\n')) {
+		newLength = newLength + (message.split('\n').length * 250)
 	}
-	
-	var curTime = Math.round(new Date().getTime() / 1000)
 	thisTab.bufferLength = (thisTab.bufferLength / (curTime - thisTab.lastTime + 1)) + ((newLength + thisTab.bufferLength) / 3) + 250
 	thisTab.lastTime = curTime
 	if (thisTab.bufferLength > 1750) {
 		thisTab.offenses += 1
-		if (thisTab.offenses > 2) {
-			Room.sendMessage('Flood kick', User.props.id)
-			chatSocket.disconnect()
-			return
-		} else {
-			Room.appendMessage(
-				'<span class="first">&nbsp;</span>\n\
-			<span title="' + makeTimestamp(false, true) + '">You are flooding. Be careful or you\'ll be kicked</span>'
-			).addClass('sys')
-			setTimeout(function () {
-				thisTab.offenses = 0
-			}, 15000)
-			return
-		}
+	}
+
+	if (thisTab.offenses > 2) {
+		Room.sendMessage('Flood kick', User.props.id)
+		chatSocket.disconnect()
+	} else if (thisTab.offenses === 2) {
+		Room.appendMessage(
+			'<span class="first">&nbsp;</span>\n\
+		<span title="' + makeTimestamp(false, true) + '">You are flooding. Be careful or you\'ll be kicked</span>'
+		).addClass('sys')
+		setTimeout(() => {
+			thisTab.offenses = 0
+		}, 15000)
 	}
 }/****
  * This module handles the chat functions of the script.
  ****/
 var chatModule = (function () {
-	var chatSettings = {
-		'colorText': true,
-		'msgMargin': false,
-
-		'enablePings': true,
-		'pingNotify': false,
-		'notifyTime': 6000,
-		'triggers': [],
-		'audioUrl': 'https://www.rphaven.com/sounds/boop.mp3',
-		'color': '#000',
-		'highlight': '#FFA',
-		'bold': false,
-		'italics': false,
-		'exact': false,
-		'case': false,
-
-		'joinFavorites': false,
-		'roomSession': [],
-		'favRooms': [],
-	}
+	var chatSettings = {}
 
 	var localStorageName = "chatSettings"
 
@@ -401,8 +337,8 @@ var chatModule = (function () {
 			'		<label class="rpht-label descript-label">Use the user\'s color to stylize their text</label>' +
 			'	</div>' +
 			'	<div class="rpht-option-section option-section-bottom">' +
-			'		<label class="rpht-label checkbox-label" for="chatMsgMarginEnable">Add padding between messages</label>' +
-			'		<label class="switch"><input type="checkbox" id="chatMsgMarginEnable"><span class="slider round"></span></label>' +
+			'		<label class="rpht-label checkbox-label" for="chatmsgPaddingEnable">Add padding between messages</label>' +
+			'		<label class="switch"><input type="checkbox" id="chatmsgPaddingEnable"><span class="slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Adds some padding at the end of each message for readibility</label>' +
 			'	</div>' +
 			'</div>' +
@@ -418,15 +354,20 @@ var chatModule = (function () {
 			'		<label class="switch"><input type="checkbox" id="notifyNotificationEnable"><span class="slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Pops up a notification when you get pinged</label>' +
 			'	</div>' +
-			'<div class="rpht-option-section">' +
-			'<label style="font-weight: bold; width:522px; padding: 0px;">Desktop notification duration</label>' +
-			'<select style="width: 80px;" id="pingNotifyTimeoutSelect">' +
-			'	<option value="3000">Short</option>' +
-			'	<option value="6000" selected>Normal</option>' +
-			'	<option value="10000">Long</option>' +
-			'</select>' +
-			'<label class="rpht-label descript-label">How long the notification will stay up</label>' +
-			'</div>' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="selfPingEnable">Can ping yourself</label>' +
+			'		<label class="switch"><input type="checkbox" id="selfPingEnable"><span class="slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Pings will trigger on your own messages</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section">' +
+			'		<label style="font-weight: bold; width:522px; padding: 0px;">Desktop notification duration</label>' +
+			'		<select style="width: 80px;" id="pingNotifyTimeoutSelect">' +
+			'			<option value="3000">Short</option>' +
+			'			<option value="6000" selected>Normal</option>' +
+			'			<option value="10000">Long</option>' +
+			'		</select>' +
+			'		<label class="rpht-label descript-label">How long the notification will stay up</label>' +
+			'	</div>' +
 			'	<div class="rpht-option-section">' +
 			'		<p>Names to be pinged (comma separated)</p>' +
 			'		<textarea id="pingNames" rows="8" class="rpht_textarea"> </textarea>' +
@@ -489,10 +430,11 @@ var chatModule = (function () {
 			saveSettings()
 		})
 
-		$('#chatMsgMarginEnable').change(() => {
-			chatSettings.msgMargin = getCheckBox('#chatMsgMarginEnable')
+		$('#chatmsgPaddingEnable').change(() => {
+			chatSettings.msgPadding = getCheckBox('#chatmsgPaddingEnable')
 			saveSettings()
 		})
+
 		$('#combineMsgEnable').change(() => {
 			chatSettings.combineMsg = getCheckBox('#combineMsgEnable')
 			saveSettings()
@@ -506,6 +448,11 @@ var chatModule = (function () {
 
 		$('#notifyNotificationEnable').change(() => {
 			chatSettings.pingNotify = getCheckBox('#notifyNotificationEnable')
+			saveSettings()
+		})
+
+		$('#selfPingEnable').change(() => {
+			chatSettings.selfPing = getCheckBox('#selfPingEnable')
 			saveSettings()
 		})
 
@@ -642,6 +589,10 @@ var chatModule = (function () {
 		var sessionModule = rphToolsModule.getModule('Session Module')
 		let modUserIdx = -1
 
+		thisRoom.$tabs[0].click(() => {
+			thisRoom.$tabs[0].removeAttr('style')
+		})
+
 		for (var idx = 0; idx < account.userids.length && !modUserIdx !== -1; idx++) {
 			if (thisRoom.props.mods.indexOf(account.userids[idx]) > -1 ||
 				thisRoom.props.owners.indexOf(account.userids[idx]) > -1) {
@@ -649,9 +600,9 @@ var chatModule = (function () {
 			}
 		}
 
-
 		chatSocket._callbacks.$msg.pop()
 		chatSocket.on('msg', (data) => {
+			console.log(data)
 			for (const msgData of data) {
 				getUserById(msgData.userid, function(User){
 					postMessage(getRoom(msgData.room), User, msgData, (modUserIdx !== -1))
@@ -682,14 +633,15 @@ var chatModule = (function () {
 	function postMessage(thisRoom, User, data, isMod) {
 		let timestamp = makeTimestamp(data.time);
 		let msg = parseMsg(data.msg);
+		let selfMsg = account.userids.includes(data.userid)
 
 		/* Check to see if there's a RNG marker, then process it if it's there */
 		if (msg.indexOf('\u200b') > -1) {
 			msg = ` ${parseMsg(parseRng(data))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
 		}
 
-		/* Add pings */
-		if (chatSettings.enablePings) {
+		/* Add pings if it's enabled AND ((self pinging is enabled AND the message is owned by self) OR it's another's) */
+		if (chatSettings.enablePings && ((chatSettings.selfPing && selfMsg === true) || selfMsg === false)) {
 			let testRegex = null
 			testRegex = matchPing(msg)
 			if (testRegex) {
@@ -697,9 +649,8 @@ var chatModule = (function () {
 				highlightRoom(thisRoom)
 				pingSound.play()
 
-				/* Bring up the notification if enabled, but don't do it if the user
-					pinged themselves*/
-				if (chatSettings.pingNotify && account.userids.includes(data.userid) === false) {
+				/* Bring up the notification if enabled, but don't do it if the user pinged themselves*/
+				if (chatSettings.pingNotify && selfMsg === false) {
 					let notification = new Notification(`${User.props.name} pinged you in ${thisRoom.props.name}`)
 					setTimeout(() => {
 						notification.close()
@@ -708,8 +659,12 @@ var chatModule = (function () {
 			}
 		}
 
+		if(thisRoom.isActive() === false) {
+			thisRoom.$tabs[0].css('border-bottom', '4px solid #ADF')
+		}
+
 		/* Process other's messages for issues if a mod */
-		if (isMod && moddingModule && account.userids.includes(data.userid) === false) {
+		if (isMod && moddingModule && selfMsg === false) {
 			let alertRegex = null
 			let alertWords = moddingModule.getAlertWords()
 			alertRegex = matchPing(msg, alertWords, false, true)
@@ -724,7 +679,6 @@ var chatModule = (function () {
 		let classes = ''
 		let msgHtml = ''
 		let colorStyle = (chatSettings.colorText) ? `style="color: #${User.props.color.toString()}"` : ``
-
 		if (msg.charAt(0) === '/' && msg.slice(1, 3) === 'me') {
 			classes += 'action ';
 			msg = msg.slice(3);
@@ -741,7 +695,7 @@ var chatModule = (function () {
 		}
 		msgHtml.find('br:gt(10)').remove();
 
-		if (chatSettings.msgMargin) {
+		if (chatSettings.msgPadding) {
 			classes += 'msg-padding '
 		}
 		if( User.friendOf ){
@@ -949,7 +903,6 @@ var chatModule = (function () {
 	 */
 	function highlightRoom(thisRoom, alert = false) {
 		if (!thisRoom.isActive()) {
-
 			if (alert) {
 				thisRoom.$tabs[0].css('background-color', '#F00')
 				thisRoom.$tabs[0].css('color', '#FFF')
@@ -957,19 +910,6 @@ var chatModule = (function () {
 				thisRoom.$tabs[0].css('background-color', chatSettings.highlight)
 				thisRoom.$tabs[0].css('color', chatSettings.color)
 			}
-
-			thisRoom.$tabs[0].click(() => {
-				thisRoom.$tabs[0].css('background-color', '#333')
-				thisRoom.$tabs[0].css('color', '#6F9FB9')
-
-				thisRoom.$tabs[0].hover(() => {
-					thisRoom.$tabs[0].css('background-color', '#6F9FB9')
-					thisRoom.$tabs[0].css('color', '#333')
-				}, () => {
-					thisRoom.$tabs[0].css('background-color', '#333')
-					thisRoom.$tabs[0].css('color', '#6F9FB9')
-				})
-			})
 		}
 	}
 
@@ -1157,29 +1097,29 @@ var chatModule = (function () {
 	function loadSettings() {
 		let storedSettings = settingsModule.getSettings(localStorageName)
 		let sessionSettings = settingsModule.getSettings('sessionSettings')
+		chatSettings = {
+			'colorText': true,
+			'msgPadding': false,
+	
+			'enablePings': true,
+			'pingNotify': false,
+			'selfPing': true,
+			'notifyTime': 6000,
+			'triggers': [],
+			'audioUrl': 'https://www.rphaven.com/sounds/boop.mp3',
+			'color': '#000',
+			'highlight': '#FFA',
+			'bold': false,
+			'italics': false,
+			'exact': false,
+			'case': false,
+	
+			'joinFavorites': false,
+			'roomSession': [],
+			'favRooms': [],
+		}
 		if (storedSettings) {
 			chatSettings = Object.assign(chatSettings, storedSettings)
-		} else {
-			chatSettings = {
-				'colorText': false,
-				'msgMargin': false,
-
-				'enablePings': true,
-				'pingNotify': false,
-				'notifyTime': 6000,
-				'triggers': [],
-				'audioUrl': 'https://www.rphaven.com/sounds/boop.mp3',
-				'color': '#000',
-				'highlight': '#FFA',
-				'bold': false,
-				'italics': false,
-				'exact': false,
-				'case': false,
-
-				'joinFavorites': false,
-				'roomSession': [],
-				'favRooms': [],
-			}
 		}
 
 		if (sessionSettings) {
@@ -1189,7 +1129,7 @@ var chatModule = (function () {
 		}
 
 		$('#chatColorEnable').prop("checked", chatSettings.colorText)
-		$('#chatMsgMarginEnable').prop("checked", chatSettings.msgMargin)
+		$('#chatmsgPaddingEnable').prop("checked", chatSettings.msgPadding)
 		$('#combineMsgEnable').prop("checked", chatSettings.combineMsg)
 
 		$('#notifyPingEnable').prop("checked", chatSettings.enablePings)
@@ -1234,11 +1174,7 @@ var chatModule = (function () {
  */
 var pmModule = (function () {
 	var pmSettings = {
-		'colorText': false,
-		'notify': false,
-		'notifyTime': 6000,
-		'audioUrl': 'https://www.rphaven.com/sounds/imsound.mp3',
-		'pmMute': false,
+
 	}
 
 	var localStorageName = "pmSettings"
@@ -1397,6 +1333,13 @@ var pmModule = (function () {
 			}
 		}
 		if (!pmMsgHtml) {return}
+
+		if (pmSettings.notify) {
+			let notification = new Notification(`${pm.to.props.name} sent a PM to you at ${pm.from.props.name}`)
+			setTimeout(() => {
+				notification.close()
+			}, pmSettings.notifyTime)
+		}
 		buildPmMessage(pmMsgHtml, data, pm.to.props.color.toString())
 	}
 
@@ -1448,6 +1391,12 @@ var pmModule = (function () {
 		var msg = parseMsg(data.msg);
 		var cmdArgs = msg.split(/ (.+)/)
 		switch(cmdArgs[0]) {
+			case '/coinflip':
+				var rngModule = rphToolsModule.getModule('RNG Module')
+				if (rngModule) {
+					msg = rngModule.genCoinFlip().substring(4)
+				}
+				break
 			case '/roll':
 				let die = 1
 				let sides = 20
@@ -1472,6 +1421,10 @@ var pmModule = (function () {
 					msg = `rolled ${die}d${sides}: `
 					msg += rolls.join(' ') + ' (total ' + total + ')'
 				}
+				break
+			case '/rps':
+				const results = ['Rock!', 'Paper!', 'Scissors!']
+				msg = 'plays Rock, Paper, Scissors and chooses... ' + results[Math.ceil(Math.random() * 3) % 3].toString()
 				break
 		}
 		return msg
@@ -1526,18 +1479,17 @@ var pmModule = (function () {
 
 	function loadSettings() {
 		var storedSettings = settingsModule.getSettings(localStorageName)
+		pmSettings = {
+			'colorText': false,
+			'notify': false,
+			'notifyTime': 6000,
+			'audioUrl': 'https://www.rphaven.com/sounds/imsound.mp3',
+			'pmMute': false,
+		}
+
 		if (storedSettings) {
 			pmSettings = Object.assign(pmSettings, storedSettings)
 		} 
-		else {
-			pmSettings = {
-				'colorText': false,
-				'notify': false,
-				'notifyTime': 6000,
-				'audioUrl': 'https://www.rphaven.com/sounds/imsound.mp3',
-				'pmMute': false,
-			}
-		}
 
 		$('#pmColorEnable').prop("checked", pmSettings.colorText)
 		$('#pmEnhnaceContrastEnable').prop("checked", pmSettings.enhanceContrast)
@@ -2082,6 +2034,9 @@ var settingsModule = (function () {
 	 * Initializes the GUI components of the module.
 	 */
 	function init() {
+		if (!localStorage.getItem(SETTINGS_NAME)){
+			localStorage.setItem(SETTINGS_NAME, JSON.stringify({}))
+		}
 		$('#importButton').click(function () {
 			importSettingsHanlder()
 		})
@@ -2232,23 +2187,23 @@ var rphToolsModule = (function () {
 
 	var rpht_css =
 		'<style>' +
-		'#settings-dialog .inner > div > div.rpht-option-block{width:640px;border:#888 solid 1px;border-radius:10px;padding:12px;padding-top:16px;padding-bottom:16px;margin-bottom:16px}' +
-		'.rpht-option-section{border-bottom:#444 solid 1px;padding-bottom:12px;margin-bottom:12px}' +
-		'.option-section-bottom{border-bottom:none;margin-bottom:0}' +
-		'.rpht-label{padding-left: 0px;text-align:justify;display:inline-block;cursor:default}' +
-		'.checkbox-label{font-weight:700;width:542px;cursor:pointer}' +
-		'.descript-label{width:500px;margin-top:8px}' +
-		'.text-input-label{width:400px}' +
+		'#settings-dialog .inner > div > div.rpht-option-block{width:640px;border:#888 solid 1px;border-radius:10px;padding:12px;padding-top:16px;padding-bottom:16px;margin-bottom:16px;}' +
+		'.rpht-option-section{border-bottom:#444 solid 1px;padding-bottom:12px;margin-bottom:12px;}' +
+		'.option-section-bottom{border-bottom:none;margin-bottom:0;}' +
+		'.rpht-label{padding-left: 0px;text-align:justify;display:inline-block;cursor:default;}' +
+		'.checkbox-label{font-weight:700;width:542px;cursor:pointer;}' +
+		'.descript-label{width:500px;margin-top:8px;}' +
+		'.text-input-label{width:400px;}' +
 		'.split-input-label {width: 300px;}' +
-		'.rpht_textarea{border:1px solid #000;width:611px;padding:2px;background:#e6e3df}' +
-		'.rpht_chat_tab{position:absolute;height:54px;overflow-x:auto;overflow-y:hidden;white-space:nowrap}' +
-		'.rpht-checkbox{height:16px;width:16px}' +
-		'input.rpht-short-input{width:200px}' +
-		'input.rpht-long-input{max-width:100%}' +
-		'.msg-padding{padding-top: 2px; padding-bottom: 2px}'+
+		'.rpht_textarea{border:1px solid #000;width:611px;padding:2px;background:#e6e3df;}' +
+		'.rpht_chat_tab{position:absolute;height:54px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;}' +
+		'.rpht-checkbox{height:16px;width:16px;}' +
+		'input.rpht-short-input{width:200px;}' +
+		'input.rpht-long-input{max-width:100%;}' +
+		'.msg-padding{padding-top: 3px; padding-bottom: 3px;}'+
 		'.alert-ping{background:#F00; color: #FFF; font-weight: bold;}' +
-		'.switch{position:relative;right:12px;width:50px;height:24px;float:right}' +
-		'.switch input{opacity:0;width:0;height:0}' +
+		'.switch{position:relative;right:12px;width:50px;height:24px;float:right;}' +
+		'.switch input{opacity:0;width:0;height:0;}' +
 		'.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;-webkit-transition:.4s;transition:.4s}' +
 		'.slider:before{position:absolute;content:"";height:16px;width:16px;left:4px;bottom:4px;background-color:#fff;-webkit-transition:.4s;transition:.4s}' +
 		'input:checked+.slider{background-color:#2196f3}' +

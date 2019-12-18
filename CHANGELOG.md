@@ -1,3 +1,12 @@
+RPH Tools (4.2.2)
+---------------
+* Added a tell on the chat tab that isn't active and new messages showed up
+* Increased padding for chat messages
+* Added an option for pings to not trigger if a person would've triggered their own pings
+* Added /coinflip and /rps as PM command options
+* Actually added desktop notifications for PMs
+* Various bug fixes
+
 RPH Tools (4.2.1)
 ---------------
 * Changed how chat message processing works
