@@ -3,11 +3,7 @@
  */
 var pmModule = (function () {
 	var pmSettings = {
-		'colorText': false,
-		'notify': false,
-		'notifyTime': 6000,
-		'audioUrl': 'https://www.rphaven.com/sounds/imsound.mp3',
-		'pmMute': false,
+
 	}
 
 	var localStorageName = "pmSettings"
@@ -166,6 +162,13 @@ var pmModule = (function () {
 			}
 		}
 		if (!pmMsgHtml) {return}
+
+		if (pmSettings.notify) {
+			let notification = new Notification(`${pm.to.props.name} sent a PM to you at ${pm.from.props.name}`)
+			setTimeout(() => {
+				notification.close()
+			}, pmSettings.notifyTime)
+		}
 		buildPmMessage(pmMsgHtml, data, pm.to.props.color.toString())
 	}
 
@@ -217,6 +220,12 @@ var pmModule = (function () {
 		var msg = parseMsg(data.msg);
 		var cmdArgs = msg.split(/ (.+)/)
 		switch(cmdArgs[0]) {
+			case '/coinflip':
+				var rngModule = rphToolsModule.getModule('RNG Module')
+				if (rngModule) {
+					msg = rngModule.genCoinFlip().substring(4)
+				}
+				break
 			case '/roll':
 				let die = 1
 				let sides = 20
@@ -241,6 +250,10 @@ var pmModule = (function () {
 					msg = `rolled ${die}d${sides}: `
 					msg += rolls.join(' ') + ' (total ' + total + ')'
 				}
+				break
+			case '/rps':
+				const results = ['Rock!', 'Paper!', 'Scissors!']
+				msg = 'plays Rock, Paper, Scissors and chooses... ' + results[Math.ceil(Math.random() * 3) % 3].toString()
 				break
 		}
 		return msg
@@ -295,18 +308,17 @@ var pmModule = (function () {
 
 	function loadSettings() {
 		var storedSettings = settingsModule.getSettings(localStorageName)
+		pmSettings = {
+			'colorText': false,
+			'notify': false,
+			'notifyTime': 6000,
+			'audioUrl': 'https://www.rphaven.com/sounds/imsound.mp3',
+			'pmMute': false,
+		}
+
 		if (storedSettings) {
 			pmSettings = Object.assign(pmSettings, storedSettings)
 		} 
-		else {
-			pmSettings = {
-				'colorText': false,
-				'notify': false,
-				'notifyTime': 6000,
-				'audioUrl': 'https://www.rphaven.com/sounds/imsound.mp3',
-				'pmMute': false,
-			}
-		}
 
 		$('#pmColorEnable').prop("checked", pmSettings.colorText)
 		$('#pmEnhnaceContrastEnable').prop("checked", pmSettings.enhanceContrast)

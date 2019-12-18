@@ -2,26 +2,7 @@
  * This module handles the chat functions of the script.
  ****/
 var chatModule = (function () {
-	var chatSettings = {
-		'colorText': true,
-		'msgMargin': false,
-
-		'enablePings': true,
-		'pingNotify': false,
-		'notifyTime': 6000,
-		'triggers': [],
-		'audioUrl': 'https://www.rphaven.com/sounds/boop.mp3',
-		'color': '#000',
-		'highlight': '#FFA',
-		'bold': false,
-		'italics': false,
-		'exact': false,
-		'case': false,
-
-		'joinFavorites': false,
-		'roomSession': [],
-		'favRooms': [],
-	}
+	var chatSettings = {}
 
 	var localStorageName = "chatSettings"
 
@@ -49,8 +30,8 @@ var chatModule = (function () {
 			'		<label class="rpht-label descript-label">Use the user\'s color to stylize their text</label>' +
 			'	</div>' +
 			'	<div class="rpht-option-section option-section-bottom">' +
-			'		<label class="rpht-label checkbox-label" for="chatMsgMarginEnable">Add padding between messages</label>' +
-			'		<label class="switch"><input type="checkbox" id="chatMsgMarginEnable"><span class="slider round"></span></label>' +
+			'		<label class="rpht-label checkbox-label" for="chatmsgPaddingEnable">Add padding between messages</label>' +
+			'		<label class="switch"><input type="checkbox" id="chatmsgPaddingEnable"><span class="slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Adds some padding at the end of each message for readibility</label>' +
 			'	</div>' +
 			'</div>' +
@@ -66,15 +47,20 @@ var chatModule = (function () {
 			'		<label class="switch"><input type="checkbox" id="notifyNotificationEnable"><span class="slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Pops up a notification when you get pinged</label>' +
 			'	</div>' +
-			'<div class="rpht-option-section">' +
-			'<label style="font-weight: bold; width:522px; padding: 0px;">Desktop notification duration</label>' +
-			'<select style="width: 80px;" id="pingNotifyTimeoutSelect">' +
-			'	<option value="3000">Short</option>' +
-			'	<option value="6000" selected>Normal</option>' +
-			'	<option value="10000">Long</option>' +
-			'</select>' +
-			'<label class="rpht-label descript-label">How long the notification will stay up</label>' +
-			'</div>' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="selfPingEnable">Can ping yourself</label>' +
+			'		<label class="switch"><input type="checkbox" id="selfPingEnable"><span class="slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Pings will trigger on your own messages</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section">' +
+			'		<label style="font-weight: bold; width:522px; padding: 0px;">Desktop notification duration</label>' +
+			'		<select style="width: 80px;" id="pingNotifyTimeoutSelect">' +
+			'			<option value="3000">Short</option>' +
+			'			<option value="6000" selected>Normal</option>' +
+			'			<option value="10000">Long</option>' +
+			'		</select>' +
+			'		<label class="rpht-label descript-label">How long the notification will stay up</label>' +
+			'	</div>' +
 			'	<div class="rpht-option-section">' +
 			'		<p>Names to be pinged (comma separated)</p>' +
 			'		<textarea id="pingNames" rows="8" class="rpht_textarea"> </textarea>' +
@@ -137,10 +123,11 @@ var chatModule = (function () {
 			saveSettings()
 		})
 
-		$('#chatMsgMarginEnable').change(() => {
-			chatSettings.msgMargin = getCheckBox('#chatMsgMarginEnable')
+		$('#chatmsgPaddingEnable').change(() => {
+			chatSettings.msgPadding = getCheckBox('#chatmsgPaddingEnable')
 			saveSettings()
 		})
+
 		$('#combineMsgEnable').change(() => {
 			chatSettings.combineMsg = getCheckBox('#combineMsgEnable')
 			saveSettings()
@@ -154,6 +141,11 @@ var chatModule = (function () {
 
 		$('#notifyNotificationEnable').change(() => {
 			chatSettings.pingNotify = getCheckBox('#notifyNotificationEnable')
+			saveSettings()
+		})
+
+		$('#selfPingEnable').change(() => {
+			chatSettings.selfPing = getCheckBox('#selfPingEnable')
 			saveSettings()
 		})
 
@@ -290,6 +282,10 @@ var chatModule = (function () {
 		var sessionModule = rphToolsModule.getModule('Session Module')
 		let modUserIdx = -1
 
+		thisRoom.$tabs[0].click(() => {
+			thisRoom.$tabs[0].removeAttr('style')
+		})
+
 		for (var idx = 0; idx < account.userids.length && !modUserIdx !== -1; idx++) {
 			if (thisRoom.props.mods.indexOf(account.userids[idx]) > -1 ||
 				thisRoom.props.owners.indexOf(account.userids[idx]) > -1) {
@@ -297,9 +293,9 @@ var chatModule = (function () {
 			}
 		}
 
-
 		chatSocket._callbacks.$msg.pop()
 		chatSocket.on('msg', (data) => {
+			console.log(data)
 			for (const msgData of data) {
 				getUserById(msgData.userid, function(User){
 					postMessage(getRoom(msgData.room), User, msgData, (modUserIdx !== -1))
@@ -330,14 +326,15 @@ var chatModule = (function () {
 	function postMessage(thisRoom, User, data, isMod) {
 		let timestamp = makeTimestamp(data.time);
 		let msg = parseMsg(data.msg);
+		let selfMsg = account.userids.includes(data.userid)
 
 		/* Check to see if there's a RNG marker, then process it if it's there */
 		if (msg.indexOf('\u200b') > -1) {
 			msg = ` ${parseMsg(parseRng(data))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
 		}
 
-		/* Add pings */
-		if (chatSettings.enablePings) {
+		/* Add pings if it's enabled AND ((self pinging is enabled AND the message is owned by self) OR it's another's) */
+		if (chatSettings.enablePings && ((chatSettings.selfPing && selfMsg === true) || selfMsg === false)) {
 			let testRegex = null
 			testRegex = matchPing(msg)
 			if (testRegex) {
@@ -345,9 +342,8 @@ var chatModule = (function () {
 				highlightRoom(thisRoom)
 				pingSound.play()
 
-				/* Bring up the notification if enabled, but don't do it if the user
-					pinged themselves*/
-				if (chatSettings.pingNotify && account.userids.includes(data.userid) === false) {
+				/* Bring up the notification if enabled, but don't do it if the user pinged themselves*/
+				if (chatSettings.pingNotify && selfMsg === false) {
 					let notification = new Notification(`${User.props.name} pinged you in ${thisRoom.props.name}`)
 					setTimeout(() => {
 						notification.close()
@@ -356,8 +352,12 @@ var chatModule = (function () {
 			}
 		}
 
+		if(thisRoom.isActive() === false) {
+			thisRoom.$tabs[0].css('border-bottom', '4px solid #ADF')
+		}
+
 		/* Process other's messages for issues if a mod */
-		if (isMod && moddingModule && account.userids.includes(data.userid) === false) {
+		if (isMod && moddingModule && selfMsg === false) {
 			let alertRegex = null
 			let alertWords = moddingModule.getAlertWords()
 			alertRegex = matchPing(msg, alertWords, false, true)
@@ -372,7 +372,6 @@ var chatModule = (function () {
 		let classes = ''
 		let msgHtml = ''
 		let colorStyle = (chatSettings.colorText) ? `style="color: #${User.props.color.toString()}"` : ``
-
 		if (msg.charAt(0) === '/' && msg.slice(1, 3) === 'me') {
 			classes += 'action ';
 			msg = msg.slice(3);
@@ -389,7 +388,7 @@ var chatModule = (function () {
 		}
 		msgHtml.find('br:gt(10)').remove();
 
-		if (chatSettings.msgMargin) {
+		if (chatSettings.msgPadding) {
 			classes += 'msg-padding '
 		}
 		if( User.friendOf ){
@@ -597,7 +596,6 @@ var chatModule = (function () {
 	 */
 	function highlightRoom(thisRoom, alert = false) {
 		if (!thisRoom.isActive()) {
-
 			if (alert) {
 				thisRoom.$tabs[0].css('background-color', '#F00')
 				thisRoom.$tabs[0].css('color', '#FFF')
@@ -605,19 +603,6 @@ var chatModule = (function () {
 				thisRoom.$tabs[0].css('background-color', chatSettings.highlight)
 				thisRoom.$tabs[0].css('color', chatSettings.color)
 			}
-
-			thisRoom.$tabs[0].click(() => {
-				thisRoom.$tabs[0].css('background-color', '#333')
-				thisRoom.$tabs[0].css('color', '#6F9FB9')
-
-				thisRoom.$tabs[0].hover(() => {
-					thisRoom.$tabs[0].css('background-color', '#6F9FB9')
-					thisRoom.$tabs[0].css('color', '#333')
-				}, () => {
-					thisRoom.$tabs[0].css('background-color', '#333')
-					thisRoom.$tabs[0].css('color', '#6F9FB9')
-				})
-			})
 		}
 	}
 
@@ -805,29 +790,29 @@ var chatModule = (function () {
 	function loadSettings() {
 		let storedSettings = settingsModule.getSettings(localStorageName)
 		let sessionSettings = settingsModule.getSettings('sessionSettings')
+		chatSettings = {
+			'colorText': true,
+			'msgPadding': false,
+	
+			'enablePings': true,
+			'pingNotify': false,
+			'selfPing': true,
+			'notifyTime': 6000,
+			'triggers': [],
+			'audioUrl': 'https://www.rphaven.com/sounds/boop.mp3',
+			'color': '#000',
+			'highlight': '#FFA',
+			'bold': false,
+			'italics': false,
+			'exact': false,
+			'case': false,
+	
+			'joinFavorites': false,
+			'roomSession': [],
+			'favRooms': [],
+		}
 		if (storedSettings) {
 			chatSettings = Object.assign(chatSettings, storedSettings)
-		} else {
-			chatSettings = {
-				'colorText': false,
-				'msgMargin': false,
-
-				'enablePings': true,
-				'pingNotify': false,
-				'notifyTime': 6000,
-				'triggers': [],
-				'audioUrl': 'https://www.rphaven.com/sounds/boop.mp3',
-				'color': '#000',
-				'highlight': '#FFA',
-				'bold': false,
-				'italics': false,
-				'exact': false,
-				'case': false,
-
-				'joinFavorites': false,
-				'roomSession': [],
-				'favRooms': [],
-			}
 		}
 
 		if (sessionSettings) {
@@ -837,7 +822,7 @@ var chatModule = (function () {
 		}
 
 		$('#chatColorEnable').prop("checked", chatSettings.colorText)
-		$('#chatMsgMarginEnable').prop("checked", chatSettings.msgMargin)
+		$('#chatmsgPaddingEnable').prop("checked", chatSettings.msgPadding)
 		$('#combineMsgEnable').prop("checked", chatSettings.combineMsg)
 
 		$('#notifyPingEnable').prop("checked", chatSettings.enablePings)

@@ -22,6 +22,9 @@ var settingsModule = (function () {
 	 * Initializes the GUI components of the module.
 	 */
 	function init() {
+		if (!localStorage.getItem(SETTINGS_NAME)){
+			localStorage.setItem(SETTINGS_NAME, JSON.stringify({}))
+		}
 		$('#importButton').click(function () {
 			importSettingsHanlder()
 		})

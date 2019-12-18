@@ -14,10 +14,6 @@ String.prototype.hashCode = function () {
 	return hash
 }
 
-
-var chatHistory = {}
-var chatHistIdx = 0
-
 /**
  * Modified handler for keyup events from the chat textbox
  * @param {object} ev - Event
@@ -25,87 +21,46 @@ var chatHistIdx = 0
  * @param {oject} Room - Room the textbox is attached to
  */
 function intputChatText(ev, User, Room) {
-	var inputTextBox = null
-	var roomTextboxName = ""
-	Room.$tabs.forEach(function (roomTab) {
-		var classesLen = roomTab[0].classList.length
-		if (roomTab[0].classList[classesLen - 1] === 'active') {
-			inputTextBox = $('textarea.' + User.props.id + '_' + makeSafeForCss(Room.props.name))
-			roomTextboxName = 'textarea.' + User.props.id + '_' + makeSafeForCss(Room.props.name)
-			if (!chatHistory[roomTextboxName]){
-				chatHistory[roomTextboxName] = {}
-			}
-		}
-	})
+	let inputTextarea = $(`textarea.${User.props.id}_${makeSafeForCss(Room.props.name)}.active`)
+	let message = inputTextarea.val().trim()
 
-	if (ev.keyCode === 13 && ev.ctrlKey === false && ev.shiftKey === false && inputTextBox.val() !== '' && inputTextBox.val().trim() !== '') {
-		var newMessage = inputTextBox.val()
-
-		if (newMessage.length > 4000) {
-			Room.appendMessage(
-				'<span class="first">&nbsp;</span>\n\
-			<span title="' + makeTimestamp(false, true) + '">Message too long</span>'
-			).addClass('sys')
-			return
-		}
-
-		chatHistory[roomTextboxName][0] = newMessage
-
-		if (newMessage[0] === '/' && newMessage.substring(0, 2) !== '//' && chatModule) {
-			chatModule.parseSlashCommand(inputTextBox, Room, User)
-		} else {
-			sendChatMessage(inputTextBox, Room, User)
-		}
+	if (message.length > 4000) {
+		Room.appendMessage(
+			`<span class="first">&nbsp;</span><span title="${makeTimestamp(null, true)}">Message too long</span>`
+		).addClass('sys')
+		return
+	} else if (message.length === 0) {
+		return
+	} else if (ev.keyCode !== 13 || ev.shiftKey === true || ev.ctrlKey === true) {
+		return
 	}
-	/* Up */
-	else if (ev.keyCode === 38 && 
-			 inputTextBox.prop("selectionStart") === 0 && 
-			 chatHistIdx === 0) 
-	{
-		chatHistory[roomTextboxName][1] = inputTextBox.val()
-		inputTextBox.val(chatHistory[roomTextboxName][0])
-		chatHistIdx = 1
-	}
-	/* Down */
-	else if (ev.keyCode === 40 && 
-			 (inputTextBox.prop("selectionStart") === inputTextBox.val().length) && 
-			 chatHistIdx === 1 ) 
-	{
-		chatHistory[roomTextboxName][0] = inputTextBox.val()
-		inputTextBox.val(chatHistory[roomTextboxName][1])
-		chatHistIdx = 0
-	}
-}
 
-function sendChatMessage(inputTextBox, Room, User) {
-	var newMessage = inputTextBox.val()
-	var thisTab = rph.tabs[User.props.id]
-	var newLength = newMessage.length
-	Room.sendMessage(newMessage, User.props.id)
-	inputTextBox.val('')
+	Room.sendMessage(message, User.props.id)
+	inputTextarea.val('')
 
-	if (newMessage.match(/\n/gi)) {
-		newLength = newLength + (newMessage.match(/\n/gi).length * 250)
+	let thisTab = rph.tabs[User.props.id]
+	let newLength = message.length
+	let curTime = Math.round(new Date().getTime() / 1000)
+
+	if (message.includes('\n')) {
+		newLength = newLength + (message.split('\n').length * 250)
 	}
-	
-	var curTime = Math.round(new Date().getTime() / 1000)
 	thisTab.bufferLength = (thisTab.bufferLength / (curTime - thisTab.lastTime + 1)) + ((newLength + thisTab.bufferLength) / 3) + 250
 	thisTab.lastTime = curTime
 	if (thisTab.bufferLength > 1750) {
 		thisTab.offenses += 1
-		if (thisTab.offenses > 2) {
-			Room.sendMessage('Flood kick', User.props.id)
-			chatSocket.disconnect()
-			return
-		} else {
-			Room.appendMessage(
-				'<span class="first">&nbsp;</span>\n\
-			<span title="' + makeTimestamp(false, true) + '">You are flooding. Be careful or you\'ll be kicked</span>'
-			).addClass('sys')
-			setTimeout(function () {
-				thisTab.offenses = 0
-			}, 15000)
-			return
-		}
+	}
+
+	if (thisTab.offenses > 2) {
+		Room.sendMessage('Flood kick', User.props.id)
+		chatSocket.disconnect()
+	} else if (thisTab.offenses === 2) {
+		Room.appendMessage(
+			'<span class="first">&nbsp;</span>\n\
+		<span title="' + makeTimestamp(false, true) + '">You are flooding. Be careful or you\'ll be kicked</span>'
+		).addClass('sys')
+		setTimeout(() => {
+			thisTab.offenses = 0
+		}, 15000)
 	}
 }
