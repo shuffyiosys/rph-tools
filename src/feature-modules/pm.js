@@ -201,7 +201,11 @@ var pmModule = (function () {
 		$(pmMsgHtml.children[0]).remove()
 		let msg = pmMsgHtml.innerHTML.trim()
 		if (msg.charAt(0) === '/') {
-			msg = ` ${parseCommand(data)}`
+			let results = interpreterModule.parseCommand(parseMsg(data), origin='pm')
+			if (results.status === 1) {
+				msg = ` ${results.str}`
+			}
+			
 		}
 		if(pmSettings.colorText) {
 			styleString += `color: #${colorString};`

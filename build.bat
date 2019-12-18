@@ -7,6 +7,7 @@ copy /B src\header.js +^
     src\feature-modules\rng.js +^
     src\feature-modules\modding.js +^
     src\core-modules\settings.js +^
+	src\core-modules\interpreter.js +^
     src\core-modules\about.js +^
     src\core-modules\rph-tools.js +^
     src\main.js ^

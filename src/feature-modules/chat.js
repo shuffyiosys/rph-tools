@@ -286,8 +286,6 @@ var chatModule = (function () {
 	function roomSetup(room) {
 		var thisRoom = getRoom(room.room)
 		var userId = getIdFromChatTab(thisRoom)
-		var moddingModule = rphToolsModule.getModule('Modding Module')
-		var sessionModule = rphToolsModule.getModule('Session Module')
 		let modUserIdx = -1
 
 		for (var idx = 0; idx < account.userids.length && !modUserIdx !== -1; idx++) {
@@ -297,11 +295,10 @@ var chatModule = (function () {
 			}
 		}
 
-
 		chatSocket._callbacks.$msg.pop()
 		chatSocket.on('msg', (data) => {
 			for (const msgData of data) {
-				getUserById(msgData.userid, function(User){
+				getUserById(msgData.userid, function (User) {
 					postMessage(getRoom(msgData.room), User, msgData, (modUserIdx !== -1))
 				})
 			}
@@ -313,16 +310,54 @@ var chatModule = (function () {
 				moddingModule.addModRoomPair(User.props, thisRoom.props.name)
 			}
 
-			if (sessionModule !== null) {
-				sessionModule.addRoomToSession(room.room, userId)
-			}
-
 			resizeChatTabs()
 			$('div.' + User.props.id + '_' + makeSafeForCss(thisRoom.props.name) + ' .user-for-textarea span').css('overflow', 'hidden')
 			var chatTextArea = $('textarea.' + User.props.id + '_' + makeSafeForCss(thisRoom.props.name))
 			chatTextArea.unbind('keyup')
-			chatTextArea.bind('keydown', function (ev) {
-				intputChatText(ev, User, thisRoom)
+			chatTextArea.bind('keydown', (ev) => {
+				let inputTextBox = $(`textarea.${User.props.id}_${makeSafeForCss(thisRoom.props.name)}.active`)
+				let message = inputTextBox.val().trim()
+			
+				if (message.length > 4000) {
+					thisRoom.appendMessage(
+						`<span class="first">&nbsp;</span><span title="${makeTimestamp(null, true)}">Message too long</span>`
+					).addClass('sys')
+					return
+				}
+				else if (message.length === 0) {
+					return
+				}
+				else if (ev.keyCode !== 13 || ev.shiftKey === true || ev.ctrlKey === true) {
+					return
+				}
+			
+				let result = interpreterModule.parseCommand(message, thisRoom, User)
+			
+				if (result.status === -1) {
+					thisRoom.appendMessage(
+						`<span class="first">&nbsp;</span>
+						<span title="${makeTimestamp(null, true)}">
+							Error in command input	
+						</span>`
+					).addClass('sys')
+					return
+				}
+				message = result.str
+				thisRoom.sendMessage(message, User.props.id)
+				inputTextBox.val('')
+			
+				let thisTab = rph.tabs[User.props.id]
+				let newLength = message.length
+				let curTime = Math.round(new Date().getTime() / 1000)
+			
+				if (message.match(/\n/gi)) {
+					newLength = newLength + (message.match(/\n/gi).length * 250)
+				}
+				thisTab.bufferLength = (thisTab.bufferLength / (curTime - thisTab.lastTime + 1)) + ((newLength + thisTab.bufferLength) / 3) + 250
+				thisTab.lastTime = curTime
+				if (thisTab.bufferLength > 1750) {
+					thisTab.offenses += 1
+				}
 			})
 		})
 	}
@@ -333,7 +368,7 @@ var chatModule = (function () {
 
 		/* Check to see if there's a RNG marker, then process it if it's there */
 		if (msg.indexOf('\u200b') > -1) {
-			msg = ` ${parseMsg(parseRng(data))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
+			msg = ` ${parseMsg(interpreterModule.parseRng(data))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
 		}
 
 		/* Add pings */
@@ -345,8 +380,7 @@ var chatModule = (function () {
 				highlightRoom(thisRoom)
 				pingSound.play()
 
-				/* Bring up the notification if enabled, but don't do it if the user
-					pinged themselves*/
+				/* Bring up the notification if enabled, but don't do it if the user pinged themselves*/
 				if (chatSettings.pingNotify && account.userids.includes(data.userid) === false) {
 					let notification = new Notification(`${User.props.name} pinged you in ${thisRoom.props.name}`)
 					setTimeout(() => {
@@ -392,46 +426,46 @@ var chatModule = (function () {
 		if (chatSettings.msgMargin) {
 			classes += 'msg-padding '
 		}
-		if( User.friendOf ){
+		if (User.friendOf) {
 			classes += 'friend ';
 		}
-		if( isOwnUser(User) ){
+		if (isOwnUser(User)) {
 			classes += 'self ';
 		}
-		if( isOwnerOf(thisRoom, User) ){
+		if (isOwnerOf(thisRoom, User)) {
 			classes += 'owner ';
-		} else if( isModOf(thisRoom, User) ){
+		} else if (isModOf(thisRoom, User)) {
 			classes += 'mod ';
 		}
-		if( isInGroup(thisRoom, User) ){
+		if (isInGroup(thisRoom, User)) {
 			classes += 'group-member ';
 		}
 		msgHtml.addClass(classes);
 		msgHtml.find('.name').text(User.props.vanity || User.props.name)
 			.attr('data-content', (User.props.vanity || User.props.name))
 			.attr('title', User.props.name);
-		if( msgHtml.find('.name').length > 0 ){
-			if( Array.isArray(User.props.color) ){
-				User.props.color.forEach( (hex, i) => {
-					msgHtml.find('.name').get(0).style.setProperty('--color'+(i+1), '#'+User.props.color[i])
+		if (msgHtml.find('.name').length > 0) {
+			if (Array.isArray(User.props.color)) {
+				User.props.color.forEach((hex, i) => {
+					msgHtml.find('.name').get(0).style.setProperty('--color' + (i + 1), '#' + User.props.color[i])
 				})
 			}
 		}
-		if( User.props.fade ){
-			if( User.props.fade == 1 ){
+		if (User.props.fade) {
+			if (User.props.fade == 1) {
 				msgHtml.find('.name').addClass('vertical-fade');
-			} else if( User.props.fade == 2 ){
+			} else if (User.props.fade == 2) {
 				msgHtml.find('.name').addClass('horizontal-fade');
-			} else if( User.props.fade == 3 ){
+			} else if (User.props.fade == 3) {
 				msgHtml.find('.name').addClass('radial-fade')
 			}
 		}
-		if( User.props.color.length > 1 ){
+		if (User.props.color.length > 1) {
 			let numColorClass = '-color';
-			if( User.props.color.length == 2 ){
-				numColorClass = 'two'+numColorClass;
+			if (User.props.color.length == 2) {
+				numColorClass = 'two' + numColorClass;
 			} else {
-				numColorClass = 'three'+numColorClass;
+				numColorClass = 'three' + numColorClass;
 			}
 			msgHtml.find('.name').addClass(numColorClass);
 		}
@@ -509,7 +543,6 @@ var chatModule = (function () {
 			case '/add-mod':
 			case '/remove-owner':
 			case '/remove-mod':
-				var moddingModule = rphToolsModule.getModule('Modding Module')
 				if (cmdArgs.length < 2) {
 					error = true
 				} else if (moddingModule) {
@@ -545,7 +578,7 @@ var chatModule = (function () {
 	 * @returns Returns the match or null
 	 */
 	function matchPing(msg, triggers = chatSettings.triggers, caseSensitive = chatSettings.case, exactMatch = chatSettings.exact) {
-		if (triggers.length === 0){
+		if (triggers.length === 0) {
 			return
 		}
 		let result = null
@@ -629,18 +662,20 @@ var chatModule = (function () {
 	function addNameToUI(thisRoom, User) {
 		var tabsLen = thisRoom.$tabs.length
 		var idRoomName = thisRoom.$tabs[tabsLen - 1][0].className.split(' ')[2]
-		var newTabHtml = '<span>' + thisRoom.props.name +
-			'</span><p style="font-size: x-small; margin-top: -58px;">' +
-			User.props.name + '</p>'
-		thisRoom.$tabs[tabsLen - 1].html(newTabHtml)
-		$('<a class="close ui-corner-all">x</a>').on('click', (ev) => {
-			ev.stopPropagation()
-			chatSocket.emit('leave', {
-				userid: User.props.id,
-				name: thisRoom.props.name
-			})
-		}).appendTo(thisRoom.$tabs[tabsLen - 1])
-		$('textarea.' + idRoomName).prop('placeholder', 'Post as ' + User.props.name)
+		thisRoom.$tabs[tabsLen - 1]
+			.html(`<span>${thisRoom.props.name}</span>
+				  <p style="font-size: x-small; margin-top: -58px;">${User.props.name}</p>`)
+		$('<a class="close ui-corner-all">x</a>')
+			.on('click', (ev) => {
+				ev.stopPropagation()
+				chatSocket.emit('leave', {
+					userid: User.props.id,
+					name: thisRoom.props.name
+				})
+			}).appendTo(thisRoom.$tabs[tabsLen - 1])
+		$('textarea.' + idRoomName)
+			.prop('placeholder', `Post as ${User.props.name}`)
+			.prop('maxlength', '4000')
 	}
 
 	/**
@@ -704,29 +739,18 @@ var chatModule = (function () {
 		}).dialog('open')
 
 		clearTimeout(autoJoinTimer)
-		autoJoinTimer = setTimeout(joinRooms, AUTOJOIN_TIMEOUT_SEC)
-	}
-
-	/**
-	 * Join rooms in the favorites and what was in the session.
-	 */
-	function joinRooms() {
 		if (chatSettings.joinFavorites === true) {
-			joinFavoriteRooms()
-		}
-	}
+			autoJoinTimer = setTimeout(() => {
+				for (var i = 0; i < chatSettings.favRooms.length; i++) {
+					var favRoom = chatSettings.favRooms[i]
+					chatSocket.emit('join', {
+						name: favRoom.room,
+						userid: favRoom.userId,
+						pw: favRoom.roomPw
+					})
+				}
 
-	/** 
-	 * Joins all the rooms in the favorite rooms list
-	 */
-	function joinFavoriteRooms() {
-		for (var i = 0; i < chatSettings.favRooms.length; i++) {
-			var favRoom = chatSettings.favRooms[i]
-			chatSocket.emit('join', {
-				name: favRoom.room,
-				userid: favRoom.userId,
-				pw: favRoom.roomPw
-			})
+			}, AUTOJOIN_TIMEOUT_SEC)
 		}
 	}
 
@@ -809,7 +833,7 @@ var chatModule = (function () {
 			chatSettings = Object.assign(chatSettings, storedSettings)
 		} else {
 			chatSettings = {
-				'colorText': false,
+				'colorText': true,
 				'msgMargin': false,
 
 				'enablePings': true,
@@ -838,7 +862,6 @@ var chatModule = (function () {
 
 		$('#chatColorEnable').prop("checked", chatSettings.colorText)
 		$('#chatMsgMarginEnable').prop("checked", chatSettings.msgMargin)
-		$('#combineMsgEnable').prop("checked", chatSettings.combineMsg)
 
 		$('#notifyPingEnable').prop("checked", chatSettings.enablePings)
 		$('#notifyNotificationEnable').prop("checked", chatSettings.pingNotify)

@@ -3,12 +3,12 @@
  * can happen in the chat
  */
 var rngModule = (function () {
-	var DIE_MIN = 1
-	var DIE_MAX = 100
-	var DIE_SIDE_MIN = 2
-	var DIE_SIDE_MAX = 100
-	var RNG_NUM_MIN = -10000000000000
-	var RNG_NUM_MAX = 10000000000000
+	const DIE_MIN = 1
+	const DIE_MAX = 100
+	const DIE_SIDE_MIN = 2
+	const DIE_SIDE_MAX = 100
+	const RNG_NUM_MIN = -10000000000000
+	const RNG_NUM_MAX = 10000000000000
 
 	var html = {
 		'tabId': 'rng-module',
@@ -160,11 +160,10 @@ var rngModule = (function () {
 	 * @param {number} maxNum Maximum end of the range
 	 * @returns String containing the random number result.
 	 */
-	function genRandomNum() {
-		var minNum = parseInt($('#rngMinNumber').val())
-		var maxNum = parseInt($('#rngMaxNumber').val())
-		var ranNumMsg = '(( Random number generated (' + minNum + ' to ' +
+	function genRandomNum(minNum=parseInt($('#rngMinNumber').val()), maxNum=parseInt($('#rngMaxNumber').val())) {
+		let ranNumMsg = '(( Random number generated (' + minNum + ' to ' +
 			maxNum + '): '
+		console.log(minNum, maxNum)
 		ranNumMsg += Math.floor((Math.random() * (maxNum - minNum) + minNum)) +
 			' ))'
 		return attachIntegrity(ranNumMsg)
@@ -180,7 +179,6 @@ var rngModule = (function () {
 		var this_room = null
 		var userID = parseInt(class_name[2].substring(0, 6))
 		var chatModule = rphToolsModule.getModule('Chat Module')
-		
 
 		/* Populate room name based on if showing usernames is checked. */
 		if (chatModule) {

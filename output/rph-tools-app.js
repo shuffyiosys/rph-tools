@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name       RPH Tools
+// @name       RPH Tools Test
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.2.1
+// @version    4.2.2
 // @description Adds extended settings to RPH
 // @match      https://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.2.1'
+const VERSION_STRING = '4.2.2T'
 
 const SETTINGS_NAME = "rph_tools_settings"
 /**
@@ -184,69 +184,15 @@ function getSortedNames() {
 	namesToIds = tempDict
 	return namesToIds
 }
-
-/** 
- * Generates a randum number using the Linear congruential generator algorithm
- * @param {*} value - Number that seeds the RNG
- */
-function LcgRng (value) {
-	let result = (((value * 214013) + 2531011) % Math.pow(2,31))
-	return result
-}
-
-/**
- * Parses a RNG message to take what the client sent and seed it into an
- * RNG.
- * @param {*} message - Message from the sender.
- */
-function parseRng(data) {
-	let newMsg = ""
-	let message = data.msg.substring(0, data.msg.indexOf('\u200b'));
-	if (message.match(new RegExp(/coin/, 'gi'))){
-		newMsg = "flips a coin. It lands on... "
-		if (LcgRng(data.time) % 2 === 1) {
-			newMsg += "heads!"
-		}
-		else {
-			newMsg += "tails!"
-		}
-	}
-	else if (message.match(new RegExp(/rolled/, 'gi'))){
-		let numbers = message.match(new RegExp(/[0-9]+/, 'gi'))
-		let sides = parseInt(numbers[1])
-		let dieNum = parseInt(numbers[0])
-		let results = []
-		let total = 0
-		let seed = data.time
-
-		let result = LcgRng(seed)
-		results.push(result % sides + 1)
-		for (let die = 1; die < dieNum; die++) {
-			result = LcgRng(result)
-			results.push(result % sides + 1)
-		}
-		total = results.reduce((a, b) => a + b, 0)
-		newMsg = `rolled ${numbers[0]}d${numbers[1]}: `
-		newMsg += results.join(' ') + ' (total ' + total + ')'
-		console.log('[parseRng] Dice roll params', numbers, data.time)
-	}
-	else if (message.match(new RegExp(/generated/, 'gi'))){
-		let resultStartIdx = message.indexOf(':')
-		let numbers = message.match(new RegExp(/-?[0-9]+/, 'gi'))
-		let seed = parseInt(numbers[2]) + data.time
-		newMsg = message.substring(0, resultStartIdx)
-		newMsg += ': ' + LcgRng(parseInt(seed)) % (numbers[1] - numbers[0] + 1 ) + ' ))'
-		console.log(`[parseRng]: General RNG params`, numbers, data.time)
-	}
-	return newMsg
-}
 /**
  * Generates a hash value for a string
  * This was modified from https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
  */
 String.prototype.hashCode = function () {
-	var hash = 0,
-		i, chr, len
+	let hash = 0
+	let i
+	let chr
+	let len
 	if (this.length === 0) return hash
 	for (i = 0, len = this.length; i < len; i++) {
 		chr = this.charCodeAt(i)
@@ -257,9 +203,6 @@ String.prototype.hashCode = function () {
 }
 
 
-var chatHistory = {}
-var chatHistIdx = 0
-
 /**
  * Modified handler for keyup events from the chat textbox
  * @param {object} ev - Event
@@ -267,88 +210,60 @@ var chatHistIdx = 0
  * @param {oject} Room - Room the textbox is attached to
  */
 function intputChatText(ev, User, Room) {
-	var inputTextBox = null
-	var roomTextboxName = ""
-	Room.$tabs.forEach(function (roomTab) {
-		var classesLen = roomTab[0].classList.length
-		if (roomTab[0].classList[classesLen - 1] === 'active') {
-			inputTextBox = $('textarea.' + User.props.id + '_' + makeSafeForCss(Room.props.name))
-			roomTextboxName = 'textarea.' + User.props.id + '_' + makeSafeForCss(Room.props.name)
-			if (!chatHistory[roomTextboxName]){
-				chatHistory[roomTextboxName] = {}
-			}
-		}
-	})
+	let inputTextBox = $(`textarea.${User.props.id}_${makeSafeForCss(Room.props.name)}.active`)
+	let message = inputTextBox.val().trim()
 
-	if (ev.keyCode === 13 && ev.ctrlKey === false && ev.shiftKey === false && inputTextBox.val() !== '' && inputTextBox.val().trim() !== '') {
-		var newMessage = inputTextBox.val()
-
-		if (newMessage.length > 4000) {
-			Room.appendMessage(
-				'<span class="first">&nbsp;</span>\n\
-			<span title="' + makeTimestamp(false, true) + '">Message too long</span>'
-			).addClass('sys')
-			return
-		}
-
-		chatHistory[roomTextboxName][0] = newMessage
-
-		if (newMessage[0] === '/' && newMessage.substring(0, 2) !== '//' && chatModule) {
-			chatModule.parseSlashCommand(inputTextBox, Room, User)
-		} else {
-			sendChatMessage(inputTextBox, Room, User)
-		}
+	if (message.length > 4000) {
+		Room.appendMessage(
+			`<span class="first">&nbsp;</span><span title="${makeTimestamp(null, true)}">Message too long</span>`
+		).addClass('sys')
+		return
 	}
-	/* Up */
-	else if (ev.keyCode === 38 && 
-			 inputTextBox.prop("selectionStart") === 0 && 
-			 chatHistIdx === 0) 
-	{
-		chatHistory[roomTextboxName][1] = inputTextBox.val()
-		inputTextBox.val(chatHistory[roomTextboxName][0])
-		chatHistIdx = 1
+	else if (message.length === 0) {
+		return
 	}
-	/* Down */
-	else if (ev.keyCode === 40 && 
-			 (inputTextBox.prop("selectionStart") === inputTextBox.val().length) && 
-			 chatHistIdx === 1 ) 
-	{
-		chatHistory[roomTextboxName][0] = inputTextBox.val()
-		inputTextBox.val(chatHistory[roomTextboxName][1])
-		chatHistIdx = 0
+	else if (ev.keyCode !== 13 || ev.shiftKey === true || ev.ctrlKey === true) {
+		return
 	}
-}
 
-function sendChatMessage(inputTextBox, Room, User) {
-	var newMessage = inputTextBox.val()
-	var thisTab = rph.tabs[User.props.id]
-	var newLength = newMessage.length
-	Room.sendMessage(newMessage, User.props.id)
+	let result = interpreterModule.parseCommand(message, Room, User)
+
+	if (result.status === -1) {
+		Room.appendMessage(
+			`<span class="first">&nbsp;</span>
+			<span title="${makeTimestamp(null, true)}">
+				Error in command input	
+			</span>`
+		).addClass('sys')
+		return
+	}
+	console.log(`Chat input result`, result)
+	message = result.str
+	Room.sendMessage(message, User.props.id)
 	inputTextBox.val('')
 
-	if (newMessage.match(/\n/gi)) {
-		newLength = newLength + (newMessage.match(/\n/gi).length * 250)
+	let thisTab = rph.tabs[User.props.id]
+	let newLength = message.length
+	let curTime = Math.round(new Date().getTime() / 1000)
+
+	if (message.match(/\n/gi)) {
+		newLength = newLength + (message.match(/\n/gi).length * 250)
 	}
-	
-	var curTime = Math.round(new Date().getTime() / 1000)
 	thisTab.bufferLength = (thisTab.bufferLength / (curTime - thisTab.lastTime + 1)) + ((newLength + thisTab.bufferLength) / 3) + 250
 	thisTab.lastTime = curTime
 	if (thisTab.bufferLength > 1750) {
 		thisTab.offenses += 1
-		if (thisTab.offenses > 2) {
-			Room.sendMessage('Flood kick', User.props.id)
-			chatSocket.disconnect()
-			return
-		} else {
-			Room.appendMessage(
-				'<span class="first">&nbsp;</span>\n\
-			<span title="' + makeTimestamp(false, true) + '">You are flooding. Be careful or you\'ll be kicked</span>'
-			).addClass('sys')
-			setTimeout(function () {
-				thisTab.offenses = 0
-			}, 15000)
-			return
-		}
+	}
+
+	if (thisTab.offenses > 2) {
+		Room.sendMessage('Flood kick', User.props.id)
+		chatSocket.disconnect()
+	} else if (thisTab.offenses === 2) {
+		Room.appendMessage(
+			'<span class="first">&nbsp;</span>\n\
+		<span title="' + makeTimestamp(false, true) + '">You are flooding. Be careful or you\'ll be kicked</span>'
+		).addClass('sys')
+		setTimeout(() => {thisTab.offenses = 0}, 15000)
 	}
 }/****
  * This module handles the chat functions of the script.
@@ -638,8 +553,6 @@ var chatModule = (function () {
 	function roomSetup(room) {
 		var thisRoom = getRoom(room.room)
 		var userId = getIdFromChatTab(thisRoom)
-		var moddingModule = rphToolsModule.getModule('Modding Module')
-		var sessionModule = rphToolsModule.getModule('Session Module')
 		let modUserIdx = -1
 
 		for (var idx = 0; idx < account.userids.length && !modUserIdx !== -1; idx++) {
@@ -649,11 +562,10 @@ var chatModule = (function () {
 			}
 		}
 
-
 		chatSocket._callbacks.$msg.pop()
 		chatSocket.on('msg', (data) => {
 			for (const msgData of data) {
-				getUserById(msgData.userid, function(User){
+				getUserById(msgData.userid, function (User) {
 					postMessage(getRoom(msgData.room), User, msgData, (modUserIdx !== -1))
 				})
 			}
@@ -663,10 +575,6 @@ var chatModule = (function () {
 			addNameToUI(thisRoom, User)
 			if (moddingModule !== null && modUserIdx === userId) {
 				moddingModule.addModRoomPair(User.props, thisRoom.props.name)
-			}
-
-			if (sessionModule !== null) {
-				sessionModule.addRoomToSession(room.room, userId)
 			}
 
 			resizeChatTabs()
@@ -685,7 +593,7 @@ var chatModule = (function () {
 
 		/* Check to see if there's a RNG marker, then process it if it's there */
 		if (msg.indexOf('\u200b') > -1) {
-			msg = ` ${parseMsg(parseRng(data))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
+			msg = ` ${parseMsg(interpreterModule.parseRng(data))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
 		}
 
 		/* Add pings */
@@ -697,8 +605,7 @@ var chatModule = (function () {
 				highlightRoom(thisRoom)
 				pingSound.play()
 
-				/* Bring up the notification if enabled, but don't do it if the user
-					pinged themselves*/
+				/* Bring up the notification if enabled, but don't do it if the user pinged themselves*/
 				if (chatSettings.pingNotify && account.userids.includes(data.userid) === false) {
 					let notification = new Notification(`${User.props.name} pinged you in ${thisRoom.props.name}`)
 					setTimeout(() => {
@@ -744,46 +651,46 @@ var chatModule = (function () {
 		if (chatSettings.msgMargin) {
 			classes += 'msg-padding '
 		}
-		if( User.friendOf ){
+		if (User.friendOf) {
 			classes += 'friend ';
 		}
-		if( isOwnUser(User) ){
+		if (isOwnUser(User)) {
 			classes += 'self ';
 		}
-		if( isOwnerOf(thisRoom, User) ){
+		if (isOwnerOf(thisRoom, User)) {
 			classes += 'owner ';
-		} else if( isModOf(thisRoom, User) ){
+		} else if (isModOf(thisRoom, User)) {
 			classes += 'mod ';
 		}
-		if( isInGroup(thisRoom, User) ){
+		if (isInGroup(thisRoom, User)) {
 			classes += 'group-member ';
 		}
 		msgHtml.addClass(classes);
 		msgHtml.find('.name').text(User.props.vanity || User.props.name)
 			.attr('data-content', (User.props.vanity || User.props.name))
 			.attr('title', User.props.name);
-		if( msgHtml.find('.name').length > 0 ){
-			if( Array.isArray(User.props.color) ){
-				User.props.color.forEach( (hex, i) => {
-					msgHtml.find('.name').get(0).style.setProperty('--color'+(i+1), '#'+User.props.color[i])
+		if (msgHtml.find('.name').length > 0) {
+			if (Array.isArray(User.props.color)) {
+				User.props.color.forEach((hex, i) => {
+					msgHtml.find('.name').get(0).style.setProperty('--color' + (i + 1), '#' + User.props.color[i])
 				})
 			}
 		}
-		if( User.props.fade ){
-			if( User.props.fade == 1 ){
+		if (User.props.fade) {
+			if (User.props.fade == 1) {
 				msgHtml.find('.name').addClass('vertical-fade');
-			} else if( User.props.fade == 2 ){
+			} else if (User.props.fade == 2) {
 				msgHtml.find('.name').addClass('horizontal-fade');
-			} else if( User.props.fade == 3 ){
+			} else if (User.props.fade == 3) {
 				msgHtml.find('.name').addClass('radial-fade')
 			}
 		}
-		if( User.props.color.length > 1 ){
+		if (User.props.color.length > 1) {
 			let numColorClass = '-color';
-			if( User.props.color.length == 2 ){
-				numColorClass = 'two'+numColorClass;
+			if (User.props.color.length == 2) {
+				numColorClass = 'two' + numColorClass;
 			} else {
-				numColorClass = 'three'+numColorClass;
+				numColorClass = 'three' + numColorClass;
 			}
 			msgHtml.find('.name').addClass(numColorClass);
 		}
@@ -861,7 +768,6 @@ var chatModule = (function () {
 			case '/add-mod':
 			case '/remove-owner':
 			case '/remove-mod':
-				var moddingModule = rphToolsModule.getModule('Modding Module')
 				if (cmdArgs.length < 2) {
 					error = true
 				} else if (moddingModule) {
@@ -897,7 +803,7 @@ var chatModule = (function () {
 	 * @returns Returns the match or null
 	 */
 	function matchPing(msg, triggers = chatSettings.triggers, caseSensitive = chatSettings.case, exactMatch = chatSettings.exact) {
-		if (triggers.length === 0){
+		if (triggers.length === 0) {
 			return
 		}
 		let result = null
@@ -981,18 +887,20 @@ var chatModule = (function () {
 	function addNameToUI(thisRoom, User) {
 		var tabsLen = thisRoom.$tabs.length
 		var idRoomName = thisRoom.$tabs[tabsLen - 1][0].className.split(' ')[2]
-		var newTabHtml = '<span>' + thisRoom.props.name +
-			'</span><p style="font-size: x-small; margin-top: -58px;">' +
-			User.props.name + '</p>'
-		thisRoom.$tabs[tabsLen - 1].html(newTabHtml)
-		$('<a class="close ui-corner-all">x</a>').on('click', (ev) => {
-			ev.stopPropagation()
-			chatSocket.emit('leave', {
-				userid: User.props.id,
-				name: thisRoom.props.name
-			})
-		}).appendTo(thisRoom.$tabs[tabsLen - 1])
-		$('textarea.' + idRoomName).prop('placeholder', 'Post as ' + User.props.name)
+		thisRoom.$tabs[tabsLen - 1]
+			.html(`<span>${thisRoom.props.name}</span>
+				  <p style="font-size: x-small; margin-top: -58px;">${User.props.name}</p>`)
+		$('<a class="close ui-corner-all">x</a>')
+			.on('click', (ev) => {
+				ev.stopPropagation()
+				chatSocket.emit('leave', {
+					userid: User.props.id,
+					name: thisRoom.props.name
+				})
+			}).appendTo(thisRoom.$tabs[tabsLen - 1])
+		$('textarea.' + idRoomName)
+			.prop('placeholder', `Post as ${User.props.name}`)
+			.prop('maxlength', '4000')
 	}
 
 	/**
@@ -1056,29 +964,18 @@ var chatModule = (function () {
 		}).dialog('open')
 
 		clearTimeout(autoJoinTimer)
-		autoJoinTimer = setTimeout(joinRooms, AUTOJOIN_TIMEOUT_SEC)
-	}
-
-	/**
-	 * Join rooms in the favorites and what was in the session.
-	 */
-	function joinRooms() {
 		if (chatSettings.joinFavorites === true) {
-			joinFavoriteRooms()
-		}
-	}
+			autoJoinTimer = setTimeout(() => {
+				for (var i = 0; i < chatSettings.favRooms.length; i++) {
+					var favRoom = chatSettings.favRooms[i]
+					chatSocket.emit('join', {
+						name: favRoom.room,
+						userid: favRoom.userId,
+						pw: favRoom.roomPw
+					})
+				}
 
-	/** 
-	 * Joins all the rooms in the favorite rooms list
-	 */
-	function joinFavoriteRooms() {
-		for (var i = 0; i < chatSettings.favRooms.length; i++) {
-			var favRoom = chatSettings.favRooms[i]
-			chatSocket.emit('join', {
-				name: favRoom.room,
-				userid: favRoom.userId,
-				pw: favRoom.roomPw
-			})
+			}, AUTOJOIN_TIMEOUT_SEC)
 		}
 	}
 
@@ -1161,7 +1058,7 @@ var chatModule = (function () {
 			chatSettings = Object.assign(chatSettings, storedSettings)
 		} else {
 			chatSettings = {
-				'colorText': false,
+				'colorText': true,
 				'msgMargin': false,
 
 				'enablePings': true,
@@ -1190,7 +1087,6 @@ var chatModule = (function () {
 
 		$('#chatColorEnable').prop("checked", chatSettings.colorText)
 		$('#chatMsgMarginEnable').prop("checked", chatSettings.msgMargin)
-		$('#combineMsgEnable').prop("checked", chatSettings.combineMsg)
 
 		$('#notifyPingEnable').prop("checked", chatSettings.enablePings)
 		$('#notifyNotificationEnable').prop("checked", chatSettings.pingNotify)
@@ -1432,7 +1328,11 @@ var pmModule = (function () {
 		$(pmMsgHtml.children[0]).remove()
 		let msg = pmMsgHtml.innerHTML.trim()
 		if (msg.charAt(0) === '/') {
-			msg = ` ${parseCommand(data)}`
+			let results = interpreterModule.parseCommand(parseMsg(data), origin='pm')
+			if (results.status === 1) {
+				msg = ` ${results.str}`
+			}
+			
 		}
 		if(pmSettings.colorText) {
 			styleString += `color: #${colorString};`
@@ -1566,12 +1466,12 @@ var pmModule = (function () {
  * can happen in the chat
  */
 var rngModule = (function () {
-	var DIE_MIN = 1
-	var DIE_MAX = 100
-	var DIE_SIDE_MIN = 2
-	var DIE_SIDE_MAX = 100
-	var RNG_NUM_MIN = -10000000000000
-	var RNG_NUM_MAX = 10000000000000
+	const DIE_MIN = 1
+	const DIE_MAX = 100
+	const DIE_SIDE_MIN = 2
+	const DIE_SIDE_MAX = 100
+	const RNG_NUM_MIN = -10000000000000
+	const RNG_NUM_MAX = 10000000000000
 
 	var html = {
 		'tabId': 'rng-module',
@@ -1723,11 +1623,10 @@ var rngModule = (function () {
 	 * @param {number} maxNum Maximum end of the range
 	 * @returns String containing the random number result.
 	 */
-	function genRandomNum() {
-		var minNum = parseInt($('#rngMinNumber').val())
-		var maxNum = parseInt($('#rngMaxNumber').val())
-		var ranNumMsg = '(( Random number generated (' + minNum + ' to ' +
+	function genRandomNum(minNum=parseInt($('#rngMinNumber').val()), maxNum=parseInt($('#rngMaxNumber').val())) {
+		let ranNumMsg = '(( Random number generated (' + minNum + ' to ' +
 			maxNum + '): '
+		console.log(minNum, maxNum)
 		ranNumMsg += Math.floor((Math.random() * (maxNum - minNum) + minNum)) +
 			' ))'
 		return attachIntegrity(ranNumMsg)
@@ -1743,7 +1642,6 @@ var rngModule = (function () {
 		var this_room = null
 		var userID = parseInt(class_name[2].substring(0, 6))
 		var chatModule = rphToolsModule.getModule('Chat Module')
-		
 
 		/* Populate room name based on if showing usernames is checked. */
 		if (chatModule) {
@@ -2191,6 +2089,191 @@ var settingsModule = (function () {
 		toString: toString
 	}
 }());/**
+ * Offers a common point for command interpretation
+ */
+let interpreterModule = (function () {
+	const CMD_PASS = 1
+	const PASSTHRU = 0
+	const CMD_ERR = -1
+
+	function init() {
+		return
+	}
+
+	/**
+	 * Parses a command and returns a result from it.
+	 * @param {*} command - Comamnd that was inputted
+	 * @returns - Object containing a status response and string output
+	 */
+	function parseCommand(command, User=null, thisRoom=null, origin='chat') {
+		let cmdArgs = command.split(/ (.+)/)
+		let result = {str: command, status: PASSTHRU}
+
+		const rngModule = rphToolsModule.getModule('RNG Module')
+		const moddingModule = rphToolsModule.getModule('Modding Module')
+		switch (cmdArgs[0]) {
+			/** Format: /[cmd] [message] */
+			case '/status':
+			case '/away':
+				if (cmdArgs.length > 1 && User) {
+					let type = (cmdArgs[0] === '/away') ? 1 : 0
+					socket.emit('modify', {
+						userid: User.props.id,
+						statusMsg: cmdArgs[1],
+						statusType: type
+					})
+					result.status = CMD_PASS
+				}
+				break
+			case '/coinflip':
+				if (rngModule) {
+					result.str = rngModule.genCoinFlip()
+					result.status = CMD_PASS
+				}
+				break
+			case '/roll':
+				let die = 1
+				let sides = 20
+				if (cmdArgs.length > 1) {
+					die = parseInt(cmdArgs[1].split('d')[0])
+					sides = parseInt(cmdArgs[1].split('d')[1])
+				}
+
+				if (isNaN(die) || isNaN(sides)) {
+					result.status = CMD_ERR
+				}
+				else if (rngModule) {
+					let die = 1
+					let sides = 20
+
+					result.str = rngModule.getDiceRoll(die, sides, true)
+					result.status = CMD_PASS
+				}
+				else if (origin === 'pm') {
+					let rolls = []
+					let total = 0
+					let result = LcgRng(data.date)
+					rolls.push(result  % sides + 1)
+					for (let i = 1; i < die; i++) {
+						result = LcgRng(result)
+						rolls.push(result % sides + 1)
+					}
+					total = rolls.reduce((a, b) => a + b, 0)
+					msg = `rolled ${die}d${sides}: `
+					msg += rolls.join(' ') + ' (total ' + total + ')'
+				}
+				break
+			case '/random':
+				if (rngModule) {
+					result.status = CMD_PASS
+					if (cmdArgs[1] && cmdArgs[1].split(/,/).length > 1) {
+						let range = cmdArgs[1].split(/,/)
+						range[0] = parseInt(range[0])
+						range[1] = parseInt(range[1])
+						result.str = rngModule.genRandomNum(range[0], range[1])
+					}
+					else {
+						result.str = rngModule.genRandomNum()
+					}
+				}
+				break
+			case '/rps':
+				const results = ['Rock', 'Paper', 'Scissors']
+				result.str = `'/me plays Rock, Paper, Scissors and chooses... ${results[Math.ceil(Math.random() * 3) % 3].toString()}!`
+				result.status = CMD_PASS
+				break
+			case '/kick':
+			case '/ban':
+			case '/unban':
+			case '/add-owner':
+			case '/add-mod':
+			case '/remove-owner':
+			case '/remove-mod':
+				if (cmdArgs.length < 2) {
+					result.status = CMD_ERR
+				} else if (moddingModule && User && thisRoom) {
+					let action = cmdArgs[0].substring(1, cmdArgs[0].length)
+					let args = cmdArgs[1].split(/,(.+)/)
+					let reason = (args[1]) ? args[1] : ''
+					moddingModule.emitModAction(action, args[0], User.props.name,
+						thisRoom.props.name, reason)
+					result.status = CMD_PASS
+				}
+				break
+			default:
+				break
+		}
+		return result
+	}
+
+	/**
+	 * Parses a RNG message to take what the client sent and seed it into an
+	 * RNG.
+	 * @param {*} message - Message from the sender.
+	 */
+	function parseRng(data) {
+		let newMsg = ""
+		let message = data.msg.substring(0, data.msg.indexOf('\u200b'));
+		if (message.match(new RegExp(/coin/, 'gi'))){
+			newMsg = "flips a coin. It lands on... "
+			if (LcgRng(data.time) % 2 === 1) {
+				newMsg += "heads!"
+			}
+			else {
+				newMsg += "tails!"
+			}
+		}
+		else if (message.match(new RegExp(/rolled/, 'gi'))){
+			let numbers = message.match(new RegExp(/[0-9]+/, 'gi'))
+			let sides = parseInt(numbers[1])
+			let dieNum = parseInt(numbers[0])
+			let results = []
+			let total = 0
+			let seed = data.time
+
+			let result = LcgRng(seed)
+			results.push(result % sides + 1)
+			for (let die = 1; die < dieNum; die++) {
+				result = LcgRng(result)
+				results.push(result % sides + 1)
+			}
+			total = results.reduce((a, b) => a + b, 0)
+			newMsg = `rolled ${numbers[0]}d${numbers[1]}: `
+			newMsg += results.join(' ') + ' (total ' + total + ')'
+			console.log('[parseRng] Dice roll params', numbers, data.time)
+		}
+		else if (message.match(new RegExp(/generated/, 'gi'))){
+			let resultStartIdx = message.indexOf(':')
+			let numbers = message.match(new RegExp(/-?[0-9]+/, 'gi'))
+			let seed = parseInt(numbers[2]) + data.time
+			newMsg = message.substring(0, resultStartIdx)
+			newMsg += ': ' + LcgRng(parseInt(seed)) % (numbers[1] - numbers[0] + 1 ) + ' ))'
+			console.log(`[parseRng]: General RNG params`, numbers, data.time)
+		}
+		return newMsg
+	}
+
+	/** 
+	 * Generates a randum number using the Linear congruential generator algorithm
+	 * @param {*} value - Number that seeds the RNG
+	 */
+	function LcgRng (value) {
+		let result = (((value * 214013) + 2531011) % Math.pow(2,31))
+		return result
+	}
+
+
+	function toString() {
+		return 'Interpreter Module'
+	}
+
+	return {
+		init,
+		parseCommand,
+		parseRng,
+		toString
+	}
+}());/**
  * This module handles the "About" section for information on RPH Tools.
  */
 var aboutModule = (function () {
@@ -2350,6 +2433,7 @@ $(function () {
 		moddingModule,
 		settingsModule,
 		aboutModule,
+		interpreterModule,
 	]
 
 	rphToolsModule.init(modules)

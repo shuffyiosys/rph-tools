@@ -10,6 +10,7 @@ $(function () {
 		moddingModule,
 		settingsModule,
 		aboutModule,
+		interpreterModule,
 	]
 
 	rphToolsModule.init(modules)
