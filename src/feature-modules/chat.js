@@ -279,7 +279,6 @@ var chatModule = (function () {
 		var thisRoom = getRoom(room.room)
 		var userId = getIdFromChatTab(thisRoom)
 		var moddingModule = rphToolsModule.getModule('Modding Module')
-		var sessionModule = rphToolsModule.getModule('Session Module')
 		let modUserIdx = -1
 
 		thisRoom.$tabs[0].click(() => {
@@ -307,10 +306,6 @@ var chatModule = (function () {
 			addNameToUI(thisRoom, User)
 			if (moddingModule !== null && modUserIdx === userId) {
 				moddingModule.addModRoomPair(User.props, thisRoom.props.name)
-			}
-
-			if (sessionModule !== null) {
-				sessionModule.addRoomToSession(room.room, userId)
 			}
 
 			resizeChatTabs()
@@ -789,7 +784,6 @@ var chatModule = (function () {
 	 */
 	function loadSettings() {
 		let storedSettings = settingsModule.getSettings(localStorageName)
-		let sessionSettings = settingsModule.getSettings('sessionSettings')
 		chatSettings = {
 			'colorText': true,
 			'msgPadding': false,
@@ -808,17 +802,10 @@ var chatModule = (function () {
 			'case': false,
 	
 			'joinFavorites': false,
-			'roomSession': [],
 			'favRooms': [],
 		}
 		if (storedSettings) {
 			chatSettings = Object.assign(chatSettings, storedSettings)
-		}
-
-		if (sessionSettings) {
-			chatSettings.joinFavorites = sessionSettings.joinFavorites
-			chatSettings.roomSession = sessionSettings.roomSession
-			chatSettings.favRooms = sessionSettings.favRooms
 		}
 
 		$('#chatColorEnable').prop("checked", chatSettings.colorText)
