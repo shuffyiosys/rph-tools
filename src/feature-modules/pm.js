@@ -202,7 +202,7 @@ var pmModule = (function () {
 		let usernameHtml =  pmMsgHtml.children[1].outerHTML
 		$(pmMsgHtml.children[0]).remove()
 		$(pmMsgHtml.children[0]).remove()
-		let msg = pmMsgHtml.innerHTML.trim()
+		let msg = pmMsgHtml.children[0].innerHTML.trim()
 		if (msg.charAt(0) === '/') {
 			msg = ` ${parseCommand(data)}`
 		}

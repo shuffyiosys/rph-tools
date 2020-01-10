@@ -1,3 +1,7 @@
+RPH Tools (4.2.3)
+---------------
+* Fixed an issue with chat and PM slash commands.
+
 RPH Tools (4.2.2)
 ---------------
 * Added a tell on the chat tab that isn't active and new messages showed up

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.2.4
+// @version    4.2.3
 // @description Adds extended settings to RPH
 // @match      https://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.2.4'
+const VERSION_STRING = '4.2.3'
 
 const SETTINGS_NAME = "rph_tools_settings"
 /**
@@ -1364,7 +1364,7 @@ var pmModule = (function () {
 		let usernameHtml =  pmMsgHtml.children[1].outerHTML
 		$(pmMsgHtml.children[0]).remove()
 		$(pmMsgHtml.children[0]).remove()
-		let msg = pmMsgHtml.innerHTML.trim()
+		let msg = pmMsgHtml.children[0].innerHTML.trim()
 		if (msg.charAt(0) === '/') {
 			msg = ` ${parseCommand(data)}`
 		}
