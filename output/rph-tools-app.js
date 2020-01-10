@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.2.2
+// @version    4.2.4
 // @description Adds extended settings to RPH
 // @match      https://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.2.2'
+const VERSION_STRING = '4.2.4'
 
 const SETTINGS_NAME = "rph_tools_settings"
 /**
@@ -148,7 +148,7 @@ function addToDroplist(value, label, droplist) {
 }
 
 /**
- * Un an array of objects, return the first instance where a key matches the
+ * In an array of objects, return the first instance where a key matches the
  * value being searched.
  * @param {array} objArray Array of objects
  * @param {*} key Key to look for
@@ -165,6 +165,9 @@ function arrayObjectIndexOf(objArray, key, value) {
 	return -1
 }
 
+/**
+ * Sorts the account's username list to alphabetical order
+ */
 function getSortedNames() {
 	var namesToIds = {}
 	account.users.forEach(function (userObj) {
@@ -187,10 +190,10 @@ function getSortedNames() {
 
 /** 
  * Generates a randum number using the Linear congruential generator algorithm
- * @param {*} value - Number that seeds the RNG
+ * @param {*} seed - RNG seed value
  */
-function LcgRng (value) {
-	let result = (((value * 214013) + 2531011) % Math.pow(2,31))
+function LcgRng (seed) {
+	let result = (((seed * 214013) + 2531011) % Math.pow(2,31))
 	return result
 }
 
@@ -240,7 +243,19 @@ function parseRng(data) {
 	}
 	return newMsg
 }
+
 /**
+ * Gets the list of vanity names and maps them to an ID
+ */
+function getVanityNamesToIds() {
+	let vanityToIds = {}
+	for(let user in messenger.users){
+		let vanityName = messenger.users[user].props.vanity
+		if(vanityName)
+		vanityToIds[vanityName] = user
+	}
+	return vanityToIds
+}/**
  * Generates a hash value for a string
  * This was modified from https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
  */
@@ -277,7 +292,11 @@ function intputChatText(ev, User, Room) {
 		return
 	}
 
-	Room.sendMessage(message, User.props.id)
+	if (message[0] === '/' && message.substring(0, 2) !== '//' && chatModule) {
+		chatModule.parseSlashCommand(inputTextarea, Room, User);
+	} else {
+		Room.sendMessage(message, User.props.id)
+	}
 	inputTextarea.val('')
 
 	let thisTab = rph.tabs[User.props.id]
@@ -601,7 +620,6 @@ var chatModule = (function () {
 
 		chatSocket._callbacks.$msg.pop()
 		chatSocket.on('msg', (data) => {
-			console.log(data)
 			for (const msgData of data) {
 				getUserById(msgData.userid, function(User){
 					postMessage(getRoom(msgData.room), User, msgData, (modUserIdx !== -1))
@@ -610,18 +628,21 @@ var chatModule = (function () {
 		})
 
 		getUserById(userId, (User) => {
-			addNameToUI(thisRoom, User)
 			if (moddingModule !== null && modUserIdx === userId) {
 				moddingModule.addModRoomPair(User.props, thisRoom.props.name)
 			}
-
-			resizeChatTabs()
-			$('div.' + User.props.id + '_' + makeSafeForCss(thisRoom.props.name) + ' .user-for-textarea span').css('overflow', 'hidden')
-			var chatTextArea = $('textarea.' + User.props.id + '_' + makeSafeForCss(thisRoom.props.name))
+			let roomCss = makeSafeForCss(thisRoom.props.name)
+			let chatTextArea = $(`textarea.${User.props.id}_${roomCss}`)
+			let tabsLen = thisRoom.$tabs.length
+			let idRoomName = thisRoom.$tabs[tabsLen - 1][0].className.split(' ')[2]
+			thisRoom.$tabs[tabsLen - 1].prepend(`<p style="font-size: x-small; height:16px; margin-top: -14px;">${User.props.name}</p>`)
+			$(`textarea.${idRoomName}`).prop('placeholder', `Post as ${User.props.name}`)
+			$(`div.${User.props.id}_${roomCss} .user-for-textarea span`).css('overflow', 'hidden')
 			chatTextArea.unbind('keyup')
 			chatTextArea.bind('keydown', function (ev) {
 				intputChatText(ev, User, thisRoom)
 			})
+			resizeChatTabs()
 		})
 	}
 
@@ -674,9 +695,8 @@ var chatModule = (function () {
 		let classes = ''
 		let msgHtml = ''
 		let colorStyle = (chatSettings.colorText) ? `style="color: #${User.props.color.toString()}"` : ``
-		if (msg.charAt(0) === '/' && msg.slice(1, 3) === 'me') {
+		if (data.msg.charAt(0) === '/' && data.msg.slice(1, 3) === 'me') {
 			classes += 'action ';
-			msg = msg.slice(3);
 			msgHtml = thisRoom.appendMessage(
 				`<span class="first"><span class="timestamp">${timestamp}</span></span>
 				 	<span ${colorStyle}><a class="name" title="${timestamp}">${data.userid}</a>${msg}</span>`
@@ -770,8 +790,8 @@ var chatModule = (function () {
 			case '/coinflip':
 				var rngModule = rphToolsModule.getModule('RNG Module')
 				if (rngModule) {
-					inputTextBox.val(rngModule.genCoinFlip())
-					sendChatMessage(inputTextBox, Room, User)
+					newMessage = rngModule.genCoinFlip()
+					Room.sendMessage(newMessage, User.props.id)
 				}
 				break
 			case '/roll':
@@ -786,22 +806,28 @@ var chatModule = (function () {
 					if (isNaN(die) || isNaN(sides)) {
 						error = true
 					} else {
-						inputTextBox.val(rngModule.getDiceRoll(die, sides, true))
-						sendChatMessage(inputTextBox, Room, User)
+						newMessage = rngModule.getDiceRoll(die, sides, true)
+						Room.sendMessage(newMessage, User.props.id)
 					}
 				}
 				break
 			case '/random':
 				var rngModule = rphToolsModule.getModule('RNG Module')
 				if (rngModule) {
-					inputTextBox.val(rngModule.genRandomNum())
-					sendChatMessage(inputTextBox, Room, User)
+					newMessage = rngModule.genRandomNum()
+					Room.sendMessage(newMessage, User.props.id)
 				}
 				break
 			case '/rps':
 				const results = ['Rock!', 'Paper!', 'Scissors!']
-				inputTextBox.val('/me plays Rock, Paper, Scissors and chooses... ' + results[Math.ceil(Math.random() * 3) % 3].toString())
-				sendChatMessage(inputTextBox, Room, User)
+				newMessage = `/me plays Rock, Paper, Scissors and chooses... ${results[Math.ceil(Math.random() * 3) % 3].toString()}`
+				Room.sendMessage(newMessage, User.props.id)
+				break
+			case '/leave':
+				chatSocket.emit('leave', {
+					userid: User.props.id,
+					name: Room.props.name
+				  })
 				break
 			case '/kick':
 			case '/ban':
@@ -828,7 +854,7 @@ var chatModule = (function () {
 				}
 				break
 			default:
-				sendChatMessage(inputTextBox, Room, User)
+				Room.sendMessage(newMessage, User.props.id)
 				break
 		}
 
@@ -906,28 +932,6 @@ var chatModule = (function () {
 				thisRoom.$tabs[0].css('color', chatSettings.color)
 			}
 		}
-	}
-
-	/**
-	 * Adds user name to chat tab and chat textarea
-	 * @param {object} thisRoom - Room that was entered
-	 * @param {number} userId - ID of the user that entered
-	 **/
-	function addNameToUI(thisRoom, User) {
-		var tabsLen = thisRoom.$tabs.length
-		var idRoomName = thisRoom.$tabs[tabsLen - 1][0].className.split(' ')[2]
-		var newTabHtml = '<span>' + thisRoom.props.name +
-			'</span><p style="font-size: x-small; margin-top: -58px;">' +
-			User.props.name + '</p>'
-		thisRoom.$tabs[tabsLen - 1].html(newTabHtml)
-		$('<a class="close ui-corner-all">x</a>').on('click', (ev) => {
-			ev.stopPropagation()
-			chatSocket.emit('leave', {
-				userid: User.props.id,
-				name: thisRoom.props.name
-			})
-		}).appendTo(thisRoom.$tabs[tabsLen - 1])
-		$('textarea.' + idRoomName).prop('placeholder', 'Post as ' + User.props.name)
 	}
 
 	/**
@@ -1877,15 +1881,18 @@ var moddingModule = (function () {
 	}
 
 	/**
-	 * Performs a modding action
+	 * Performs a modding action. This will look for a user's vanity name first, then act on that.
 	 * @param {string} action Name of the action being performed
 	 */
 	function modAction(action) {
 		var targets = $('#modTargetTextInput').val().replace(/\r?\n|\r/, '')
+		let vanityMap = getVanityNamesToIds()
 		targets = targets.split(',')
 		console.log('RPH Tools[modAction]: Performing', action, 'on', targets)
-
 		targets.forEach(function (target) {
+			if (vanityMap[target]) {
+				target = messenger.users[vanityMap[target]].props.name
+			}
 			emitModAction(action, target, $('input#modFromTextInput').val(),
 				$('input#modRoomTextInput').val(),
 				$("input#modMessageTextInput").val())
@@ -1943,10 +1950,6 @@ var moddingModule = (function () {
 			$('#roomModSelect').append('<option value="' + roomNameValue + '">' +
 				roomNamePair + '</option>')
 		}
-	}
-
-	function processFilterAction(action, modName, targetName, roomName) {
-		moddingModule.emitModAction(action, targetName, modName, roomName, settings.autoKickMsg)
 	}
 
 	/**

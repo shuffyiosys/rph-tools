@@ -35,7 +35,11 @@ function intputChatText(ev, User, Room) {
 		return
 	}
 
-	Room.sendMessage(message, User.props.id)
+	if (message[0] === '/' && message.substring(0, 2) !== '//' && chatModule) {
+		chatModule.parseSlashCommand(inputTextarea, Room, User);
+	} else {
+		Room.sendMessage(message, User.props.id)
+	}
 	inputTextarea.val('')
 
 	let thisTab = rph.tabs[User.props.id]

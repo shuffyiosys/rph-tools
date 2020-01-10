@@ -156,15 +156,18 @@ var moddingModule = (function () {
 	}
 
 	/**
-	 * Performs a modding action
+	 * Performs a modding action. This will look for a user's vanity name first, then act on that.
 	 * @param {string} action Name of the action being performed
 	 */
 	function modAction(action) {
 		var targets = $('#modTargetTextInput').val().replace(/\r?\n|\r/, '')
+		let vanityMap = getVanityNamesToIds()
 		targets = targets.split(',')
 		console.log('RPH Tools[modAction]: Performing', action, 'on', targets)
-
 		targets.forEach(function (target) {
+			if (vanityMap[target]) {
+				target = messenger.users[vanityMap[target]].props.name
+			}
 			emitModAction(action, target, $('input#modFromTextInput').val(),
 				$('input#modRoomTextInput').val(),
 				$("input#modMessageTextInput").val())
@@ -222,10 +225,6 @@ var moddingModule = (function () {
 			$('#roomModSelect').append('<option value="' + roomNameValue + '">' +
 				roomNamePair + '</option>')
 		}
-	}
-
-	function processFilterAction(action, modName, targetName, roomName) {
-		moddingModule.emitModAction(action, targetName, modName, roomName, settings.autoKickMsg)
 	}
 
 	/**

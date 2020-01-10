@@ -134,7 +134,7 @@ function addToDroplist(value, label, droplist) {
 }
 
 /**
- * Un an array of objects, return the first instance where a key matches the
+ * In an array of objects, return the first instance where a key matches the
  * value being searched.
  * @param {array} objArray Array of objects
  * @param {*} key Key to look for
@@ -151,6 +151,9 @@ function arrayObjectIndexOf(objArray, key, value) {
 	return -1
 }
 
+/**
+ * Sorts the account's username list to alphabetical order
+ */
 function getSortedNames() {
 	var namesToIds = {}
 	account.users.forEach(function (userObj) {
@@ -173,10 +176,10 @@ function getSortedNames() {
 
 /** 
  * Generates a randum number using the Linear congruential generator algorithm
- * @param {*} value - Number that seeds the RNG
+ * @param {*} seed - RNG seed value
  */
-function LcgRng (value) {
-	let result = (((value * 214013) + 2531011) % Math.pow(2,31))
+function LcgRng (seed) {
+	let result = (((seed * 214013) + 2531011) % Math.pow(2,31))
 	return result
 }
 
@@ -225,4 +228,17 @@ function parseRng(data) {
 		console.log(`[parseRng]: General RNG params`, numbers, data.time)
 	}
 	return newMsg
+}
+
+/**
+ * Gets the list of vanity names and maps them to an ID
+ */
+function getVanityNamesToIds() {
+	let vanityToIds = {}
+	for(let user in messenger.users){
+		let vanityName = messenger.users[user].props.vanity
+		if(vanityName)
+		vanityToIds[vanityName] = user
+	}
+	return vanityToIds
 }

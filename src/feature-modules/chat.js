@@ -294,7 +294,6 @@ var chatModule = (function () {
 
 		chatSocket._callbacks.$msg.pop()
 		chatSocket.on('msg', (data) => {
-			console.log(data)
 			for (const msgData of data) {
 				getUserById(msgData.userid, function(User){
 					postMessage(getRoom(msgData.room), User, msgData, (modUserIdx !== -1))
@@ -303,18 +302,21 @@ var chatModule = (function () {
 		})
 
 		getUserById(userId, (User) => {
-			addNameToUI(thisRoom, User)
 			if (moddingModule !== null && modUserIdx === userId) {
 				moddingModule.addModRoomPair(User.props, thisRoom.props.name)
 			}
-
-			resizeChatTabs()
-			$('div.' + User.props.id + '_' + makeSafeForCss(thisRoom.props.name) + ' .user-for-textarea span').css('overflow', 'hidden')
-			var chatTextArea = $('textarea.' + User.props.id + '_' + makeSafeForCss(thisRoom.props.name))
+			let roomCss = makeSafeForCss(thisRoom.props.name)
+			let chatTextArea = $(`textarea.${User.props.id}_${roomCss}`)
+			let tabsLen = thisRoom.$tabs.length
+			let idRoomName = thisRoom.$tabs[tabsLen - 1][0].className.split(' ')[2]
+			thisRoom.$tabs[tabsLen - 1].prepend(`<p style="font-size: x-small; height:16px; margin-top: -14px;">${User.props.name}</p>`)
+			$(`textarea.${idRoomName}`).prop('placeholder', `Post as ${User.props.name}`)
+			$(`div.${User.props.id}_${roomCss} .user-for-textarea span`).css('overflow', 'hidden')
 			chatTextArea.unbind('keyup')
 			chatTextArea.bind('keydown', function (ev) {
 				intputChatText(ev, User, thisRoom)
 			})
+			resizeChatTabs()
 		})
 	}
 
@@ -367,9 +369,8 @@ var chatModule = (function () {
 		let classes = ''
 		let msgHtml = ''
 		let colorStyle = (chatSettings.colorText) ? `style="color: #${User.props.color.toString()}"` : ``
-		if (msg.charAt(0) === '/' && msg.slice(1, 3) === 'me') {
+		if (data.msg.charAt(0) === '/' && data.msg.slice(1, 3) === 'me') {
 			classes += 'action ';
-			msg = msg.slice(3);
 			msgHtml = thisRoom.appendMessage(
 				`<span class="first"><span class="timestamp">${timestamp}</span></span>
 				 	<span ${colorStyle}><a class="name" title="${timestamp}">${data.userid}</a>${msg}</span>`
@@ -463,8 +464,8 @@ var chatModule = (function () {
 			case '/coinflip':
 				var rngModule = rphToolsModule.getModule('RNG Module')
 				if (rngModule) {
-					inputTextBox.val(rngModule.genCoinFlip())
-					sendChatMessage(inputTextBox, Room, User)
+					newMessage = rngModule.genCoinFlip()
+					Room.sendMessage(newMessage, User.props.id)
 				}
 				break
 			case '/roll':
@@ -479,22 +480,28 @@ var chatModule = (function () {
 					if (isNaN(die) || isNaN(sides)) {
 						error = true
 					} else {
-						inputTextBox.val(rngModule.getDiceRoll(die, sides, true))
-						sendChatMessage(inputTextBox, Room, User)
+						newMessage = rngModule.getDiceRoll(die, sides, true)
+						Room.sendMessage(newMessage, User.props.id)
 					}
 				}
 				break
 			case '/random':
 				var rngModule = rphToolsModule.getModule('RNG Module')
 				if (rngModule) {
-					inputTextBox.val(rngModule.genRandomNum())
-					sendChatMessage(inputTextBox, Room, User)
+					newMessage = rngModule.genRandomNum()
+					Room.sendMessage(newMessage, User.props.id)
 				}
 				break
 			case '/rps':
 				const results = ['Rock!', 'Paper!', 'Scissors!']
-				inputTextBox.val('/me plays Rock, Paper, Scissors and chooses... ' + results[Math.ceil(Math.random() * 3) % 3].toString())
-				sendChatMessage(inputTextBox, Room, User)
+				newMessage = `/me plays Rock, Paper, Scissors and chooses... ${results[Math.ceil(Math.random() * 3) % 3].toString()}`
+				Room.sendMessage(newMessage, User.props.id)
+				break
+			case '/leave':
+				chatSocket.emit('leave', {
+					userid: User.props.id,
+					name: Room.props.name
+				  })
 				break
 			case '/kick':
 			case '/ban':
@@ -521,7 +528,7 @@ var chatModule = (function () {
 				}
 				break
 			default:
-				sendChatMessage(inputTextBox, Room, User)
+				Room.sendMessage(newMessage, User.props.id)
 				break
 		}
 
@@ -599,28 +606,6 @@ var chatModule = (function () {
 				thisRoom.$tabs[0].css('color', chatSettings.color)
 			}
 		}
-	}
-
-	/**
-	 * Adds user name to chat tab and chat textarea
-	 * @param {object} thisRoom - Room that was entered
-	 * @param {number} userId - ID of the user that entered
-	 **/
-	function addNameToUI(thisRoom, User) {
-		var tabsLen = thisRoom.$tabs.length
-		var idRoomName = thisRoom.$tabs[tabsLen - 1][0].className.split(' ')[2]
-		var newTabHtml = '<span>' + thisRoom.props.name +
-			'</span><p style="font-size: x-small; margin-top: -58px;">' +
-			User.props.name + '</p>'
-		thisRoom.$tabs[tabsLen - 1].html(newTabHtml)
-		$('<a class="close ui-corner-all">x</a>').on('click', (ev) => {
-			ev.stopPropagation()
-			chatSocket.emit('leave', {
-				userid: User.props.id,
-				name: thisRoom.props.name
-			})
-		}).appendTo(thisRoom.$tabs[tabsLen - 1])
-		$('textarea.' + idRoomName).prop('placeholder', 'Post as ' + User.props.name)
 	}
 
 	/**
