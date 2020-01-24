@@ -65,7 +65,7 @@ var moddingModule = (function () {
 			'<div class="rpht-option-block">' +
 			'	<div class="rpht-option-section">' +
 			'		<label class="rpht-label checkbox-label" for="wordAlertEnable">Enable word alerting</label>' +
-			'		<label class="switch"><input type="checkbox" id="wordAlertEnable"><span class="slider round"></span></label>' +
+			'		<label class="switch"><input type="checkbox" id="wordAlertEnable"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Highlights words that you want to be pinged on for moderation</label>' +
 			'	</div>' +
 			'	<div class="rpht-option-section option-section-bottom">' +
@@ -98,7 +98,7 @@ var moddingModule = (function () {
 			var room = $('input#modRoomTextInput').val()
 
 			getUserByName($('input#modFromTextInput').val(), function (user) {
-				chatSocket.emit('modify', {
+				socket.emit('modify', {
 					room: room,
 					userid: user.props.id,
 					props: {
@@ -186,7 +186,7 @@ var moddingModule = (function () {
 				if (action === 'kick' || action === 'ban' || action === 'unban') {
 					modMessage = reasonMsg
 				}
-				chatSocket.emit(action, {
+				socket.emit(action, {
 					room: roomName,
 					userid: user.props.id,
 					targetid: target.props.id,
@@ -197,7 +197,7 @@ var moddingModule = (function () {
 	}
 
 	function findUserAsMod(userObj) {
-		roomnames.forEach((roomname) => {
+		Object.keys(rph.rooms).forEach((roomname) => {
 			var roomObj = getRoom(roomname)
 			if (roomObj.props.mods.indexOf(userObj.props.id) > -1 ||
 				roomObj.props.owners.indexOf(userObj.props.id) > -1) {

@@ -57,7 +57,7 @@ function intputChatText(ev, User, Room) {
 
 	if (thisTab.offenses > 2) {
 		Room.sendMessage('Flood kick', User.props.id)
-		chatSocket.disconnect()
+		socket.disconnect()
 	} else if (thisTab.offenses === 2) {
 		Room.appendMessage(
 			'<span class="first">&nbsp;</span>\n\

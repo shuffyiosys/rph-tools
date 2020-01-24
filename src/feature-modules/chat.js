@@ -25,13 +25,18 @@ var chatModule = (function () {
 			'<h4>General options</h4>' +
 			'<div class="rpht-option-block">' +
 			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="chatColorEnable">Use user text colors</label>' +
-			'		<label class="switch"><input type="checkbox" id="chatColorEnable"><span class="slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">Use the user\'s color to stylize their text</label>' +
+			'		<label class="rpht-label checkbox-label" for="chatColorEnable">Stylize messages with user\'s color</label>' +
+			'		<label class="switch"><input type="checkbox" id="chatColorEnable"><span class="rpht-slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Stylize a user\'s text with their color(s)</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="chatSimpleColorEnable">Use simple color stylizing</label>' +
+			'		<label class="switch"><input type="checkbox" id="chatSimpleColorEnable"><span class="rpht-slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Only stylize with the user\'s primary color</label>' +
 			'	</div>' +
 			'	<div class="rpht-option-section option-section-bottom">' +
 			'		<label class="rpht-label checkbox-label" for="chatmsgPaddingEnable">Add padding between messages</label>' +
-			'		<label class="switch"><input type="checkbox" id="chatmsgPaddingEnable"><span class="slider round"></span></label>' +
+			'		<label class="switch"><input type="checkbox" id="chatmsgPaddingEnable"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Adds some padding at the end of each message for readibility</label>' +
 			'	</div>' +
 			'</div>' +
@@ -39,22 +44,22 @@ var chatModule = (function () {
 			'<div class="rpht-option-block">' +
 			'	<div class="rpht-option-section">' +
 			'		<label class="rpht-label checkbox-label" for="notifyPingEnable">Enable pings</label>' +
-			'		<label class="switch"><input type="checkbox" id="notifyPingEnable"><span class="slider round"></span></label>' +
+			'		<label class="switch"><input type="checkbox" id="notifyPingEnable"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">	Turns on ping notifications in chat</label>' +
 			'	</div>' +
 			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="notifyNotificationEnable">Enable desktop notifications</label>' +
-			'		<label class="switch"><input type="checkbox" id="notifyNotificationEnable"><span class="slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">Pops up a notification when you get pinged</label>' +
-			'	</div>' +
-			'	<div class="rpht-option-section">' +
 			'		<label class="rpht-label checkbox-label" for="selfPingEnable">Can ping yourself</label>' +
-			'		<label class="switch"><input type="checkbox" id="selfPingEnable"><span class="slider round"></span></label>' +
+			'		<label class="switch"><input type="checkbox" id="selfPingEnable"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Pings will trigger on your own messages</label>' +
 			'	</div>' +
 			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="notifyNotificationEnable">Enable desktop notifications</label>' +
+			'		<label class="switch"><input type="checkbox" id="notifyNotificationEnable"><span class="rpht-slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Pops up a notification when you get pinged</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section">' +
 			'		<label style="font-weight: bold; width:522px; padding: 0px;">Desktop notification duration</label>' +
-			'		<select style="width: 80px;" id="pingNotifyTimeoutSelect">' +
+			'		<select style="float: right; width: 80px;" id="pingNotifyTimeoutSelect">' +
 			'			<option value="3000">Short</option>' +
 			'			<option value="6000" selected>Normal</option>' +
 			'			<option value="10000">Long</option>' +
@@ -72,12 +77,12 @@ var chatModule = (function () {
 			'	</div>' +
 			'	<div class="rpht-option-section">' +
 			'		<label class="rpht-label checkbox-label" for="pingExactMatch">Exact match</label>' +
-			'		<label class="switch"><input type="checkbox" id="pingExactMatch"><span class="slider round"></span></label>' +
+			'		<label class="switch"><input type="checkbox" id="pingExactMatch"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">e.g., If pinging on "Mel", matches on "Mel" and not "Melody"</label>' +
 			'	</div>' +
 			'	<div class="rpht-option-section">' +
 			'		<label class="rpht-label checkbox-label" for="pingCaseSense">Case sensitive</label>' +
-			'		<label class="switch"><input type="checkbox" id="pingCaseSense"><span class="slider round"></span></label>' +
+			'		<label class="switch"><input type="checkbox" id="pingCaseSense"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">e.g., If pinging on "Mel", matches on "Mel" and not "mel"</label>' +
 			'	</div>' +
 			'	<div class="rpht-option-section">' +
@@ -85,9 +90,9 @@ var chatModule = (function () {
 			'		<label class="rpht-label text-input-label">Text Color</label><input type="text" class="rpht-short-input" id="pingTextColor" value="#000"><br /><br />' +
 			'		<label class="rpht-label text-input-label">Highlight</label><input type="text" class="rpht-short-input" id="pingHighlightColor" value="#FFA"><br><br>' +
 			'		<label class="rpht-label checkbox-label" style="font-weight:initial;" for="pingBoldEnable">Add <strong>bold</strong></label>' +
-			'		<label class="switch"><input type="checkbox" id="pingBoldEnable"><span class="slider round"></span></label><br><br>' +
+			'		<label class="switch"><input type="checkbox" id="pingBoldEnable"><span class="rpht-slider round"></span></label><br><br>' +
 			'		<label class="rpht-label checkbox-label" style="font-weight:initial;" for="pingItalicsEnable">Add <em>Italics</em></label>' +
-			'		<label class="switch"><input type="checkbox" id="pingItalicsEnable"><span class="slider round"></span></label>' +
+			'		<label class="switch"><input type="checkbox" id="pingItalicsEnable"><span class="rpht-slider round"></span></label>' +
 			'	</div>' +
 			'	<div class="rpht-option-section option-section-bottom">' +
 			'			<label class="rpht-label checkbox-label">Ping Tester: </label>' +
@@ -99,7 +104,7 @@ var chatModule = (function () {
 			'<div class="rpht-option-block">' +
 			'	<div class="rpht-option-section">' +
 			'		<label class="rpht-label checkbox-label" for="joinFavEnable">Join favorites</label>' +
-			'		<label class="switch"><input type="checkbox" id="joinFavEnable"><span class="slider round"></span></label>' +
+			'		<label class="switch"><input type="checkbox" id="joinFavEnable"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Join rooms that are in the favorite rooms list</label>' +
 			'	</div>' +
 			'	<div class="rpht-option-section option-section-bottom">' +
@@ -121,6 +126,11 @@ var chatModule = (function () {
 		$('#chatColorEnable').change(() => {
 			chatSettings.colorText = getCheckBox('#chatColorEnable')
 			saveSettings()
+		})
+
+		$('#chatSimpleColorEnable').change( () => {
+			chatSettings.colorSimpleText = getCheckBox('#chatSimpleColorEnable')
+			saveSettings()	
 		})
 
 		$('#chatmsgPaddingEnable').change(() => {
@@ -242,14 +252,14 @@ var chatModule = (function () {
 		/* General intialization */
 		$(window).resize(resizeChatTabs)
 
-		chatSocket.on('confirm-room-join', function (data) {
+		socket.on('confirm-room-join', function (data) {
 			roomSetup(data)
 		})
 
 		/* Setup the timer for automatically dismissing the opening dialog once
 		   rooms are available. The timer clears after. */
 		autoDismissTimer = setInterval(() => {
-			if (roomnames.length === 0) {
+			if (Object.keys(rph.rooms).length === 0) {
 				return
 			}
 			$("button span:contains('Continue')").trigger('click')
@@ -281,8 +291,10 @@ var chatModule = (function () {
 		var moddingModule = rphToolsModule.getModule('Modding Module')
 		let modUserIdx = -1
 
-		thisRoom.$tabs[0].click(() => {
-			thisRoom.$tabs[0].removeAttr('style')
+		thisRoom.$tabs[thisRoom.$tabs.length-1].click(() => {
+			for(let roomTab of thisRoom.$tabs) {
+				roomTab.removeAttr('style')
+			}
 		})
 
 		for (var idx = 0; idx < account.userids.length && !modUserIdx !== -1; idx++) {
@@ -292,15 +304,21 @@ var chatModule = (function () {
 			}
 		}
 
-		chatSocket._callbacks.$msg.pop()
-		chatSocket.on('msg', (data) => {
-			for (const msgData of data) {
-				getUserById(msgData.userid, function(User){
-					postMessage(getRoom(msgData.room), User, msgData, (modUserIdx !== -1))
-				})
+		socket.on('msg', (data) => {
+			for (let dataIdx = 0; dataIdx < data.length; dataIdx++){
+				const msgData = data[(data.length - 1) - dataIdx]
+				let messages = $(`div[data-roomname="${msgData.room}"]`).children()
+				for(let idx = ((messages.length - 2) - dataIdx); idx > 0; idx--) {
+					/* Traverse the messages in reverse order. Start at -2 to start past the anchor */
+					let message = messages[idx]
+					if ($(message.children[0].children[0]).attr('data-userid') == msgData.userid){
+						processMsg(thisRoom, msgData, message, modUserIdx !== -1)
+						break
+					}
+				}
 			}
 		})
-
+		
 		getUserById(userId, (User) => {
 			if (moddingModule !== null && modUserIdx === userId) {
 				moddingModule.addModRoomPair(User.props, thisRoom.props.name)
@@ -320,116 +338,113 @@ var chatModule = (function () {
 		})
 	}
 
-	function postMessage(thisRoom, User, data, isMod) {
-		let timestamp = makeTimestamp(data.time);
-		let msg = parseMsg(data.msg);
-		let selfMsg = account.userids.includes(data.userid)
+	function processMsg(thisRoom, msgData, msgHtml, isMod) {
+		const fadeTypes = ['', 'vertical-fade', 'horizontal-fade', 'radial-fade']
+		const colorClasses = ['', 'two-color', 'three-color']
+		let contentQuery = $(msgHtml.children[1].children[0])
+		let selfMsg = account.userids.includes(msgData.userid)
+		/* If the message was an action, switch the query to where it really is */
+		if (msgHtml.className.includes('action')){
+			contentQuery = $(msgHtml.children[1].children[1])
+		}
+		/* Separate the new content from the previous content */
+		const msgLineCount = msgData.msg.split('\n').length
+		const contentLines = contentQuery[0].innerHTML.split('<br>')
+		const prevMsgs = contentLines.slice(0, contentLines.length - msgLineCount)
+		let newMsg = contentLines.slice(contentLines.length - msgLineCount).join('<br>')
 
 		/* Check to see if there's a RNG marker, then process it if it's there */
-		if (msg.indexOf('\u200b') > -1) {
-			msg = ` ${parseMsg(parseRng(data))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
-		}
-
-		/* Add pings if it's enabled AND ((self pinging is enabled AND the message is owned by self) OR it's another's) */
-		if (chatSettings.enablePings && ((chatSettings.selfPing && selfMsg === true) || selfMsg === false)) {
-			let testRegex = null
-			testRegex = matchPing(msg)
-			if (testRegex) {
-				msg = highlightPing(msg, testRegex)
-				highlightRoom(thisRoom)
-				pingSound.play()
-
-				/* Bring up the notification if enabled, but don't do it if the user pinged themselves*/
-				if (chatSettings.pingNotify && selfMsg === false) {
-					let notification = new Notification(`${User.props.name} pinged you in ${thisRoom.props.name}`)
-					setTimeout(() => {
-						notification.close()
-					}, chatSettings.notifyTime)
-				}
-			}
+		if (newMsg.indexOf('\u200b') > -1) {
+			newMsg = ` ${parseMsg(parseRng(msgData))} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
 		}
 
 		if(thisRoom.isActive() === false) {
-			thisRoom.$tabs[0].css('border-bottom', '4px solid #ADF')
-		}
-
-		/* Process other's messages for issues if a mod */
-		if (isMod && moddingModule && selfMsg === false) {
-			let alertRegex = null
-			let alertWords = moddingModule.getAlertWords()
-			alertRegex = matchPing(msg, alertWords, false, true)
-			// Process alert
-			if (alertRegex) {
-				msg = highlightPing(msg, alertRegex, true)
-				highlightRoom(thisRoom, true)
-				moddingModule.playAlert()
+			for(let roomTab of thisRoom.$tabs) {
+				roomTab.css('border-bottom', '4px solid #ADF')
+				$(roomTab.children()[2]).hide()
 			}
 		}
 
-		let classes = ''
-		let msgHtml = ''
-		let colorStyle = (chatSettings.colorText) ? `style="color: #${User.props.color.toString()}"` : ``
-		if (data.msg.charAt(0) === '/' && data.msg.slice(1, 3) === 'me') {
-			classes += 'action ';
-			msgHtml = thisRoom.appendMessage(
-				`<span class="first"><span class="timestamp">${timestamp}</span></span>
-				 	<span ${colorStyle}><a class="name" title="${timestamp}">${data.userid}</a>${msg}</span>`
-			).addClass(classes);
-		} else {
-			msgHtml = thisRoom.appendMessage(
-				`<span class="first"><span class="timestamp">${timestamp}</span><a class="name" title="${timestamp}">${data.userid}</a></span>
-				<span ${colorStyle}>${msg}</span>`
-			).addClass(classes);
-			msgHtml.find('.name').data('userid', data.userid);
-		}
-		msgHtml.find('br:gt(10)').remove();
+		/* Figure out pinging and coloring */
+		getUserById(msgData.userid, (user) => {
+			/* Add pings if 
+			   - It's enabled AND 
+			   - The message isn't a buffer from the server AND
+			   - ((self pinging is enabled AND the message is owned by self) OR it's another's) */
+			if (chatSettings.enablePings && 
+				!msgData.buffer &&
+				((chatSettings.selfPing && selfMsg === true) || selfMsg === false)) {
+				let testRegex = null
+				testRegex = matchPing(newMsg)
+				if (testRegex) {
+					newMsg = highlightPing(newMsg, testRegex)
+					if (!thisRoom.isActive()) {
+						for(let roomTab of thisRoom.$tabs) {
+							roomTab[0].css('background-color', chatSettings.highlight)
+							roomTab[0].css('color', chatSettings.color)
+						}
+					}
+					pingSound.play()
 
-		if (chatSettings.msgPadding) {
-			classes += 'msg-padding '
-		}
-		if( User.friendOf ){
-			classes += 'friend ';
-		}
-		if( isOwnUser(User) ){
-			classes += 'self ';
-		}
-		if( isOwnerOf(thisRoom, User) ){
-			classes += 'owner ';
-		} else if( isModOf(thisRoom, User) ){
-			classes += 'mod ';
-		}
-		if( isInGroup(thisRoom, User) ){
-			classes += 'group-member ';
-		}
-		msgHtml.addClass(classes);
-		msgHtml.find('.name').text(User.props.vanity || User.props.name)
-			.attr('data-content', (User.props.vanity || User.props.name))
-			.attr('title', User.props.name);
-		if( msgHtml.find('.name').length > 0 ){
-			if( Array.isArray(User.props.color) ){
-				User.props.color.forEach( (hex, i) => {
-					msgHtml.find('.name').get(0).style.setProperty('--color'+(i+1), '#'+User.props.color[i])
-				})
+					/* Bring up the notification if enabled, but don't do it if the user pinged themselves*/
+					if (chatSettings.pingNotify && selfMsg === false) {
+						let notification = new Notification(`${user.props.name} pinged you in ${thisRoom.props.name}`)
+						setTimeout(() => {
+							notification.close()
+						}, chatSettings.notifyTime)
+					}
+				}
 			}
-		}
-		if( User.props.fade ){
-			if( User.props.fade == 1 ){
-				msgHtml.find('.name').addClass('vertical-fade');
-			} else if( User.props.fade == 2 ){
-				msgHtml.find('.name').addClass('horizontal-fade');
-			} else if( User.props.fade == 3 ){
-				msgHtml.find('.name').addClass('radial-fade')
+			/* Process other's messages for issues if a mod */
+			if (isMod && moddingModule && selfMsg === false) {
+				let alertRegex = null
+				let alertWords = moddingModule.getAlertWords()
+				alertRegex = matchPing(newMsg, alertWords, false, true)
+				// Process alert
+				if (alertRegex) {
+					msg = highlightPing(newMsg, alertRegex, true)
+					if (!thisRoom.isActive()) {
+						for(let roomTab of thisRoom.$tabs) {
+							roomTab.css('background-color', '#F00')
+							roomTab[0].css('color', '#FFF')
+						}
+					}
+					moddingModule.playAlert()
+				}
 			}
-		}
-		if( User.props.color.length > 1 ){
-			let numColorClass = '-color';
-			if( User.props.color.length == 2 ){
-				numColorClass = 'two'+numColorClass;
-			} else {
-				numColorClass = 'three'+numColorClass;
+			contentQuery[0].innerHTML = `${prevMsgs.join('<br>')} ${newMsg} <br>`
+	
+			/* Force the time stamp to show */
+			$(msgHtml.children[0].children[0]).show()
+
+			/* Add padding and remove stlying of the content */
+			if (chatSettings.msgPadding) {
+				msgHtml.className += ' msg-padding'
+				contentQuery.removeAttr('style')
 			}
-			msgHtml.find('.name').addClass(numColorClass);
-		}
+				
+			if (chatSettings.colorText) {
+				let classString = `${contentQuery[0].className}`
+				let styleString = `color: #${user.props.color[0]};`
+	
+				if (user.props.color[1]) {
+					styleString += `--color1: #${user.props.color[0]}; --color2: #${user.props.color[1]};`
+				}
+				if (user.props.color[2]) {
+					styleString += `--color3: #${user.props.color[2]};`
+				}
+	
+				if (!classString.includes(colorClasses[user.props.color.length - 1])) {
+					classString += ` ${colorClasses[user.props.color.length - 1]}`
+				}
+				if (!classString.includes(fadeTypes[user.props.fade])){
+					classString += ` ${fadeTypes[user.props.fade]}`
+				}
+	
+				contentQuery[0].className = classString.trim()
+				contentQuery.attr('style', styleString)
+			}
+		})
 	}
 
 	/**
@@ -498,7 +513,7 @@ var chatModule = (function () {
 				Room.sendMessage(newMessage, User.props.id)
 				break
 			case '/leave':
-				chatSocket.emit('leave', {
+				socket.emit('leave', {
 					userid: User.props.id,
 					name: Room.props.name
 				  })
@@ -593,22 +608,6 @@ var chatModule = (function () {
 	}
 
 	/**
-	 * Adds a highlight to the room's tab
-	 * @param {object} thisRoom - Room where the ping happened.
-	 */
-	function highlightRoom(thisRoom, alert = false) {
-		if (!thisRoom.isActive()) {
-			if (alert) {
-				thisRoom.$tabs[0].css('background-color', '#F00')
-				thisRoom.$tabs[0].css('color', '#FFF')
-			} else {
-				thisRoom.$tabs[0].css('background-color', chatSettings.highlight)
-				thisRoom.$tabs[0].css('color', chatSettings.color)
-			}
-		}
-	}
-
-	/**
 	 * Gets the user's ID from the chat tab (it's in the class)
 	 * @param {} thisRoom - Room to get the ID from
 	 **/
@@ -647,7 +646,7 @@ var chatModule = (function () {
 	 **/
 	function autoJoiningHandler() {
 		/* Don't run this if there's no rooms yet. */
-		if (roomnames.length === 0) {
+		if (Object.keys(rph.rooms).length === 0) {
 			return
 		}
 		$('<div id="rpht-autojoin" class="inner">' +
@@ -687,7 +686,7 @@ var chatModule = (function () {
 	function joinFavoriteRooms() {
 		for (var i = 0; i < chatSettings.favRooms.length; i++) {
 			var favRoom = chatSettings.favRooms[i]
-			chatSocket.emit('join', {
+			socket.emit('join', {
 				name: favRoom.room,
 				userid: favRoom.userId,
 				pw: favRoom.roomPw
@@ -771,6 +770,7 @@ var chatModule = (function () {
 		let storedSettings = settingsModule.getSettings(localStorageName)
 		chatSettings = {
 			'colorText': true,
+			'colorSimpleText': true,
 			'msgPadding': false,
 	
 			'enablePings': true,
@@ -794,6 +794,7 @@ var chatModule = (function () {
 		}
 
 		$('#chatColorEnable').prop("checked", chatSettings.colorText)
+		$('#chatSimpleColorEnable').prop("checked", chatSettings.colorSimpleText)
 		$('#chatmsgPaddingEnable').prop("checked", chatSettings.msgPadding)
 		$('#combineMsgEnable').prop("checked", chatSettings.combineMsg)
 

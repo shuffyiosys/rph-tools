@@ -17,7 +17,7 @@ var pmModule = (function () {
 			'<div class="rpht-option-block">' +
 			'	<div class="rpht-option-section option-section-bottom">' +
 			'		<label class="rpht-label checkbox-label" for="pmColorEnable">Use user text colors</label>' +
-			'		<label class="switch"><input type="checkbox" id="pmColorEnable"><span class="slider round"></span></label>' +
+			'		<label class="switch"><input type="checkbox" id="pmColorEnable"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Use the user\'s color to stylize their text</label>' +
 			'	</div>' +
 			'</div>' +
@@ -25,12 +25,12 @@ var pmModule = (function () {
 			'<div class="rpht-option-block">' +
 			'	<div class="rpht-option-section">' +
 			'		<label class="rpht-label checkbox-label" for="pmNotify">Enable desktop notifications</label>' +
-			'		<label class="switch"><input type="checkbox" id="pmNotify"><span class="slider round"></span></label>' +
+			'		<label class="switch"><input type="checkbox" id="pmNotify"><span class="rpht-slider round"></span></label>' +
 			'		<p>Pops a desktop notification when you get a PM</p>' +
 			'	</div>' +
 			'	<div class="rpht-option-section">' +
 			'		<label style="font-weight: bold; width:522px; padding: 0px;">Desktop notification duration</label>' +
-			'		<select style="width: 80px;" id="pmNotifyTimeoutSelect">' +
+			'		<select style="width: 80px; float: right;" id="pmNotifyTimeoutSelect">' +
 			'			<option value="3000">Short</option>' +
 			'			<option value="6000" selected>Normal</option>' +
 			'			<option value="10000">Long</option>' +
@@ -41,7 +41,7 @@ var pmModule = (function () {
 			'		<label class="rpht-label split-input-label">PM sound URL </label>' +
 			'		<input class="split-input-label" type="text" id="pmPingURL" name="pmPingURL" style="margin-bottom: 12px;">' +
 			'		<label class="rpht-label checkbox-label" for="pmMute">Mute PMs</label>' +
-			'		<label class="switch"><input type="checkbox" id="pmMute"><span class="slider round"></span></label>' +
+			'		<label class="switch"><input type="checkbox" id="pmMute"><span class="rpht-slider round"></span></label>' +
 			'	</div>' +
 			'</div>' +
 			'<h4>PM Away System</h4>' +
@@ -93,7 +93,7 @@ var pmModule = (function () {
 		})
 
 		$('#removeAwayButton').click(() => {
-			removePmAway()
+			removePmAway($('#pmNamesDroplist option:selected').val())
 		})
 
 		$('#pmPingURL').change(() => {
@@ -120,20 +120,49 @@ var pmModule = (function () {
 			settingsModule.saveSettings(localStorageName, pmSettings)
 		})
 		$('#pm-msgs span').css('opacity', 0.85)
+
 		socket.on('pm', (data) => {
-			/* Check if the user is blocked */
 			if (account.ignores.indexOf(data.to) > -1) {
 				return;
 			}
-			rph.getPm({'from':data.from, 'to':data.to}, function(pm){
-				handleIncomingPm(data, pm)
-				pm.typingStop()
+			rph.getPm({'from':data.from, 'to':data.to}, (pm) => {
+				getUserByName(pm.to.props.name, (user) => {
+					processPmMsg(user, data, pm)
+				})
+
+				if (pmSettings.notify) {
+					let notification = new Notification(`${pm.to.props.name} sent a PM to you for ${pm.from.props.name}`)
+					setTimeout(() => {
+						notification.close()
+					}, pmSettings.notifyTime)
+				}
+
+				if (awayMessages[data.from].enabled) {
+					awayMessages[data.from].usedPmAwayMsg = true;
+					socket.emit('pm', {
+					  'from': data.from,
+					  'to': data.to,
+					  'msg': awayMessages[data.from].message,
+					  'target': 'all'
+					});
+				  }
 			})
 		})
-
+		
 		socket.on('pm-confirmation', (data) => {
 			rph.getPm({'from':data.to, 'to':data.from}, function(pm){
-				handleOutgoingPm(data, pm)
+				getUserByName(pm.from.props.name, (user) => {
+					processPmMsg(user, data, pm)
+
+					if (awayMessages[data.to] && awayMessages[data.to].enabled) {
+						$('#pmNamesDroplist option').filter(function () {
+							return this.value == data.to
+						  })
+						  .css("background-color", "")
+						  .html(user.props.name)
+						  awayMessages[data.to].enabled = false
+					}
+				})
 			})
 		})
 
@@ -147,116 +176,55 @@ var pmModule = (function () {
 			}, 3000)
 		})
 	}
-
-	/**
-	 * Handler for PMs that are incoming
-	 * @param {object } data Data containing the PM.
-	 */
-	function handleIncomingPm(data, pm) {
-		let pmMsgHtml = null
-		for(let i = pm.$msgs[0].children.length -1; i > -1; i--) {
-			let msgHtml = pm.$msgs[0].children[i].innerHTML
-			if (msgHtml.match(pm.to.props.name, 'i')){
-				pmMsgHtml = pm.$msgs[0].children[i]
-				break
+	function processPmMsg(user, data, pm) {
+		let pmMsgQuery = pm.$msgs[0].childNodes[pm.$msgs[0].childNodes.length - 1]
+		let nameQuery = $(pmMsgQuery.childNodes[1].childNodes[1])
+		let msgQuery = $(pmMsgQuery.childNodes[1].childNodes[2])
+		let rngMsg = parsePmRng(data.msg, data.date)
+	
+		nameQuery[0].innerHTML += `&nbsp;`
+	
+		if (rngMsg) {
+			msgQuery[0].innerHTML = rngMsg
+			nameQuery[0].innerHTML = `${user.props.name}`
+		}
+		else if (data.msg.startsWith('/me')) {
+			nameQuery[0].innerHTML = `${user.props.name}`
+		}
+	
+		nameQuery.attr('style', `color: #${user.props.color[0]}`)
+		if (pmSettings.colorText) {
+			msgQuery.attr('style', `color: #${user.props.color[0]}`)
+		}
+	}
+	
+	function parsePmRng (message, date) {
+		let resultMsg = ''
+		if (message.startsWith('/roll')) {
+			const diceArgs = parseRoll(message)
+			let results = []
+			let result = LcgRng(date)
+			results.push(result % diceArgs[1] + 1)
+			for (let die = 1; die < diceArgs[0]; die++) {
+				result = LcgRng(result)
+				results.push(result % diceArgs[1] + 1)
 			}
+			total = results.reduce((a, b) => a + b, 0)
+			resultMsg = ` rolled ${diceArgs[0]}d${diceArgs[1]}: ` + results.join(' ') + ' (total ' + total + ')'
 		}
-		if (!pmMsgHtml) {return}
+		else if (message.startsWith('/coinflip')) {
+			const outcomes = ['heads', 'tails']
+			resultMsg =  ` flips a coin. It lands on... ${outcomes[LcgRng(date) % 2]}!`
+		}
+		else if (message.startsWith('/rps')) {
+			const outcomes = ['Rock!', 'Paper!', 'Scissors!']
+			resultMsg = ` plays Rock, Paper, Scissors and chooses... ${outcomes[Math.ceil(Math.random() * 3) % 3].toString()}`
+		}
 
-		if (pmSettings.notify) {
-			let notification = new Notification(`${pm.to.props.name} sent a PM to you at ${pm.from.props.name}`)
-			setTimeout(() => {
-				notification.close()
-			}, pmSettings.notifyTime)
+		if (resultMsg) {
+			resultMsg += ` <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
 		}
-		buildPmMessage(pmMsgHtml, data, pm.to.props.color.toString())
-	}
-
-	/**
-	 * Handler for PMs that are outgoing
-	 * @param {object } data Data containing the PM.
-	 */
-	function handleOutgoingPm(data, pm) {
-		let pmMsgHtml = null
-		for(let i = pm.$msgs[0].children.length -1; i > -1; i--) {
-			let msgHtml = pm.$msgs[0].children[i].innerHTML
-			if (msgHtml.match(pm.from.props.name, 'i')){
-				pmMsgHtml = pm.$msgs[0].children[i]
-				break
-			}
-		}
-		if (!pmMsgHtml) {return}
-		buildPmMessage(pmMsgHtml, data, pm.from.props.color.toString())
-		if (awayMessages[data.from] && !awayMessages[data.from].usedPmAwayMsg) {
-			awayMessages[data.from].enabled = false
-			$('#pmNamesDroplist option').filter(function () {
-				return this.value == data.from
-			}).css("background-color", "")
-			awayMessages[data.from].usedPmAwayMsg = false
-		}
-	}
-
-	function buildPmMessage(pmMsgHtml, data, colorString) {
-		let styleString = ''
-		let timestampHtml = pmMsgHtml.children[0].outerHTML
-		let usernameHtml =  pmMsgHtml.children[1].outerHTML
-		$(pmMsgHtml.children[0]).remove()
-		$(pmMsgHtml.children[0]).remove()
-		let msg = pmMsgHtml.children[0].innerHTML.trim()
-		if (msg.charAt(0) === '/') {
-			msg = ` ${parseCommand(data)}`
-		}
-		if(pmSettings.colorText) {
-			styleString += `color: #${colorString};`
-		}
-		styleString += `opacity: 1.0;`
-		if (styleString) {
-			styleString = `style="${styleString}"`
-		}
-		pmMsgHtml.innerHTML = `${timestampHtml} ${usernameHtml} <span ${styleString}>${msg}</span>`
-	}
-
-	function parseCommand(data) {
-		var msg = parseMsg(data.msg);
-		var cmdArgs = msg.split(/ (.+)/)
-		switch(cmdArgs[0]) {
-			case '/coinflip':
-				var rngModule = rphToolsModule.getModule('RNG Module')
-				if (rngModule) {
-					msg = rngModule.genCoinFlip().substring(4)
-				}
-				break
-			case '/roll':
-				let die = 1
-				let sides = 20
-				let rolls = []
-				let total = 0
-				
-				if (cmdArgs.length > 1) {
-					die = parseInt(cmdArgs[1].split('d')[0])
-					sides = parseInt(cmdArgs[1].split('d')[1])
-				}
-				if (isNaN(die) || isNaN(sides)) {
-					error = true
-				} 
-				else {
-					let result = LcgRng(data.date)
-					rolls.push(result  % sides + 1)
-					for (let i = 1; i < die; i++) {
-						result = LcgRng(result)
-						rolls.push(result % sides + 1)
-					}
-					total = rolls.reduce((a, b) => a + b, 0)
-					msg = `rolled ${die}d${sides}: `
-					msg += rolls.join(' ') + ' (total ' + total + ')'
-				}
-				break
-			case '/rps':
-				const results = ['Rock!', 'Paper!', 'Scissors!']
-				msg = 'plays Rock, Paper, Scissors and chooses... ' + results[Math.ceil(Math.random() * 3) % 3].toString()
-				break
-		}
-		return msg
+		return resultMsg
 	}
 
 	/**
@@ -289,15 +257,12 @@ var pmModule = (function () {
 	/**
 	 * Removes an away status for a character
 	 */
-	function removePmAway() {
-		var userId = $('#pmNamesDroplist option:selected').val()
-
+	function removePmAway(userId) {
 		if (!awayMessages[userId]) {
 			return
 		}
-
-		if (awayMessages[userId].enabled) {
-			var name = $("#pmNamesDroplist option:selected").html()
+		var name = $("#pmNamesDroplist option:selected").html()
+		if (awayMessages[userId].enabled && name.startsWith('[Away]')) {
 			awayMessages[userId].enabled = false
 			$("#pmNamesDroplist option:selected").html(name.substring(6, name.length))
 			$("#pmNamesDroplist option:selected").css("background-color", "")

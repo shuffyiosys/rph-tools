@@ -1,3 +1,16 @@
+RPH Tools (4.2.5)
+---------------
+##### Bug fixes and features
+* New chat and PM processing to be compatible with RPH's native Edit message and Dice Roll commands.
+* Re-instated PM Away (not sure why this got lost D:)
+* Added option for chat message text coloring to add a user's complete color style or just their primary one
+##### Known issues
+* Cannot process RPH's edits at the moment. This will invalidate any RNG commands if used.
+
+RPH Tools (4.2.4)
+---------------
+* Quick patches to get RPH Tools working on PMs and Chat
+
 RPH Tools (4.2.3)
 ---------------
 * Fixed an issue with chat and PM slash commands.

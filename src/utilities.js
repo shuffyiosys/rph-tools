@@ -242,3 +242,14 @@ function getVanityNamesToIds() {
 	}
 	return vanityToIds
 }
+
+function parseRoll(rollCmd){
+	const args = rollCmd.split(/ (.+)/)
+	var die = 1
+	var sides = 20
+	if (args.length > 1) {
+		die = parseInt(args[1].split('d')[0])
+		sides = parseInt(args[1].split('d')[1])
+	}
+	return [die, sides]
+}
