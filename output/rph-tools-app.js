@@ -773,7 +773,7 @@ var chatModule = (function () {
 				if (!classString.includes(colorClasses[user.props.color.length - 1])) {
 					classString += ` ${colorClasses[user.props.color.length - 1]}`
 				}
-				if (!classString.includes(fadeTypes[user.props.fade])) {
+				if (!classString.includes(fadeTypes[user.props.fade]) && !chatSettings.colorSimpleText) {
 					classString += ` ${fadeTypes[user.props.fade]}`
 				}
 
