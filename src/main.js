@@ -6,7 +6,6 @@ $(function () {
 	var modules = [
 		chatModule,
 		pmModule,
-		rngModule,
 		moddingModule,
 		settingsModule,
 		aboutModule,

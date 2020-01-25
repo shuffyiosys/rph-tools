@@ -3,6 +3,7 @@ RPH Tools (4.2.6)
 ##### Features Updates
 * Added a slash (/) command window that pops up if the first character in the chat room textbox is /
 * Changed the RNG system so that it's only available via slash (/) commands
+* RNG module is no longer available since the current random numbers work differently.
 
 ##### Bug fixes
 * Fixed a bug that highlighted inactive rooms regardless when a chat message came in

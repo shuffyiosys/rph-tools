@@ -34,10 +34,15 @@ var chatModule = (function () {
 			'		<label class="switch"><input type="checkbox" id="chatSimpleColorEnable"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Only stylize with the user\'s primary color</label>' +
 			'	</div>' +
-			'	<div class="rpht-option-section option-section-bottom">' +
+			'	<div class="rpht-option-section">' +
 			'		<label class="rpht-label checkbox-label" for="chatmsgPaddingEnable">Add padding between messages</label>' +
 			'		<label class="switch"><input type="checkbox" id="chatmsgPaddingEnable"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Adds some padding at the end of each message for readibility</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<label class="rpht-label checkbox-label" for="chatCmdPopupEnable">Show chat command popup</label>' +
+			'		<label class="switch"><input type="checkbox" id="chatCmdPopupEnable"><span class="rpht-slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">If you type "/" as the first character, a pop-up shows displaying the commands</label>' +
 			'	</div>' +
 			'</div>' +
 			'<h4>Chat Pinging</h4>' +
@@ -196,8 +201,8 @@ var chatModule = (function () {
 			saveSettings()
 		})
 
-		$('#combineMsgEnable').change(() => {
-			chatSettings.combineMsg = $('#combineMsgEnable').is(':checked')
+		$('#chatCmdPopupEnable').change(() => {
+			chatSettings.chatCommandPopup = $('#chatCmdPopupEnable').is(':checked')
 			saveSettings()
 		})
 
@@ -393,7 +398,7 @@ var chatModule = (function () {
 				intputChatText(ev, User, thisRoom)
 			})
 			chatTextArea.on('input', () => {
-				if (chatTextArea.val().trim()[0] === '/') {
+				if (chatSettings.chatCommandPopup && chatTextArea.val().trim()[0] === '/') {
 					$('#chatCommandTooltip').show()
 				}
 				else {
@@ -844,6 +849,7 @@ var chatModule = (function () {
 			'colorText': true,
 			'colorSimpleText': true,
 			'msgPadding': false,
+			'chatCommandPopup': true,
 
 			'enablePings': true,
 			'pingNotify': false,
@@ -868,7 +874,7 @@ var chatModule = (function () {
 		$('#chatColorEnable').prop("checked", chatSettings.colorText)
 		$('#chatSimpleColorEnable').prop("checked", chatSettings.colorSimpleText)
 		$('#chatmsgPaddingEnable').prop("checked", chatSettings.msgPadding)
-		$('#combineMsgEnable').prop("checked", chatSettings.combineMsg)
+		$('#chatCmdPopupEnable').prop("checked", chatSettings.chatCommandPopup)
 
 		$('#notifyPingEnable').prop("checked", chatSettings.enablePings)
 		$('#notifyNotificationEnable').prop("checked", chatSettings.pingNotify)
