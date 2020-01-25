@@ -11,6 +11,7 @@ RPH Tools (4.2.6)
 
 #### Known issues
 * [CANNOT FIX] If a message comes up from a backlog such as going into a room or PM history restore, RPH Tools cannot process RNG commands. For chat commands, this is because RPH sends groups of messages with the same timestamp, which is used as the seed for the RNG. For PMs, it's because they are auto-filled by your computer's local history and there's no obvious trigger that RPH Tools can pick up on to process past results.
+** [ADDENDUM] RPH Tools will process RNG commands in the chat if it's the first message in a bundle, as the seed is valid for that. Otherwise it ignores the others.
 
 RPH Tools (4.2.5)
 ---------------
