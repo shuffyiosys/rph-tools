@@ -143,7 +143,7 @@ var moddingModule = (function () {
 
 		$('#modAlertUrl').blur(function () {
 			if (validateSetting('modAlertUrl', 'url')) {
-				settings.alertUrl = getInput('#modAlertUrl')
+				settings.alertUrl = $('#modAlertUrl').val()
 				settingsModule.saveSettings(localStorageName, settings)
 				alertSound = new Audio(settings.alertUrl)
 			}

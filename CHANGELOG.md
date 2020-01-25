@@ -1,3 +1,16 @@
+RPH Tools (4.2.6)
+---------------
+##### Features Updates
+* Added a slash (/) command window that pops up if the first character in the chat room textbox is /
+* Changed the RNG system so that it's only available via slash (/) commands
+
+##### Bug fixes
+* Fixed a bug that highlighted inactive rooms regardless when a chat message came in
+* Fixed a bug that was causing simple coloring to not work
+
+#### Known issues
+* [CANNOT FIX] If a message comes up from a backlog such as going into a room or PM history restore, RPH Tools cannot process RNG commands. For chat commands, this is because RPH sends groups of messages with the same timestamp, which is used as the seed for the RNG. For PMs, it's because they are auto-filled by your computer's local history and there's no obvious trigger that RPH Tools can pick up on to process past results.
+
 RPH Tools (4.2.5)
 ---------------
 ##### Bug fixes and features

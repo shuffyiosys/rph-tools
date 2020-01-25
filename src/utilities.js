@@ -1,20 +1,4 @@
-/**
- * Gets the value from an input element.
- * @param {string} settingId Full selector of the input to get its value
- * @return The extracted HTML's value
- */
-function getInput(settingId) {
-	return $(settingId).val()
-}
 
-/**
- * Gets the value of a checkbox
- * @param {string} settingId Full selector of the checkbox to get the value
- * @return The extracted HTML's value
- */
-function getCheckBox(settingId) {
-	return $(settingId).is(':checked')
-}
 
 /**
  * Marks an HTML element with red or white if there's a problem
@@ -42,14 +26,9 @@ function validateSetting(settingId, setting) {
 	if (setting === "url") {
 		validInput = validateUrl(input)
 	}
-	else if (setting === "color-allrange") {
+	else if (setting === 'color') {
 		input = input.replace('#', '')
 		validInput = validateColor(input)
-	}
-	else if (setting === "color") {
-		input = input.replace('#', '')
-		validInput = validateColor(input)
-		validInput = validateColorRange(input)
 	}
 	markProblem(settingId, !validInput)
 	return validInput
@@ -83,40 +62,6 @@ var validateUrl = function (url) {
 		}
 	}
 	return match
-}
-
-/**
- * Makes sure the color is less than #DDDDDD or #DDD depending on how many
- * digits were entered.
- * @param {string} TextColor String representation of the color.
- * @return True if the color is within range, false otherwise.
- */
-function validateColorRange(TextColor) {
-	var validColor = false
-	var red = 255
-	var green = 255
-	var blue = 255
-
-	/* If the color text is 3 characters, limit it to #DDD */
-	if (TextColor.length == 3) {
-		red = parseInt(TextColor.substring(0, 1), 16)
-		green = parseInt(TextColor.substring(1, 2), 16)
-		blue = parseInt(TextColor.substring(2, 3), 16)
-
-		if ((red <= 0xD) && (green <= 0xD) && (blue <= 0xD)) {
-			validColor = true
-		}
-	}
-	/* If the color text is 6 characters, limit it to #DDDDDD */
-	else if (TextColor.length == 6) {
-		red = parseInt(TextColor.substring(0, 2), 16)
-		green = parseInt(TextColor.substring(2, 4), 16)
-		blue = parseInt(TextColor.substring(4, 6), 16)
-		if ((red <= 0xDD) && (green <= 0xDD) && (blue <= 0xDD)) {
-			validColor = true
-		}
-	}
-	return validColor
 }
 
 /**
@@ -183,51 +128,47 @@ function LcgRng (seed) {
 	return result
 }
 
-/**
- * Parses a RNG message to take what the client sent and seed it into an
- * RNG.
- * @param {*} message - Message from the sender.
- */
-function parseRng(data) {
-	let newMsg = ""
-	let message = data.msg.substring(0, data.msg.indexOf('\u200b'));
-	if (message.match(new RegExp(/coin/, 'gi'))){
-		newMsg = "flips a coin. It lands on... "
-		if (LcgRng(data.time) % 2 === 1) {
-			newMsg += "heads!"
-		}
-		else {
-			newMsg += "tails!"
-		}
+function generateRngResult (command, message, date) {
+	let resultMsg = ''
+	if (command === 'rng-coinflip') {
+		const outcomes = ['heads', 'tails']
+		resultMsg += `flips a coin. It lands on... ${outcomes[LcgRng(date) % 2]}!`
 	}
-	else if (message.match(new RegExp(/rolled/, 'gi'))){
-		let numbers = message.match(new RegExp(/[0-9]+/, 'gi'))
-		let sides = parseInt(numbers[1])
-		let dieNum = parseInt(numbers[0])
+	else if (command === 'rng-roll') {
+		const diceArgs = parseRoll(message)
 		let results = []
-		let total = 0
-		let seed = data.time
-
-		let result = LcgRng(seed)
-		results.push(result % sides + 1)
-		for (let die = 1; die < dieNum; die++) {
+		let result = LcgRng(date)
+		results.push(result % diceArgs[1] + 1)
+		for (let die = 1; die < diceArgs[0]; die++) {
 			result = LcgRng(result)
-			results.push(result % sides + 1)
+			results.push(result % diceArgs[1] + 1)
 		}
 		total = results.reduce((a, b) => a + b, 0)
-		newMsg = `rolled ${numbers[0]}d${numbers[1]}: `
-		newMsg += results.join(' ') + ' (total ' + total + ')'
-		console.log('[parseRng] Dice roll params', numbers, data.time)
+		resultMsg += `rolled ${diceArgs[0]}d${diceArgs[1]}: ${results.join(' ')} (total: ${total})`
 	}
-	else if (message.match(new RegExp(/generated/, 'gi'))){
-		let resultStartIdx = message.indexOf(':')
-		let numbers = message.match(new RegExp(/-?[0-9]+/, 'gi'))
-		let seed = parseInt(numbers[2]) + data.time
-		newMsg = message.substring(0, resultStartIdx)
-		newMsg += ': ' + LcgRng(parseInt(seed)) % (numbers[1] - numbers[0] + 1 ) + ' ))'
-		console.log(`[parseRng]: General RNG params`, numbers, data.time)
+	else if (command === 'rng-rps') {
+		const outcomes = ['Rock!', 'Paper!', 'Scissors!']
+		resultMsg += `plays Rock, Paper, Scissors and chooses... ${outcomes[Math.ceil(Math.random() * 3) % 3].toString()}`
 	}
-	return newMsg
+
+	return resultMsg
+}
+
+function parsePostCommand(message) {
+	let command = ''
+	if (message.startsWith('/roll')) {
+		command = 'rng-roll'
+	}
+	else if (message.startsWith('/coinflip')) {
+		command = 'rng-coinflip'
+	}
+	else if (message.startsWith('/rps')) {
+		command = 'rng-rps'
+	}
+	else if (message.startsWith('/me')){
+		command = 'me'
+	}
+	return command
 }
 
 /**
@@ -244,6 +185,10 @@ function getVanityNamesToIds() {
 }
 
 function parseRoll(rollCmd){
+	const DIE_NUM_MIN = 1
+	const DIE_NUM_MAX = 100
+	const DIE_SIDE_MIN = 2
+	const DIE_SIDE_MAX = 1000000
 	const args = rollCmd.split(/ (.+)/)
 	var die = 1
 	var sides = 20
@@ -251,5 +196,7 @@ function parseRoll(rollCmd){
 		die = parseInt(args[1].split('d')[0])
 		sides = parseInt(args[1].split('d')[1])
 	}
+	die = Math.min(Math.max(die, DIE_NUM_MIN), DIE_NUM_MAX)
+	sides = Math.min(Math.max(sides, DIE_SIDE_MIN), DIE_SIDE_MAX)
 	return [die, sides]
 }

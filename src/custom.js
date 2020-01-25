@@ -14,34 +14,7 @@ String.prototype.hashCode = function () {
 	return hash
 }
 
-/**
- * Modified handler for keyup events from the chat textbox
- * @param {object} ev - Event
- * @param {object} User - User the textbox is attached to
- * @param {oject} Room - Room the textbox is attached to
- */
-function intputChatText(ev, User, Room) {
-	let inputTextarea = $(`textarea.${User.props.id}_${makeSafeForCss(Room.props.name)}.active`)
-	let message = inputTextarea.val().trim()
-
-	if (message.length > 4000) {
-		Room.appendMessage(
-			`<span class="first">&nbsp;</span><span title="${makeTimestamp(null, true)}">Message too long</span>`
-		).addClass('sys')
-		return
-	} else if (message.length === 0) {
-		return
-	} else if (ev.keyCode !== 13 || ev.shiftKey === true || ev.ctrlKey === true) {
-		return
-	}
-
-	if (message[0] === '/' && message.substring(0, 2) !== '//' && chatModule) {
-		chatModule.parseSlashCommand(inputTextarea, Room, User);
-	} else {
-		Room.sendMessage(message, User.props.id)
-	}
-	inputTextarea.val('')
-
+function floodTracker(User, Room, message) {
 	let thisTab = rph.tabs[User.props.id]
 	let newLength = message.length
 	let curTime = Math.round(new Date().getTime() / 1000)
@@ -67,4 +40,6 @@ function intputChatText(ev, User, Room) {
 			thisTab.offenses = 0
 		}, 15000)
 	}
+
+	return thisTab.offenses > 2
 }

@@ -2,9 +2,7 @@
  * This module handles features for the PM system.
  */
 var pmModule = (function () {
-	var pmSettings = {
-
-	}
+	var pmSettings = {}
 
 	var localStorageName = "pmSettings"
 
@@ -63,12 +61,12 @@ var pmModule = (function () {
 		loadSettings()
 
 		$('#pmColorEnable').change(() => {
-			pmSettings.colorText = getCheckBox('#pmColorEnable')
+			pmSettings.colorText = $('#pmColorEnable').is(':checked')
 			settingsModule.saveSettings(localStorageName, pmSettings)
 		})
 
 		$('#pmNotify').change(() => {
-			pmSettings.notify = getCheckBox('#pmNotify')
+			pmSettings.notify = $('#pmNotify').is(':checked')
 			settingsModule.saveSettings(localStorageName, pmSettings)
 		})
 
@@ -98,7 +96,7 @@ var pmModule = (function () {
 
 		$('#pmPingURL').change(() => {
 			if (validateSetting('pmPingURL', 'url')) {
-				pmSettings.audioUrl = getInput('pmPingURL')
+				pmSettings.audioUrl = $('pmPingURL').val()
 				$('#im-sound').children("audio").attr('src', pmSettings.audioUrl)
 				settingsModule.saveSettings(localStorageName, pmSettings)
 			}
@@ -180,51 +178,23 @@ var pmModule = (function () {
 		let pmMsgQuery = pm.$msgs[0].childNodes[pm.$msgs[0].childNodes.length - 1]
 		let nameQuery = $(pmMsgQuery.childNodes[1].childNodes[1])
 		let msgQuery = $(pmMsgQuery.childNodes[1].childNodes[2])
-		let rngMsg = parsePmRng(data.msg, data.date)
-	
-		nameQuery[0].innerHTML += `&nbsp;`
-	
-		if (rngMsg) {
-			msgQuery[0].innerHTML = rngMsg
+		let pmCommand = parsePostCommand(data.msg)
+
+		if (pmCommand.includes('rng')) {
+			msgQuery[0].innerHTML = ` ${generateRngResult(pmCommand, data.msg, data.date)} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
 			nameQuery[0].innerHTML = `${user.props.name}`
 		}
-		else if (data.msg.startsWith('/me')) {
+		else if (pmCommand === 'me') {
 			nameQuery[0].innerHTML = `${user.props.name}`
+		}
+		else {
+			nameQuery[0].innerHTML += '&nbsp;'
 		}
 	
 		nameQuery.attr('style', `color: #${user.props.color[0]}`)
 		if (pmSettings.colorText) {
 			msgQuery.attr('style', `color: #${user.props.color[0]}`)
 		}
-	}
-	
-	function parsePmRng (message, date) {
-		let resultMsg = ''
-		if (message.startsWith('/roll')) {
-			const diceArgs = parseRoll(message)
-			let results = []
-			let result = LcgRng(date)
-			results.push(result % diceArgs[1] + 1)
-			for (let die = 1; die < diceArgs[0]; die++) {
-				result = LcgRng(result)
-				results.push(result % diceArgs[1] + 1)
-			}
-			total = results.reduce((a, b) => a + b, 0)
-			resultMsg = ` rolled ${diceArgs[0]}d${diceArgs[1]}: ` + results.join(' ') + ' (total ' + total + ')'
-		}
-		else if (message.startsWith('/coinflip')) {
-			const outcomes = ['heads', 'tails']
-			resultMsg =  ` flips a coin. It lands on... ${outcomes[LcgRng(date) % 2]}!`
-		}
-		else if (message.startsWith('/rps')) {
-			const outcomes = ['Rock!', 'Paper!', 'Scissors!']
-			resultMsg = ` plays Rock, Paper, Scissors and chooses... ${outcomes[Math.ceil(Math.random() * 3) % 3].toString()}`
-		}
-
-		if (resultMsg) {
-			resultMsg += ` <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
-		}
-		return resultMsg
 	}
 
 	/**
@@ -286,7 +256,6 @@ var pmModule = (function () {
 		} 
 
 		$('#pmColorEnable').prop("checked", pmSettings.colorText)
-		$('#pmEnhnaceContrastEnable').prop("checked", pmSettings.enhanceContrast)
 		$('#pmNotify').prop("checked", pmSettings.notify)
 		$('#pmNotifyTimeoutSelect').val(pmSettings.notifyTime.toString())
 		$('#pmPingURL').val(pmSettings.audioUrl)
