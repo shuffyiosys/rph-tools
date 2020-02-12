@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.2.6
+// @version    4.2.7
 // @description Adds extended settings to RPH
 // @match      https://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.2.6'
+const VERSION_STRING = '4.2.7'
 
 const SETTINGS_NAME = "rph_tools_settings"
 
@@ -384,65 +384,29 @@ var chatModule = (function () {
 			'</div>'
 	}
 
-	const CHAT_COMMANDS_HTML = `<div id="chatCommandTooltip" style="position: absolute; bottom: 120px; left: 200px; width: 860px; height: 422px; color: #dedbd9; background: #303235; padding: 10px;">
-		<table style="width: 100%;">
-		<tbody>
-		<tr>
-		<td>Chat Commands:</td>
-		<td style="width: 75%;">&nbsp;</td>
-		</tr>
-		<tr>
-		<td><code>/away [message]</code></td>
-		<td style="padding-bottom:10px;">Sets your status to "Away" and the status message<br>
-			Example: <code>/away I'm away</code></td>
-		</tr>
-		<tr>
-		<td><code>/coinflip</code></td>
-		<td style="padding-bottom:10px;">Performs a coin flip</td>
-		</tr>
-		<tr>
-		<td><code>/leave</code></td>
-		<td style="padding-bottom:10px;">Leaves the current room</td>
-		</tr>
-		<tr>
-		<td><code>/me</code></td>
-		<td style="padding-bottom:10px;">Formats text as an action</td>
-		</tr>
-		<tr>
-		<td><code>/roll</code></td>
-		<td style="padding-bottom:10px;">Performs a dice roll using a 20-sided die.</td>
-		</tr>
-		<tr>
-		<td><code>/roll [num]d[sides]</code></td>
-		<td style="padding-bottom:10px;">Performs a dice roll. [num] is number of dice to roll. [sides] is how
-			many sides per die.<br>
-			Example: <code>/roll 2d10</code> will roll 2 10-sided dice</td>
-		</tr>
-		<tr>
-		<td><code>/rps</code></td>
-		<td style="padding-bottom:10px;">Performs a Rock/Paper/Scissors action</td>
-		</tr>
-		<tr>
-		<td><code>/status [message]</code></td>
-		<td style="padding-bottom:10px;">Sets your status message<br>
-			Example: <code>/status I'm tabbed out</code></td>
-		</tr>
-		<tr>
-		<td>Modding action</td>
-		<td style="padding-bottom:10px;">
-			<p>General form: <code>/[action] [username],[reason]</code>. The reason is optional.</p>
-			<p>Example: <code>/kick Alice,Being rude</code></p>
-			<p>Supported actions: kick, ban, unban, add-mod, remove-mod, add-owner, remove-owner</p>
-		</td>
-		</tr>
-		</tbody>
-		</table>
-		</div>`
+	const CHAT_COMMANDS = new function() {
+		this.away = `<tr><td><code>/away [message]</code></td><td style="padding-bottom:10px;">Sets your status to "Away" and the status message<br>Example: <code>/away I'm away</code></td></tr>`
+		this.coinflip = `<tr><td><code>/coinflip</code></td><td style="padding-bottom:10px;">Performs a coin flip</td></tr>`
+		this.leave = `<tr><td><code>/leave</code></td><td style="padding-bottom:10px;">Leaves the current room</td></tr>`
+		this.me = `<tr><td><code>/me</code></td><td style="padding-bottom:10px;">Formats text as an action</td></tr>`
+		this.roll = `<tr><td><code>/roll</code></td><td style="padding-bottom:10px;">Performs a dice roll using a 20-sided die.</td></tr>`
+		this.rps = `<tr><td><code>/rps</code></td><td style="padding-bottom:10px;">Performs a Rock/Paper/Scissors action</td></tr>`
+		this.status = `<tr><td><code>/status [message]</code></td><td style="padding-bottom:10px;">Sets your status message<br>Example: <code>/status I'm tabbed out</code></td></tr>`
+		this.kick = `<tr><td><code>/kick [username],[reason]</code></td><td style="padding-bottom:10px;">Kicks [username] from the current room with [reason] (optional)</td></tr>`
+		this.ban = `<tr><td><code>/ban [username],[reason]<br>/unban [username],[reason]</code></td><td style="padding-bottom:10px;">Bans [username] from the current room with [reason] (optional)</td></tr>`
+		this['add-mod'] = `<tr><td><code>/add-mod [username]<br>/unmod [username]</code></td><td style="padding-bottom:10px;">Adds [username] as a mod of the current room</td></tr>`
+		this['add-owner'] = `<tr><td><code>/add-onwer [username]<br>/unowner [username]</code></td><td style="padding-bottom:10px;">Adds [username] as the owner of the current room</td></tr>`
+		this.unban = `<tr><td><code>/unban [username],[reason]</code></td><td style="padding-bottom:10px;">Unbans [username] from the current room with [reason] (optional)</td></tr>`
+		this['remove-mod'] = `<tr><td><code>/remove-mod [username]</code></td><td style="padding-bottom:10px;">Removes [username] as a mod of the current room</td></tr>`
+		this['remove-owner'] = `<tr><td><code>/remove-owner [username]</code></td><td style="padding-bottom:10px;">Removes [username] as the owner of the current room</td></tr>`
+	}
+
+	const CHAT_COMMAND_HTML = `<div id="chatCommandTooltip" style="position: absolute; bottom: 120px; left: 200px; width: 860px; height: auto; color: #dedbd9; background: #303235; padding: 10px;"></div>`
 
 	function init() {
 		loadSettings()
 
-		$('#chat-bottom').append(CHAT_COMMANDS_HTML)
+		$('#chat-bottom').append(CHAT_COMMAND_HTML)
 		$('#chatCommandTooltip').hide()
 
 		/* General Options */
@@ -463,6 +427,10 @@ var chatModule = (function () {
 
 		$('#chatCmdPopupEnable').change(() => {
 			chatSettings.chatCommandPopup = $('#chatCmdPopupEnable').is(':checked')
+
+			if(!chatSettings.chatCommandPopup){
+				$('#chatCommandTooltip').hide()
+			}
 			saveSettings()
 		})
 
@@ -658,15 +626,42 @@ var chatModule = (function () {
 				intputChatText(ev, User, thisRoom)
 			})
 			chatTextArea.on('input', () => {
-				if (chatSettings.chatCommandPopup && chatTextArea.val().trim()[0] === '/') {
-					$('#chatCommandTooltip').show()
-				}
-				else {
+				if (chatSettings.chatCommandPopup){
+					let chatInput = chatTextArea.val().trim()
 					$('#chatCommandTooltip').hide()
+					if (chatInput[0] === '/') {
+						let commandTable = buildComamndTable(chatTextArea.val().trim())
+						if(chatInput.length === 1 || commandTable.length > 0) {
+							$('#chatCommandTooltip')[0].innerHTML = commandTable
+							$('#chatCommandTooltip').show()
+						}
+					}
 				}
 			})
 			resizeChatTabs()
 		})
+	}
+
+	function buildComamndTable(message) {
+		let commandEntry = ''
+		let commandTable = ''
+		if (message.length === 1) {
+			commandEntry = Object.values(CHAT_COMMANDS).join('\n')
+		}
+		else {
+			const command = message.split(' ')[0].substring(1)
+			Object.keys(CHAT_COMMANDS).filter(key => key.startsWith(command))
+				.forEach(key => commandEntry += CHAT_COMMANDS[key])
+		}
+		if (commandEntry.length > 0) {
+			commandTable = `<table style="width: 100%;">
+					<tbody>
+						<tr><td>Chat Commands:</td>	<td style="width: 68%;">&nbsp;</td></tr>
+						${commandEntry}
+					</tbody>
+				</table>`
+		}
+		return commandTable
 	}
 
 	function processMsg(thisRoom, msgData, msgHtml, isMod) {
@@ -729,7 +724,7 @@ var chatModule = (function () {
 					pingSound.play()
 
 					/* Bring up the notification if enabled, but don't do it if the user pinged themselves*/
-					if (chatSettings.pingNotify && selfMsg === false) {
+					if (chatSettings.pingNotify && selfMsg === false && document.hidden) {
 						let notification = new Notification(`${user.props.name} pinged you in ${thisRoom.props.name}`)
 						setTimeout(() => {
 							notification.close()
@@ -1303,7 +1298,7 @@ var pmModule = (function () {
 					processPmMsg(user, data, pm)
 				})
 
-				if (pmSettings.notify) {
+				if (pmSettings.notify && document.hidden) {
 					let notification = new Notification(`${pm.to.props.name} sent a PM to you for ${pm.from.props.name}`)
 					setTimeout(() => {
 						notification.close()

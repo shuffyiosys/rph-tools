@@ -1,3 +1,9 @@
+RPH Tools (4.2.7)
+---------------
+##### Features Updates
+* Command window automatically filters based on what you type
+* Browser notifications trigger only if you do not have the tab active
+
 RPH Tools (4.2.6)
 ---------------
 ##### Features Updates

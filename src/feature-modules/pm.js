@@ -128,7 +128,7 @@ var pmModule = (function () {
 					processPmMsg(user, data, pm)
 				})
 
-				if (pmSettings.notify) {
+				if (pmSettings.notify && document.hidden) {
 					let notification = new Notification(`${pm.to.props.name} sent a PM to you for ${pm.from.props.name}`)
 					setTimeout(() => {
 						notification.close()
