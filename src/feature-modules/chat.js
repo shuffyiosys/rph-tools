@@ -133,15 +133,15 @@ var chatModule = (function () {
 		this.rps = `<tr><td><code>/rps</code></td><td style="padding-bottom:10px;">Performs a Rock/Paper/Scissors action</td></tr>`
 		this.status = `<tr><td><code>/status [message]</code></td><td style="padding-bottom:10px;">Sets your status message<br>Example: <code>/status I'm tabbed out</code></td></tr>`
 		this.kick = `<tr><td><code>/kick [username],[reason]</code></td><td style="padding-bottom:10px;">Kicks [username] from the current room with [reason] (optional)</td></tr>`
-		this.ban = `<tr><td><code>/ban [username],[reason]<br>/unban [username],[reason]</code></td><td style="padding-bottom:10px;">Bans [username] from the current room with [reason] (optional)</td></tr>`
-		this['add-mod'] = `<tr><td><code>/add-mod [username]<br>/unmod [username]</code></td><td style="padding-bottom:10px;">Adds [username] as a mod of the current room</td></tr>`
-		this['add-owner'] = `<tr><td><code>/add-onwer [username]<br>/unowner [username]</code></td><td style="padding-bottom:10px;">Adds [username] as the owner of the current room</td></tr>`
+		this.ban = `<tr><td><code>/ban [username],[reason]</code></td><td style="padding-bottom:10px;">Bans [username] from the current room with [reason] (optional)</td></tr>`
+		this['add-mod'] = `<tr><td><code>/add-mod [username]</code></td><td style="padding-bottom:10px;">Adds [username] as a mod of the current room</td></tr>`
+		this['add-owner'] = `<tr><td><code>/add-onwer [username]</code></td><td style="padding-bottom:10px;">Adds [username] as the owner of the current room</td></tr>`
 		this.unban = `<tr><td><code>/unban [username],[reason]</code></td><td style="padding-bottom:10px;">Unbans [username] from the current room with [reason] (optional)</td></tr>`
 		this['remove-mod'] = `<tr><td><code>/remove-mod [username]</code></td><td style="padding-bottom:10px;">Removes [username] as a mod of the current room</td></tr>`
 		this['remove-owner'] = `<tr><td><code>/remove-owner [username]</code></td><td style="padding-bottom:10px;">Removes [username] as the owner of the current room</td></tr>`
 	}
 
-	const CHAT_COMMAND_HTML = `<div id="chatCommandTooltip" style="position: absolute; bottom: 120px; left: 200px; width: 860px; height: auto; color: #dedbd9; background: #303235; padding: 10px;"></div>`
+	const CHAT_COMMAND_HTML = `<div id="chatCommandTooltip" class="rpht-cmd-tooltip"></div>`
 
 	function init() {
 		loadSettings()
@@ -369,7 +369,7 @@ var chatModule = (function () {
 				if (chatSettings.chatCommandPopup){
 					let chatInput = chatTextArea.val().trim()
 					$('#chatCommandTooltip').hide()
-					if (chatInput[0] === '/') {
+					if (chatInput[0] === '/' && chatInput.indexOf(' ') === -1) {
 						let commandTable = buildComamndTable(chatTextArea.val().trim())
 						if(chatInput.length === 1 || commandTable.length > 0) {
 							$('#chatCommandTooltip')[0].innerHTML = commandTable

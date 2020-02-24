@@ -1,3 +1,8 @@
+RPH Tools (4.2.8)
+---------------
+##### Features Updates
+* Command window hides when inputting something after the first space.
+
 RPH Tools (4.2.7)
 ---------------
 ##### Features Updates

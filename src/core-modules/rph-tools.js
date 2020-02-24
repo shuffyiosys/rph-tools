@@ -30,6 +30,8 @@ var rphToolsModule = (function () {
 		'input:checked+.rpht-slider:before{-webkit-transform:translateX(26px);-ms-transform:translateX(26px);transform:translateX(26px)}' +
 		'.rpht-slider.round{border-radius:34px}' +
 		'.rpht-slider.round:before{border-radius:50%}' +
+		'.rpht-cmd-tooltip{position: absolute; bottom: 120px; left: 200px; width: 860px; height: auto; color: #dedbd9; background: #303235; opacity: 0.65; padding: 10px;}' +
+		'.rpht-cmd-tooltip:hover{opacity: 0.9;}' +
 		'</style>'
 
 	/**
