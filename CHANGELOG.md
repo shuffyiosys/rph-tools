@@ -7,7 +7,8 @@ RPH Tools (4.2.10)
 * The server update in 2/29/2020 caused various issues, so a lot of these are to address them.
 * Fixed the ping preview so that it uses the actual ping settings.
 * Fixed highlighting rooms when pinged
-* Fixed an issue where in chat, messages were posted with an extra blank line.
+* ~~Fixed an issue where in chat, messages were posted with an extra blank line. ~~
+  * This is still an issue, will fix this in another update.
 * Fixed formatting in the PM message processing so normal messages now have a colon after the username.
 
 RPH Tools (4.2.9)
