@@ -135,7 +135,7 @@ var pmModule = (function () {
 					}, pmSettings.notifyTime)
 				}
 
-				if (awayMessages[data.from].enabled) {
+				if (awayMessages[data.from] && awayMessages[data.from].enabled) {
 					awayMessages[data.from].usedPmAwayMsg = true;
 					socket.emit('pm', {
 					  'from': data.from,

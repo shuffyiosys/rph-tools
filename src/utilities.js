@@ -1,5 +1,3 @@
-
-
 /**
  * Marks an HTML element with red or white if there's a problem
  * @param {string} element Full selector of the HTML element to mark

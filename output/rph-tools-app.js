@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.2.8
+// @version    4.2.9
 // @description Adds extended settings to RPH
 // @match      https://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,11 +9,9 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.2.8'
+const VERSION_STRING = '4.2.9'
 
 const SETTINGS_NAME = "rph_tools_settings"
-
-
 /**
  * Marks an HTML element with red or white if there's a problem
  * @param {string} element Full selector of the HTML element to mark
@@ -614,7 +612,7 @@ var chatModule = (function () {
 			if (moddingModule !== null && modUserIdx === userId) {
 				moddingModule.addModRoomPair(User.props, thisRoom.props.name)
 			}
-			let roomCss = makeSafeForCss(thisRoom.props.name)
+			let roomCss = thisRoom.props.name.toLocaleLowerCase().replace(/ /g, '-')
 			let chatTextArea = $(`textarea.${User.props.id}_${roomCss}`)
 			let tabsLen = thisRoom.$tabs.length
 			let idRoomName = thisRoom.$tabs[tabsLen - 1][0].className.split(' ')[2]
@@ -727,10 +725,7 @@ var chatModule = (function () {
 					moddingModule.playAlert()
 				}
 			}
-			contentQuery[0].innerHTML = `${prevMsgs.join('<br>')} ${newMsg} <br>`
-
-			/* Force the time stamp to show */
-			$(msgHtml.children[0].children[0]).show()
+			contentQuery[0].innerHTML = `${prevMsgs.join('<br>')} ${newMsg}`
 
 			if (chatSettings.colorText) {
 				let classString = `${contentQuery[0].className}`
@@ -862,7 +857,7 @@ var chatModule = (function () {
 	 * @param {oject} Room - Room the textbox is attached to
 	 */
 	function intputChatText(ev, User, Room) {
-		let inputTextarea = $(`textarea.${User.props.id}_${makeSafeForCss(Room.props.name)}.active`)
+		let inputTextarea = $(`textarea.${User.props.id}_${Room.props.name.toLocaleLowerCase().replace(/ /g, '-')}.active`)
 		let message = inputTextarea.val().trim()
 
 		if (message.length > 4000) {
@@ -1305,7 +1300,7 @@ var pmModule = (function () {
 					}, pmSettings.notifyTime)
 				}
 
-				if (awayMessages[data.from].enabled) {
+				if (awayMessages[data.from] && awayMessages[data.from].enabled) {
 					awayMessages[data.from].usedPmAwayMsg = true;
 					socket.emit('pm', {
 					  'from': data.from,
@@ -1869,6 +1864,7 @@ var aboutModule = (function () {
 			'<p><strong>Version: ' + VERSION_STRING + '</strong>' +
 			' | <a href="https://github.com/shuffyiosys/rph-tools/blob/master/CHANGELOG.md" target="_blank">Version history</a>' +
 			' | <a href="https://openuserjs.org/install/shuffyiosys/RPH_Tools.user.js" target="_blank">Install the latest version</a>' +
+			' | <a href="https://discord.gg/HBEaGjs" target="_blank">Discord channel</a>' + 
 			'</p></br>' +
 			'<p>Created by shuffyiosys. Under MIT License (SPDX: MIT). Feel free to make contributions to <a href="https://github.com/shuffyiosys/rph-tools" target="_blank">the repo</a>!</p><br />' +
 			'<p><a href="https://github.com/shuffyiosys/rph-tools/blob/master/docs/quick-guide.md" target="_blank">Quick guide to using RPH Tools</a></p></br>' +
@@ -2012,7 +2008,7 @@ var rphToolsModule = (function () {
  * Script initializations to execute after the page loads
  ***************************************************************************/
 $(function () {
-	console.log('RPH Tools', VERSION_STRING, 'start')
+	console.log(`RPH Tools ${VERSION_STRING} start`)
 	var modules = [
 		chatModule,
 		pmModule,

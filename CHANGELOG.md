@@ -1,3 +1,9 @@
+RPH Tools (4.2.9)
+---------------
+##### Bug Fixes
+* Replaces the ``makeSafeForCss`` method.
+
+
 RPH Tools (4.2.8)
 ---------------
 ##### Features Updates

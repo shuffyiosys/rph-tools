@@ -2,7 +2,7 @@
  * Script initializations to execute after the page loads
  ***************************************************************************/
 $(function () {
-	console.log('RPH Tools', VERSION_STRING, 'start')
+	console.log(`RPH Tools ${VERSION_STRING} start`)
 	var modules = [
 		chatModule,
 		pmModule,

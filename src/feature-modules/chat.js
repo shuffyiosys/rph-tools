@@ -354,7 +354,7 @@ var chatModule = (function () {
 			if (moddingModule !== null && modUserIdx === userId) {
 				moddingModule.addModRoomPair(User.props, thisRoom.props.name)
 			}
-			let roomCss = makeSafeForCss(thisRoom.props.name)
+			let roomCss = thisRoom.props.name.toLocaleLowerCase().replace(/ /g, '-')
 			let chatTextArea = $(`textarea.${User.props.id}_${roomCss}`)
 			let tabsLen = thisRoom.$tabs.length
 			let idRoomName = thisRoom.$tabs[tabsLen - 1][0].className.split(' ')[2]
@@ -467,10 +467,7 @@ var chatModule = (function () {
 					moddingModule.playAlert()
 				}
 			}
-			contentQuery[0].innerHTML = `${prevMsgs.join('<br>')} ${newMsg} <br>`
-
-			/* Force the time stamp to show */
-			$(msgHtml.children[0].children[0]).show()
+			contentQuery[0].innerHTML = `${prevMsgs.join('<br>')} ${newMsg}`
 
 			if (chatSettings.colorText) {
 				let classString = `${contentQuery[0].className}`
@@ -602,7 +599,7 @@ var chatModule = (function () {
 	 * @param {oject} Room - Room the textbox is attached to
 	 */
 	function intputChatText(ev, User, Room) {
-		let inputTextarea = $(`textarea.${User.props.id}_${makeSafeForCss(Room.props.name)}.active`)
+		let inputTextarea = $(`textarea.${User.props.id}_${Room.props.name.toLocaleLowerCase().replace(/ /g, '-')}.active`)
 		let message = inputTextarea.val().trim()
 
 		if (message.length > 4000) {
