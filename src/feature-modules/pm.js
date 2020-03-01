@@ -185,10 +185,10 @@ var pmModule = (function () {
 			nameQuery[0].innerHTML = `${user.props.name}`
 		}
 		else if (pmCommand === 'me') {
-			nameQuery[0].innerHTML = `${user.props.name}`
+			nameQuery[0].innerHTML = `${user.props.name} `
 		}
 		else {
-			nameQuery[0].innerHTML += '&nbsp;'
+			nameQuery.html(`&nbsp;${user.props.name}:&nbsp;`)
 		}
 	
 		nameQuery.attr('style', `color: #${user.props.color[0]}`)

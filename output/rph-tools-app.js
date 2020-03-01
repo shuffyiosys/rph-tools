@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.2.9
+// @version    4.2.10
 // @description Adds extended settings to RPH
 // @match      https://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.2.9'
+const VERSION_STRING = '4.2.10'
 
 const SETTINGS_NAME = "rph_tools_settings"
 /**
@@ -211,6 +211,10 @@ function parseRoll(rollCmd){
 	die = Math.min(Math.max(die, DIE_NUM_MIN), DIE_NUM_MAX)
 	sides = Math.min(Math.max(sides, DIE_SIDE_MIN), DIE_SIDE_MAX)
 	return [die, sides]
+}
+
+function getCssRoomName(roomName) {
+	return roomName.toLowerCase().replace(/ /g, '-')
 }/**
  * Generates a hash value for a string
  * This was modified from https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
@@ -382,12 +386,12 @@ var chatModule = (function () {
 			'</div>'
 	}
 
-	const CHAT_COMMANDS = new function() {
+	const CHAT_COMMANDS = new function () {
 		this.away = `<tr><td><code>/away [message]</code></td><td style="padding-bottom:10px;">Sets your status to "Away" and the status message<br>Example: <code>/away I'm away</code></td></tr>`
 		this.coinflip = `<tr><td><code>/coinflip</code></td><td style="padding-bottom:10px;">Performs a coin flip</td></tr>`
 		this.leave = `<tr><td><code>/leave</code></td><td style="padding-bottom:10px;">Leaves the current room</td></tr>`
 		this.me = `<tr><td><code>/me</code></td><td style="padding-bottom:10px;">Formats text as an action</td></tr>`
-		this.roll = `<tr><td><code>/roll</code></td><td style="padding-bottom:10px;">Performs a dice roll using a 20-sided die.</td></tr>`
+		this.roll = `<tr><td><code>/roll [N]d[S]</code></td><td style="padding-bottom:10px;">Performs a dice roll with N die of S sides. For example /roll 3d12 will roll three, 12-sided die. Doing /roll by itself will default to 1d20</td></tr>`
 		this.rps = `<tr><td><code>/rps</code></td><td style="padding-bottom:10px;">Performs a Rock/Paper/Scissors action</td></tr>`
 		this.status = `<tr><td><code>/status [message]</code></td><td style="padding-bottom:10px;">Sets your status message<br>Example: <code>/status I'm tabbed out</code></td></tr>`
 		this.kick = `<tr><td><code>/kick [username],[reason]</code></td><td style="padding-bottom:10px;">Kicks [username] from the current room with [reason] (optional)</td></tr>`
@@ -426,7 +430,7 @@ var chatModule = (function () {
 		$('#chatCmdPopupEnable').change(() => {
 			chatSettings.chatCommandPopup = $('#chatCmdPopupEnable').is(':checked')
 
-			if(!chatSettings.chatCommandPopup){
+			if (!chatSettings.chatCommandPopup) {
 				$('#chatCommandTooltip').hide()
 			}
 			saveSettings()
@@ -508,13 +512,11 @@ var chatModule = (function () {
 			var msg = $('#pingPreviewInput').val()
 			var testRegex = matchPing(msg)
 			if (testRegex !== null) {
-				msg = highlightPing(msg, testRegex, chatSettings.color,
-					chatSettings.highlight, chatSettings.bold,
-					chatSettings.italics)
+				msg = highlightPing(msg, testRegex)
 				pingSound.play()
-				$('#pingPreviewText')[0].innerHTML = msg
+				$('#pingPreviewText').html(`&nbsp;${msg}`)
 			} else {
-				$('#pingPreviewText')[0].innerHTML = "No match"
+				$('#pingPreviewText').html(`No match`)
 			}
 		})
 
@@ -612,7 +614,7 @@ var chatModule = (function () {
 			if (moddingModule !== null && modUserIdx === userId) {
 				moddingModule.addModRoomPair(User.props, thisRoom.props.name)
 			}
-			let roomCss = thisRoom.props.name.toLocaleLowerCase().replace(/ /g, '-')
+			let roomCss = getCssRoomName(thisRoom.props.name)
 			let chatTextArea = $(`textarea.${User.props.id}_${roomCss}`)
 			let tabsLen = thisRoom.$tabs.length
 			let idRoomName = thisRoom.$tabs[tabsLen - 1][0].className.split(' ')[2]
@@ -624,13 +626,13 @@ var chatModule = (function () {
 				intputChatText(ev, User, thisRoom)
 			})
 			chatTextArea.on('input', () => {
-				if (chatSettings.chatCommandPopup){
+				if (chatSettings.chatCommandPopup) {
 					let chatInput = chatTextArea.val().trim()
 					$('#chatCommandTooltip').hide()
 					if (chatInput[0] === '/' && chatInput.indexOf(' ') === -1) {
 						let commandTable = buildComamndTable(chatTextArea.val().trim())
-						if(chatInput.length === 1 || commandTable.length > 0) {
-							$('#chatCommandTooltip')[0].innerHTML = commandTable
+						if (chatInput.length === 1 || commandTable.length > 0) {
+							$('#chatCommandTooltip').html(commandTable)
 							$('#chatCommandTooltip').show()
 						}
 					}
@@ -658,8 +660,11 @@ var chatModule = (function () {
 		}
 
 		if (!thisRoom.isActive() && msgData.room === thisRoom.props.name) {
+			$(`li.tab.tab-${getCssRoomName(thisRoom.props.name)}`).css({
+				'border-bottom': chatSettings.highlight,
+				'4px solid #ADF': chatSettings.color
+			})
 			for (let roomTab of thisRoom.$tabs) {
-				roomTab.css('border-bottom', '4px solid #ADF')
 				$(roomTab.children()[2]).hide()
 			}
 		}
@@ -679,7 +684,8 @@ var chatModule = (function () {
 					newMsgLines[msgIdx] += ` <span style="background:#4A4; color: #FFF;"> &#9745;</span> ]`
 				}
 			}
-			let newMsg = newMsgLines.join('<br>')
+
+			let newMsg = `${newMsgLines.join('<br>')}<br>`
 			/* Add pings if 
 			   - It's enabled AND 
 			   - The message isn't a buffer from the server AND
@@ -692,10 +698,10 @@ var chatModule = (function () {
 				if (testRegex) {
 					newMsg = highlightPing(newMsg, testRegex)
 					if (!thisRoom.isActive()) {
-						for (let roomTab of thisRoom.$tabs) {
-							roomTab[0].css('background-color', chatSettings.highlight)
-							roomTab[0].css('color', chatSettings.color)
-						}
+						$(`li.tab.tab-${getCssRoomName(thisRoom.props.name)}`).css({
+							'background-color': chatSettings.highlight,
+							'color': chatSettings.color
+						})
 					}
 					pingSound.play()
 
@@ -725,7 +731,7 @@ var chatModule = (function () {
 					moddingModule.playAlert()
 				}
 			}
-			contentQuery[0].innerHTML = `${prevMsgs.join('<br>')} ${newMsg}`
+			contentQuery.html(`${prevMsgs.join('<br>')} ${newMsg}`)
 
 			if (chatSettings.colorText) {
 				let classString = `${contentQuery[0].className}`
@@ -756,8 +762,7 @@ var chatModule = (function () {
 		let commandTable = ''
 		if (message.length === 1) {
 			commandEntry = Object.values(CHAT_COMMANDS).join('\n')
-		}
-		else {
+		} else {
 			const command = message.split(' ')[0].substring(1)
 			Object.keys(CHAT_COMMANDS).filter(key => key.startsWith(command))
 				.forEach(key => commandEntry += CHAT_COMMANDS[key])
@@ -857,7 +862,7 @@ var chatModule = (function () {
 	 * @param {oject} Room - Room the textbox is attached to
 	 */
 	function intputChatText(ev, User, Room) {
-		let inputTextarea = $(`textarea.${User.props.id}_${Room.props.name.toLocaleLowerCase().replace(/ /g, '-')}.active`)
+		let inputTextarea = $(`textarea.${User.props.id}_${getCssRoomName(Room.props.name)}.active`)
 		let message = inputTextarea.val().trim()
 
 		if (message.length > 4000) {
@@ -1350,10 +1355,10 @@ var pmModule = (function () {
 			nameQuery[0].innerHTML = `${user.props.name}`
 		}
 		else if (pmCommand === 'me') {
-			nameQuery[0].innerHTML = `${user.props.name}`
+			nameQuery[0].innerHTML = `${user.props.name} `
 		}
 		else {
-			nameQuery[0].innerHTML += '&nbsp;'
+			nameQuery.html(`&nbsp;${user.props.name}:&nbsp;`)
 		}
 	
 		nameQuery.attr('style', `color: #${user.props.color[0]}`)
@@ -1920,8 +1925,7 @@ var rphToolsModule = (function () {
 		'input:checked+.rpht-slider:before{-webkit-transform:translateX(26px);-ms-transform:translateX(26px);transform:translateX(26px)}' +
 		'.rpht-slider.round{border-radius:34px}' +
 		'.rpht-slider.round:before{border-radius:50%}' +
-		'.rpht-cmd-tooltip{position: absolute; bottom: 120px; left: 200px; width: 860px; height: auto; color: #dedbd9; background: #303235; opacity: 0.65; padding: 10px;}' +
-		'.rpht-cmd-tooltip:hover{opacity: 0.9;}' +
+		'.rpht-cmd-tooltip{position: absolute; bottom: 120px; left: 200px; width: 860px; height: auto; color: #dedbd9; background: #303235; opacity: 0.9; padding: 10px;}' +
 		'</style>'
 
 	/**

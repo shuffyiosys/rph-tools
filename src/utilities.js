@@ -198,3 +198,7 @@ function parseRoll(rollCmd){
 	sides = Math.min(Math.max(sides, DIE_SIDE_MIN), DIE_SIDE_MAX)
 	return [die, sides]
 }
+
+function getCssRoomName(roomName) {
+	return roomName.toLowerCase().replace(/ /g, '-')
+}

@@ -1,8 +1,19 @@
+RPH Tools (4.2.10)
+---------------
+##### Features Updates
+* Expanded dice roll command explanation in the command window. Got rid of the "hover for lower opacity" CSS rule (window is now 90% opaque all the time)
+
+##### Bug Fixes
+* The server update in 2/29/2020 caused various issues, so a lot of these are to address them.
+* Fixed the ping preview so that it uses the actual ping settings.
+* Fixed highlighting rooms when pinged
+* Fixed an issue where in chat, messages were posted with an extra blank line.
+* Fixed formatting in the PM message processing so normal messages now have a colon after the username.
+
 RPH Tools (4.2.9)
 ---------------
 ##### Bug Fixes
-* Replaces the ``makeSafeForCss`` method.
-
+* Replaces the ``makeSafeForCss`` method, which was removed, for a substitute where used.
 
 RPH Tools (4.2.8)
 ---------------
@@ -28,7 +39,7 @@ RPH Tools (4.2.6)
 
 #### Known issues
 * [CANNOT FIX] If a message comes up from a backlog such as going into a room or PM history restore, RPH Tools cannot process RNG commands. For chat commands, this is because RPH sends groups of messages with the same timestamp, which is used as the seed for the RNG. For PMs, it's because they are auto-filled by your computer's local history and there's no obvious trigger that RPH Tools can pick up on to process past results.
-** [ADDENDUM] RPH Tools will process RNG commands in the chat if it's the first message in a bundle, as the seed is valid for that. Otherwise it ignores the others.
+  * [ADDENDUM] RPH Tools will process RNG commands in the chat if it's the first message in a bundle, as the seed is valid for that. Otherwise it ignores the others.
 
 RPH Tools (4.2.5)
 ---------------
