@@ -2,7 +2,7 @@ RPH Tools (4.3.0)
 ---------------
 ##### Features Updates
 * Revised the RNG to something that's more fair. Based on the [Park-Miller-Carta PRNG](http://www.firstpr.com.au/dsp/rand31/). As a result, older versions are no longer compatible.
-* Added an RNG mini-window. This is accessible through a 🎲 button next to the chat input text box.
+* Added an RNG mini-window. This is accessible through a dice button next to the chat input text box.
 
 ##### Bug Fixes
 * Fixed the added new line in posts
