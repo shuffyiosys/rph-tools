@@ -1,3 +1,13 @@
+RPH Tools (4.3.0)
+---------------
+##### Features Updates
+* Revised the RNG to something that's more fair. Based on the [Park-Miller-Carta PRNG](http://www.firstpr.com.au/dsp/rand31/). As a result, older versions are no longer compatible.
+* Added an RNG mini-window. This is accessible through a 🎲 button next to the chat input text box.
+
+##### Bug Fixes
+* Fixed the added new line in posts
+* When exiting a room, made the command window close as well. This applies to the new dice roller window too.
+
 RPH Tools (4.2.10)
 ---------------
 ##### Features Updates
@@ -7,7 +17,7 @@ RPH Tools (4.2.10)
 * The server update in 2/29/2020 caused various issues, so a lot of these are to address them.
 * Fixed the ping preview so that it uses the actual ping settings.
 * Fixed highlighting rooms when pinged
-* Fixed an issue where in chat, messages were posted with an extra blank line.
+* ~~Fixed an issue where in chat, messages were posted with an extra blank line.~~
 * Fixed formatting in the PM message processing so normal messages now have a colon after the username.
 
 RPH Tools (4.2.9)

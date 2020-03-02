@@ -121,28 +121,48 @@ function getSortedNames() {
  * Generates a randum number using the Linear congruential generator algorithm
  * @param {*} seed - RNG seed value
  */
-function LcgRng (seed) {
-	let result = (((seed * 214013) + 2531011) % Math.pow(2,31))
-	return result
+function LcgRng (seed, init=true) {
+	if (init) {
+		seed = (seed % 2147483647)
+		if (seed <= 0) {
+			seed += 2147483646
+		}
+	}
+	return seed * 16807 % 2147483647
 }
 
-function generateRngResult (command, message, date) {
+function calculateDiceRolls(dieNum, dieSides, seed) {
+	let results = []
+	let result = LcgRng(seed)
+	results.push(result % dieSides + 1)
+	for (let die = 1; die < dieNum; die++) {
+		result = LcgRng(result, false)
+		results.push(result % dieSides + 1)
+	}
+	total = results.reduce((a, b) => a + b, 0)
+	return {
+		'results': results,
+		'total': total
+	}
+}
+
+function generateRngResult (command, message, seed) {
+	const MSG_ARGS = message.split(/ /gm)
 	let resultMsg = ''
 	if (command === 'rng-coinflip') {
 		const outcomes = ['heads', 'tails']
-		resultMsg += `flips a coin. It lands on... ${outcomes[LcgRng(date) % 2]}!`
+		resultMsg += `flips a coin. It lands on... ${outcomes[LcgRng(seed) % 2]}!`
 	}
 	else if (command === 'rng-roll') {
-		const diceArgs = parseRoll(message)
-		let results = []
-		let result = LcgRng(date)
-		results.push(result % diceArgs[1] + 1)
-		for (let die = 1; die < diceArgs[0]; die++) {
-			result = LcgRng(result)
-			results.push(result % diceArgs[1] + 1)
+		let diceArgs
+		if (MSG_ARGS.length === 1) {
+			diceArgs = [1, 20]
 		}
-		total = results.reduce((a, b) => a + b, 0)
-		resultMsg += `rolled ${diceArgs[0]}d${diceArgs[1]}: ${results.join(' ')} (total: ${total})`
+		else {
+			diceArgs = parseRoll(MSG_ARGS[1])
+		}
+		const result = calculateDiceRolls(diceArgs[0], diceArgs[1], seed)
+		resultMsg += `rolled ${diceArgs[0]}d${diceArgs[1]}: ${result['results'].join(' ')} (total: ${result.total})`
 	}
 	else if (command === 'rng-rps') {
 		const outcomes = ['Rock!', 'Paper!', 'Scissors!']
@@ -182,18 +202,15 @@ function getVanityNamesToIds() {
 	return vanityToIds
 }
 
-function parseRoll(rollCmd){
+function parseRoll(rollArgs){
 	const DIE_NUM_MIN = 1
 	const DIE_NUM_MAX = 100
 	const DIE_SIDE_MIN = 2
 	const DIE_SIDE_MAX = 1000000
-	const args = rollCmd.split(/ (.+)/)
 	var die = 1
 	var sides = 20
-	if (args.length > 1) {
-		die = parseInt(args[1].split('d')[0])
-		sides = parseInt(args[1].split('d')[1])
-	}
+	die = parseInt(rollArgs.split('d')[0])
+	sides = parseInt(rollArgs.split('d')[1])
 	die = Math.min(Math.max(die, DIE_NUM_MIN), DIE_NUM_MAX)
 	sides = Math.min(Math.max(sides, DIE_SIDE_MIN), DIE_SIDE_MAX)
 	return [die, sides]

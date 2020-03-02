@@ -30,7 +30,11 @@ var rphToolsModule = (function () {
 		'input:checked+.rpht-slider:before{-webkit-transform:translateX(26px);-ms-transform:translateX(26px);transform:translateX(26px)}' +
 		'.rpht-slider.round{border-radius:34px}' +
 		'.rpht-slider.round:before{border-radius:50%}' +
-		'.rpht-cmd-tooltip{position: absolute; bottom: 120px; left: 200px; width: 860px; height: auto; color: #dedbd9; background: #303235; opacity: 0.9; padding: 10px;}' +
+		'.rpht-tooltip-common{position: absolute; bottom: 120px; left: 200px; width: auto; height: auto; color: #dedbd9; background: #303235; opacity: 0.9; padding: 10px;}' +
+		'.rpht-cmd-tooltip{width: 800px;}' +
+		'.rpht-die-label{text-align: right; display: inline-block; width: 92px;}' +
+		'.rpht-close-btn{margin-left: 56px; width: 24px; cursor: pointer;}'+
+		'.rpht-close-btn:hover{background: #CA7169;}'+
 		'</style>'
 
 	/**

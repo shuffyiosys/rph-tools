@@ -141,13 +141,31 @@ var chatModule = (function () {
 		this['remove-owner'] = `<tr><td><code>/remove-owner [username]</code></td><td style="padding-bottom:10px;">Removes [username] as the owner of the current room</td></tr>`
 	}
 
-	const CHAT_COMMAND_HTML = `<div id="chatCommandTooltip" class="rpht-cmd-tooltip"></div>`
+	const CHAT_COMMAND_HTML = `<div id="chatCommandTooltip" class="rpht-tooltip-common rpht-cmd-tooltip"></div>`
+
+	const DICE_ROLL_POPUP_HTML = `<div id="diceRollerPopup" class="rpht-tooltip-common">
+			<p style="margin-bottom:10px;">Dice Roller <span id="diceRollerClose" class="rpht-close-btn">&nbsp;X&nbsp;</span></p>
+			<label class="rpht-die-label"># of die</label> <input id="rpht_dieRollerCount" type="number" max="100" min="1" value="2" style="min-width: 36px; float:none; display:inline-block;">
+			<br>
+			<label class="rpht-die-label"># of sides</label> <input id="rpht_dieRollerSides" type="number"max="1000" min="2" value="20" style="min-width: 36px; float:none; display:inline-block;">
+			<br><br>
+			<button id="dieRollButton" style="width: 140px;">
+				Let's roll!
+			</button>
+			<br><br>
+			<hr style="margin-top: 6px; margin-bottom: 6px; ">
+			<button id="coinFlipButton" style="width: 140px;">
+				Flip a coin!
+			</button>
+		</div>`
 
 	function init() {
 		loadSettings()
 
 		$('#chat-bottom').append(CHAT_COMMAND_HTML)
+		$('#chat-bottom').append(DICE_ROLL_POPUP_HTML)
 		$('#chatCommandTooltip').hide()
+		$('#diceRollerPopup').hide()
 
 		/* General Options */
 		$('#chatColorEnable').change(() => {
@@ -278,6 +296,25 @@ var chatModule = (function () {
 			autoJoinTimer = setInterval(autoJoiningHandler, AUTOJOIN_INTERVAL)
 		}
 
+		/* Die roller */
+		$('#dieRollButton').click(() => {
+			const DIE_COUNT = $('#rpht_dieRollerCount').val()
+			const DIE_SIDES = $('#rpht_dieRollerSides').val()
+			$(`textarea.${$('li.tab.active')[0].className.split(' ')[2]}.active`).val(`/roll ${DIE_COUNT}d${DIE_SIDES}`)
+			$(`textarea.${$('li.tab.active')[0].className.split(' ')[2]}.active`).trigger({type: 'keydown', which: 13, keyCode: 13})
+			$('#diceRollerPopup').hide()
+		})
+
+		$('#coinFlipButton').click(() => {
+			$(`textarea.${$('li.tab.active')[0].className.split(' ')[2]}.active`).val(`/coinflip`)
+			$(`textarea.${$('li.tab.active')[0].className.split(' ')[2]}.active`).trigger({type: 'keydown', which: 13, keyCode: 13})
+			$('#diceRollerPopup').hide()
+		})
+
+		$('#diceRollerClose').click(() => {
+			$('#diceRollerPopup').hide()
+		})
+
 		/* General intialization */
 		$(window).resize(resizeChatTabs)
 
@@ -359,6 +396,16 @@ var chatModule = (function () {
 			thisRoom.$tabs[tabsLen - 1].prepend(`<p style="font-size: x-small; height:16px; margin-top: -14px;">${User.props.name}</p>`)
 			$(`textarea.${idRoomName}`).prop('placeholder', `Post as ${User.props.name}`)
 			$(`div.${User.props.id}_${roomCss} .user-for-textarea span`).css('overflow', 'hidden')
+			$(`div.${User.props.id}_${roomCss} .user-for-textarea div`)
+				.append(`<span class="${User.props.id}_${roomCss} roller-button" style="cursor:pointer; float: right; width: auto;" title="Dice roller">🎲</span>`)
+			$(`span.${User.props.id}_${roomCss}.roller-button`).click(()=> {
+				$('#diceRollerPopup').toggle()
+			})
+
+			$(`li.${User.props.id}_${roomCss} a.close`).click(() => {
+				$('#chatCommandTooltip').hide()
+				$('#diceRollerPopup').hide()
+			})
 			chatTextArea.unbind('keyup')
 			chatTextArea.bind('keydown', (ev) => {
 				intputChatText(ev, User, thisRoom)
@@ -414,16 +461,58 @@ var chatModule = (function () {
 			let newMsgLines = contentLines.slice(contentLines.length - msgLineCount)
 
 			for (let msgIdx = 0; msgIdx < newMsgLines.length; msgIdx++) {
-				let chatCommand = parsePostCommand(newMsgLines[msgIdx])
+				if (newMsgLines[msgIdx].indexOf('\u200b') > -1) {
+					const SEED = newMsgLines[msgIdx].split('\u200b')[1]
+					newMsgLines[msgIdx] = newMsgLines[msgIdx].substring(0, newMsgLines[msgIdx].indexOf(' @\u200b'))
+					const MSG_CHUNKS = newMsgLines[msgIdx].split(/ /g)
 
-				/* If the command is RNG, only process it if it's the first line as the seed is only good for that line. */
-				if (chatCommand.includes('rng') && msgIdx === 0) {
-					newMsgLines[msgIdx] = `[ ${user.props.name} ${generateRngResult(chatCommand, newMsgLines[msgIdx], msgData.time)} `
-					newMsgLines[msgIdx] += ` <span style="background:#4A4; color: #FFF;"> &#9745;</span> ]`
+					console.log(SEED, MSG_CHUNKS)
+					if (newMsgLines[msgIdx].search('rolled') > -1) {
+						const ROLL_PARAMS = parseRoll(MSG_CHUNKS[2])
+						const ROLL_RESULTS = calculateDiceRolls(ROLL_PARAMS[0], ROLL_PARAMS[1], SEED)
+						let validResult = true
+
+						for(let idx = 0; idx < ROLL_PARAMS[0] && validResult; idx++) {
+							if (ROLL_RESULTS['results'][idx] !== parseInt(MSG_CHUNKS[idx + 3])) {
+								console.log('Roll result mismatch!', ROLL_RESULTS['results'][idx], MSG_CHUNKS[idx + 3])
+								validResult = false
+							}
+						}
+
+						if (validResult === false) {
+							newMsgLines[msgIdx] += ` <span style="background:#F44; color: #FFF;">&#9746;</span>`
+						}
+						else if (msgData.time - SEED > (5 * 60 * 1000)) {
+							newMsgLines[msgIdx] += ` <span style="background:#A44; color: #FFF;">&#9072;</span>`
+						}
+						else {
+							newMsgLines[msgIdx] += ` <span style="background:#4A4; color: #FFF;">&#9745;</span>`
+						}
+					}
+					else if (newMsgLines[msgIdx].search('flips a coin' > -1)) {
+						const outcomes = ['heads', 'tails']
+						console.log(newMsgLines[msgIdx])
+						let outcome = outcomes[LcgRng(SEED) % 2]
+						if (newMsgLines[msgIdx].search(outcome) >- 1) {
+							newMsgLines[msgIdx] += ` <span style="background:#4A4; color: #FFF;">&#9745;</span>`
+						}
+						else if (msgData.time - SEED > (5 * 60 * 1000)) {
+							newMsgLines[msgIdx] += ` <span style="background:#A44; color: #FFF;">&#9072;</span>`
+						}
+						else {
+							newMsgLines[msgIdx] += ` <span style="background:#F44; color: #FFF;">&#9746;</span>`
+						}
+					}
 				}
 			}
 
-			let newMsg = `${newMsgLines.join('<br>')}<br>`
+			let newMsg = ``
+			if (newMsgLines.length === 1 && !msgData.buffer) {
+				newMsg += `<br>${newMsgLines.join('<br>')}`
+			}
+			else {
+				newMsg = `${newMsgLines.join('<br>')}`
+			}
 			/* Add pings if 
 			   - It's enabled AND 
 			   - The message isn't a buffer from the server AND
@@ -545,10 +634,42 @@ var chatModule = (function () {
 					inputTextBox.val('')
 				}
 				break
+			case '/coinflip':
+				{
+					const outcomes = ['heads', 'tails']
+					const seed = new Date().getTime()
+					let resultMsg = `/me flips a coin. It lands on... **${outcomes[LcgRng(seed) % 2]}**! @&#8203;${seed}`
+					Room.sendMessage(resultMsg, User.props.id)
+				}
+				break
+			case '/roll':
+				{
+					const seed = new Date().getTime()
+					let diceArgs = [1, 20]
+					let resultMsg = `/me `
+					let results = []
+					let result = LcgRng(seed)
+
+					if(cmdArgs[1]) {
+						diceArgs = parseRoll(cmdArgs[1])
+					}
+
+					results.push(result % diceArgs[1] + 1)
+					for (let die = 1; die < diceArgs[0]; die++) {
+						result = LcgRng(result)
+						results.push(result % diceArgs[1] + 1)
+					}
+					total = results.reduce((a, b) => a + b, 0)
+					resultMsg += `rolled ${diceArgs[0]}d${diceArgs[1]}: ${results.join(' ')} (total: ${total}) @&#8203;${seed}`
+					Room.sendMessage(resultMsg, User.props.id)
+				}
+				break
 			case '/rps':
-				const results = ['Rock!', 'Paper!', 'Scissors!']
-				newMessage = `/me plays Rock, Paper, Scissors and chooses... ${results[Math.ceil(Math.random() * 3) % 3].toString()}`
-				Room.sendMessage(newMessage, User.props.id)
+				{
+					const results = ['Rock!', 'Paper!', 'Scissors!']
+					newMessage = `/me plays Rock, Paper, Scissors and chooses... ${results[Math.ceil(Math.random() * 3) % 3].toString()}`
+					Room.sendMessage(newMessage, User.props.id)
+				}
 				break
 			case '/leave':
 				socket.emit('leave', {
