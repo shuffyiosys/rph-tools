@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.3.0
+// @version    4.3.2
 // @description Adds extended settings to RPH
 // @match      https://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.3.0'
+const VERSION_STRING = '4.3.2'
 
 const SETTINGS_NAME = "rph_tools_settings"
 /**
@@ -424,14 +424,13 @@ var chatModule = (function () {
 
 	const DICE_ROLL_POPUP_HTML = `<div id="diceRollerPopup" class="rpht-tooltip-common">
 			<p style="margin-bottom:10px;">Dice Roller <span id="diceRollerClose" class="rpht-close-btn">&nbsp;X&nbsp;</span></p>
-			<label class="rpht-die-label"># of die</label> <input id="rpht_dieRollerCount" type="number" max="100" min="1" value="2" style="min-width: 36px; float:none; display:inline-block;">
+			<label class="rpht-die-label"># of die</label> <input id="rpht_dieRollerCount" type="number" max="100" min="1" value="1" style="min-width: 36px; float:none; display:inline-block;">
 			<br>
 			<label class="rpht-die-label"># of sides</label> <input id="rpht_dieRollerSides" type="number"max="1000" min="2" value="20" style="min-width: 36px; float:none; display:inline-block;">
 			<br><br>
 			<button id="dieRollButton" style="width: 140px;">
 				Let's roll!
 			</button>
-			<br><br>
 			<hr style="margin-top: 6px; margin-bottom: 6px; ">
 			<button id="coinFlipButton" style="width: 140px;">
 				Flip a coin!
@@ -653,6 +652,10 @@ var chatModule = (function () {
 		socket.on('msg', (data) => {
 			for (let dataIdx = 0; dataIdx < data.length; dataIdx++) {
 				const msgData = data[(data.length - 1) - dataIdx]
+				if (msgData.room != thisRoom.props.name){
+					continue
+				}
+
 				let messages = $(`div[data-roomname="${msgData.room}"]`).children()
 				for (let idx = ((messages.length - 2) - dataIdx); idx > 0; idx--) {
 					let message = messages[idx]
@@ -786,12 +789,10 @@ var chatModule = (function () {
 			}
 
 			let newMsg = ``
-			if (newMsgLines.length === 1 && !msgData.buffer) {
-				newMsg += `<br>${newMsgLines.join('<br>')}`
+			if (contentLines.length !== 1 && !('buffer' in msgData)){
+				newMsg += `<br>`
 			}
-			else {
-				newMsg = `${newMsgLines.join('<br>')}`
-			}
+			newMsg += `${newMsgLines.join('<br>')}`
 			/* Add pings if 
 			   - It's enabled AND 
 			   - The message isn't a buffer from the server AND

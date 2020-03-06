@@ -1,3 +1,13 @@
+RPH Tools (4.3.2)
+---------------
+##### Bug Fixes
+* Fixed an issue where if pinged in an actively watched room, the room highlight affects the first non-actively watched room.
+
+RPH Tools (4.3.1)
+---------------
+##### Bug Fixes
+* Fixed the added new line in posts (it's fixed now, I promise!)
+
 RPH Tools (4.3.0)
 ---------------
 ##### Features Updates
@@ -5,7 +15,7 @@ RPH Tools (4.3.0)
 * Added an RNG mini-window. This is accessible through a dice button next to the chat input text box.
 
 ##### Bug Fixes
-* Fixed the added new line in posts
+* ~~Fixed the added new line in posts~~
 * When exiting a room, made the command window close as well. This applies to the new dice roller window too.
 
 RPH Tools (4.2.10)
