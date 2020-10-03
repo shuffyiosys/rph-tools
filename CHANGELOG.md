@@ -1,3 +1,11 @@
+RPH Tools (4.3.3)
+---------------
+##### Features Updates
+* Made the command window disappear if hovered over.
+* Ping tester checks on each input, rather than when focusing somewhere else
+* Self-pinging is turned off by default
+* Added user leaving room filtering to suppress multiple triggers from the server (until it gets fixed)
+
 RPH Tools (4.3.2)
 ---------------
 ##### Bug Fixes

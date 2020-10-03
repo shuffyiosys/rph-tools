@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.3.2
+// @version    4.3.3
 // @description Adds extended settings to RPH
 // @match      https://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.3.2'
+const VERSION_STRING = '4.3.3'
 
 const SETTINGS_NAME = "rph_tools_settings"
 /**
@@ -542,15 +542,15 @@ var chatModule = (function () {
 			saveSettings()
 		})
 
-		$('#pingPreviewInput').blur(() => {
+		$('#pingPreviewInput').keyup(() => {
 			var msg = $('#pingPreviewInput').val()
 			var testRegex = matchPing(msg)
 			if (testRegex !== null) {
 				msg = highlightPing(msg, testRegex)
 				pingSound.play()
-				$('#pingPreviewText').html(`&nbsp;${msg}`)
+				$('#pingPreviewText').html(` &nbsp;${msg}`)
 			} else {
-				$('#pingPreviewText').html(`No match`)
+				$('#pingPreviewText').html(` No match`)
 			}
 		})
 
@@ -634,6 +634,17 @@ var chatModule = (function () {
 		var userId = getIdFromChatTab(thisRoom)
 		var moddingModule = rphToolsModule.getModule('Modding Module')
 		let modUserIdx = -1
+
+		thisRoom.lastUserLeft = -1
+        thisRoom.userLeave = (function() {
+            var cached_function = thisRoom.userLeave;
+            return function() {
+                if (thisRoom.lastUserLeft !== arguments[0] || account.userids.indexOf(arguments[0]) > -1) {
+                    cached_function.apply(this, arguments); // use .apply() to call it
+                    thisRoom.lastUserLeft = arguments[0];
+                }
+            };
+		}());
 
 		thisRoom.$tabs[thisRoom.$tabs.length - 1].click(() => {
 			for (let roomTab of thisRoom.$tabs) {
@@ -1247,7 +1258,7 @@ var chatModule = (function () {
 
 			'enablePings': true,
 			'pingNotify': false,
-			'selfPing': true,
+			'selfPing': false,
 			'notifyTime': 6000,
 			'triggers': [],
 			'audioUrl': 'https://www.rphaven.com/sounds/boop.mp3',
@@ -2066,6 +2077,7 @@ var rphToolsModule = (function () {
 		'.rpht-slider.round:before{border-radius:50%}' +
 		'.rpht-tooltip-common{position: absolute; bottom: 120px; left: 200px; width: auto; height: auto; color: #dedbd9; background: #303235; opacity: 0.9; padding: 10px;}' +
 		'.rpht-cmd-tooltip{width: 800px;}' +
+		'.rpht-cmd-tooltip:hover{display:none;}' +
 		'.rpht-die-label{text-align: right; display: inline-block; width: 92px;}' +
 		'.rpht-close-btn{margin-left: 56px; width: 24px; cursor: pointer;}'+
 		'.rpht-close-btn:hover{background: #CA7169;}'+
