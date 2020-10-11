@@ -32,7 +32,7 @@ var rphToolsModule = (function () {
 		'.rpht-slider.round:before{border-radius:50%}' +
 		'.rpht-tooltip-common{position: absolute; bottom: 120px; left: 200px; width: auto; height: auto; color: #dedbd9; background: #303235; opacity: 0.9; padding: 10px;}' +
 		'.rpht-cmd-tooltip{width: 800px;}' +
-		'.rpht-cmd-tooltip:hover{display:none;}' +
+		'.rpht-cmd-tooltip:hover{opacity: 0;}' +
 		'.rpht-die-label{text-align: right; display: inline-block; width: 92px;}' +
 		'.rpht-close-btn{margin-left: 56px; width: 24px; cursor: pointer;}'+
 		'.rpht-close-btn:hover{background: #CA7169;}'+

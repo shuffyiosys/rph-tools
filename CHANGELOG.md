@@ -1,5 +1,11 @@
 RPH Tools (4.3.3)
 ---------------
+##### Bug Fixes
+* Used a different CSS property to hide the command window when hovered, due to a strange interaction between jQuery's hide/show function and the property ``display:none``
+* Fixed an issue where multiple user-left-room triggers still happen.
+
+RPH Tools (4.3.3)
+---------------
 ##### Features Updates
 * Made the command window disappear if hovered over.
 * Ping tester checks on each input, rather than when focusing somewhere else
