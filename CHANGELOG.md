@@ -3,6 +3,7 @@ RPH Tools (4.3.5)
 ##### Features Updates
 * Added sessions. When enabled, this will automatically join the last rooms you were in when reloading the chat.
 * Reworked how chat messages are processed so there's only one handler, rather than per-chat-tab. This should improve performance.
+* The area to the left of the chat text box now has a fixed width. This is to prevent issues were the character name + room name overflows, causing the dice button to become hidden.
 
 ##### Bug Fixes
 * Fixed the alert word feature of the mod section.
