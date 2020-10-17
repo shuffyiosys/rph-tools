@@ -4,10 +4,7 @@
  * of certain words and alert the mod.
  */
 var moddingModule = (function () {
-	var settings = {
-		'alertWords': '',
-		'alertUrl': 'https://www.rphaven.com/sounds/boop.mp3',
-	}
+	var settings = {}
 
 	var localStorageName = "modSettings"
 
@@ -136,6 +133,11 @@ var moddingModule = (function () {
 			modAction('remove-owner')
 		})
 
+		$('#wordAlertEnable').click(function () {
+			settings.alertOnWords = $('#wordAlertEnable').is(':checked')
+			settingsModule.saveSettings(localStorageName, settings)
+		})
+
 		$('#modAlertWords').blur(function () {
 			settings.alertWords = $('#modAlertWords').val().replace(/\r?\n|\r/, '')
 			settingsModule.saveSettings(localStorageName, settings)
@@ -235,18 +237,20 @@ var moddingModule = (function () {
 	}
 
 	function loadSettings() {
-		var storedSettings = settingsModule.getSettings(localStorageName)
-		if (storedSettings) {
-			settings = storedSettings
+		settings = {
+			'alertOnWords': false,
+			'alertWords': '',
+			'alertUrl': 'https://www.rphaven.com/sounds/boop.mp3',
 		}
-		else {
-			settings = {
-				'alertWords': '',
-				'alertUrl': 'https://www.rphaven.com/sounds/boop.mp3',
-			}
+		var storedSettings = settingsModule.getSettings(localStorageName)
+
+		if (storedSettings) {
+			settings = Object.assign(settings, storedSettings)
 		}
 
 		$('#modAlertUrl').val(settings.alertUrl)
+		$('#wordAlertEnable').prop("checked", settings.alertOnWords)
+		$('#modAlertWords').val(settings.alertWords)
 		alertSound = new Audio(settings.alertUrl)
 
 		$('#alertTriggers').val(settings.alertWords)

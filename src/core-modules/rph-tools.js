@@ -20,7 +20,6 @@ var rphToolsModule = (function () {
 		'input.rpht-short-input{width:200px;}' +
 		'input.rpht-long-input{max-width:100%;}' +
 		'.msg-padding{line-height: 1.25em}'+
-		'.alert-ping{background:#F00; color: #FFF; font-weight: bold;}' +
 		'.switch{position:relative;right:12px;width:50px;height:24px;float:right;}' +
 		'.switch input{opacity:0;width:0;height:0;}' +
 		'.rpht-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;-webkit-transition:.4s;transition:.4s}' +

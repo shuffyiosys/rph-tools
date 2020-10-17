@@ -66,6 +66,7 @@ var settingsModule = (function () {
 	 * Exports settings into a JSON formatted string
 	 */
 	function exportSettings() {
+		markProblem('textarea#importExportTextarea', false)
 		return localStorage.getItem(SETTINGS_NAME)
 	}
 

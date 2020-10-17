@@ -1,4 +1,14 @@
-RPH Tools (4.3.3)
+RPH Tools (4.3.5)
+---------------
+##### Features Updates
+* Added sessions. When enabled, this will automatically join the last rooms you were in when reloading the chat.
+* Reworked how chat messages are processed so there's only one handler, rather than per-chat-tab. This should improve performance.
+
+##### Bug Fixes
+* Fixed the alert word feature of the mod section.
+* Fixed an issue where if you imported bad settings, the box would remain red if you exported them. The box will clear when exporting settings.
+
+RPH Tools (4.3.4)
 ---------------
 ##### Bug Fixes
 * Used a different CSS property to hide the command window when hovered, due to a strange interaction between jQuery's hide/show function and the property ``display:none``

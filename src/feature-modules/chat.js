@@ -6,6 +6,10 @@ var chatModule = (function () {
 
 	var localStorageName = "chatSettings"
 
+	var joinedSession = false
+
+	var isRoomMod = {}
+
 	var pingSound = null
 
 	var autoDismissTimer = null
@@ -107,6 +111,11 @@ var chatModule = (function () {
 			'</div>' +
 			'<h4>Auto Joining</h4>' +
 			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="trackSession">Sessioning</label>' +
+			'		<label class="switch"><input type="checkbox" id="trackSession"><span class="rpht-slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Keeps track of which rooms you were in, then rejoins them when you log in again.</label>' +
+			'	</div>' +
 			'	<div class="rpht-option-section">' +
 			'		<label class="rpht-label checkbox-label" for="joinFavEnable">Join favorites</label>' +
 			'		<label class="switch"><input type="checkbox" id="joinFavEnable"><span class="rpht-slider round"></span></label>' +
@@ -276,6 +285,17 @@ var chatModule = (function () {
 		})
 
 		/* Session Options */
+		$('#trackSession').click(() => {
+			chatSettings.trackSession = $('#trackSession').is(':checked')
+			if (chatSettings.trackSession) {
+				chatSettings.session = rph.roomsJoined
+			}
+			else {
+				chatSettings.session = []
+			}
+			saveSettings() 
+		})
+
 		$('#joinFavEnable').click(() => {
 			chatSettings.joinFavorites = $('#joinFavEnable').is(':checked')
 			saveSettings()
@@ -291,7 +311,7 @@ var chatModule = (function () {
 			settingsModule.saveSettings(localStorageName, chatSettings)
 		})
 
-		if (chatSettings.joinFavorites) {
+		if (chatSettings.joinFavorites || chatSettings.trackSession) {
 			autoJoinTimer = setInterval(autoJoiningHandler, AUTOJOIN_INTERVAL)
 		}
 
@@ -317,8 +337,36 @@ var chatModule = (function () {
 		/* General intialization */
 		$(window).resize(resizeChatTabs)
 
-		socket.on('confirm-room-join', function (data) {
+		socket.on('confirm-room-join', (data) => {
 			roomSetup(data)
+			if (chatSettings.trackSession && joinedSession) {
+				chatSettings.session = rph.roomsJoined
+				console.log("Chat session after entering room:", chatSettings.session)
+				saveSettings() 
+			}
+		})
+
+		socket.on('room-users-leave', () => {
+			if (chatSettings.trackSession && joinedSession) {
+				chatSettings.session = rph.roomsJoined
+				console.log("Chat session after leaving room:", chatSettings.session)
+				saveSettings() 
+			}
+		})
+
+		socket.on('msg', (data) => {
+			for (let dataIdx = 0; dataIdx < data.length; dataIdx++) {
+				const msgData = data[(data.length - 1) - dataIdx]
+				let thisRoom = getRoom(msgData.room)
+				let messages = $(`div[data-roomname="${msgData.room}"]`).children()
+				for (let idx = ((messages.length - 2) - dataIdx); idx > 0; idx--) {
+					let message = messages[idx]
+					if ($(message.children[0].children[0]).attr('data-userid') == msgData.userid) {
+						processMsg(thisRoom, msgData, message, isRoomMod[msgData.room])
+						break
+					}
+				}
+			}
 		})
 
 		/* Setup the timer for automatically dismissing the opening dialog once
@@ -354,7 +402,6 @@ var chatModule = (function () {
 		var thisRoom = getRoom(room.room)
 		var userId = getIdFromChatTab(thisRoom)
 		var moddingModule = rphToolsModule.getModule('Modding Module')
-		let modUserIdx = -1
 
 		thisRoom.userLeave = (function () {
 			var cached_function = thisRoom.userLeave;
@@ -371,44 +418,31 @@ var chatModule = (function () {
 			}
 		})
 
-		for (var idx = 0; idx < account.userids.length && !modUserIdx !== -1; idx++) {
+		if (!(room.room in isRoomMod)) {
+			isRoomMod[room.room] = false;
+		}
+
+		for (var idx = 0; idx < account.userids.length && isRoomMod[room.room] == false; idx++) {
 			if (thisRoom.props.mods.indexOf(account.userids[idx]) > -1 ||
 				thisRoom.props.owners.indexOf(account.userids[idx]) > -1) {
-				modUserIdx = account.userids[idx]
+				isRoomMod[room.room] |= true
 				break
 			}
 		}
 
-		socket.on('msg', (data) => {
-			for (let dataIdx = 0; dataIdx < data.length; dataIdx++) {
-				const msgData = data[(data.length - 1) - dataIdx]
-				if (msgData.room != thisRoom.props.name){
-					continue
-				}
-
-				let messages = $(`div[data-roomname="${msgData.room}"]`).children()
-				for (let idx = ((messages.length - 2) - dataIdx); idx > 0; idx--) {
-					let message = messages[idx]
-					if ($(message.children[0].children[0]).attr('data-userid') == msgData.userid) {
-						processMsg(thisRoom, msgData, message, modUserIdx !== -1)
-						break
-					}
-				}
-			}
-		})
-
 		getUserById(userId, (User) => {
-			if (moddingModule !== null && modUserIdx === userId) {
+			if (moddingModule !== null && isRoomMod[room.room]) {
 				moddingModule.addModRoomPair(User.props, thisRoom.props.name)
 			}
 			let roomCss = getCssRoomName(thisRoom.props.name)
 			let chatTextArea = $(`textarea.${User.props.id}_${roomCss}`)
 			let tabsLen = thisRoom.$tabs.length
 			let idRoomName = thisRoom.$tabs[tabsLen - 1][0].className.split(' ')[2]
-			thisRoom.$tabs[tabsLen - 1].prepend(`<p style="font-size: x-small; height:16px; margin-top: -14px;">${User.props.name}</p>`)
+			thisRoom.$tabs[tabsLen - 1].prepend(`<p style="font-size: x-small; height:16px; margin-top: -10px;">${User.props.name}</p>`)
 			$(`textarea.${idRoomName}`).prop('placeholder', `Post as ${User.props.name}`)
 			$(`div.${User.props.id}_${roomCss} .user-for-textarea span`).css('overflow', 'hidden')
 			$(`div.${User.props.id}_${roomCss} .user-for-textarea div`)
+				.css('width', '234px')
 				.append(`<span class="${User.props.id}_${roomCss} roller-button" style="cursor:pointer; float: right; width: auto;" title="Dice roller">🎲</span>`)
 			$(`span.${User.props.id}_${roomCss}.roller-button`).click(()=> {
 				$('#diceRollerPopup').toggle()
@@ -478,7 +512,6 @@ var chatModule = (function () {
 					newMsgLines[msgIdx] = newMsgLines[msgIdx].substring(0, newMsgLines[msgIdx].indexOf(' @\u200b'))
 					const MSG_CHUNKS = newMsgLines[msgIdx].split(/ /g)
 
-					console.log(SEED, MSG_CHUNKS)
 					if (newMsgLines[msgIdx].search('rolled') > -1) {
 						const ROLL_PARAMS = parseRoll(MSG_CHUNKS[2])
 						const ROLL_RESULTS = calculateDiceRolls(ROLL_PARAMS[0], ROLL_PARAMS[1], SEED)
@@ -558,7 +591,7 @@ var chatModule = (function () {
 				alertRegex = matchPing(newMsg, alertWords, false, true)
 				// Process alert
 				if (alertRegex) {
-					msg = highlightPing(newMsg, alertRegex, true)
+					newMsg = highlightPing(newMsg, alertRegex, true)
 					if (!thisRoom.isActive()) {
 						for (let roomTab of thisRoom.$tabs) {
 							roomTab.css('background-color', '#F00')
@@ -792,19 +825,18 @@ var chatModule = (function () {
 	 * @returns Modified message
 	 */
 	function highlightPing(msg, testRegex, alert = false) {
+		let styleText = `color: ${chatSettings.color}; background: ${chatSettings.highlight};`
 		if (alert) {
-			msg = msg.replace(testRegex, `<span class="alert-ping">${msg.match(testRegex)}</span>`)
+			styleText = `background: #F00; color: #FFF; font-weight: bold;`
 		} else {
-			let styleText = `color: ${chatSettings.color}; background: ${chatSettings.highlight};`
-
 			if (chatSettings.bold === true) {
 				styleText += ' font-weight: bold;'
 			}
 			if (chatSettings.italics === true) {
 				styleText += ' font-style:italic;'
 			}
-			msg = msg.replace(testRegex, `<span style="${styleText}">${msg.match(testRegex)}</span>`)
 		}
+		msg = msg.replace(testRegex, `<span style="${styleText}">${msg.match(testRegex)}</span>`)
 		return msg
 	}
 
@@ -850,9 +882,9 @@ var chatModule = (function () {
 		if (Object.keys(rph.rooms).length === 0) {
 			return
 		}
-		$('<div id="rpht-autojoin" class="inner">' +
-			'<p>Autojoining or restoring session.</p>' +
-			'<p>Press "Cancel" to stop autojoin or session restore.</p>' +
+		$('<div id="rpht-autojoin" class="inner" style="background: #333;">' +
+			'<p>Autojoining or restoring session in about 5 seconds.</p>' +
+			'<p>Press "Cancel" to stop.</p>' +
 			'</div>'
 		).dialog({
 			open: function (event, ui) {
@@ -879,20 +911,46 @@ var chatModule = (function () {
 		if (chatSettings.joinFavorites === true) {
 			joinFavoriteRooms()
 		}
+		if (chatSettings.trackSession === true) {
+			joinPreviousSession()
+		}
 	}
 
-	/** 
-	 * Joins all the rooms in the favorite rooms list
-	 */
 	function joinFavoriteRooms() {
-		for (var i = 0; i < chatSettings.favRooms.length; i++) {
-			var favRoom = chatSettings.favRooms[i]
+		chatSettings.favRooms.forEach((favRoom) => {
 			socket.emit('join', {
 				name: favRoom.room,
 				userid: favRoom.userId,
 				pw: favRoom.roomPw
 			})
+		})
+	}
+
+	function joinPreviousSession() {
+		const sessionLen = chatSettings.session.length
+		for(let i = 0; i < sessionLen; i++) {
+			const favoritesLen = chatSettings.favRooms.length
+			const sessionRoom = chatSettings.session[i]
+			let canJoin = true
+
+			for(let j = 0; chatSettings.joinFavorites && j < favoritesLen; j++) {
+				const favRoom = chatSettings.favRooms[j]
+				console.log(j, favRoom, sessionRoom)
+				if (favRoom.name == sessionRoom.roomname && 
+					favRoom.userId == sessionRoom.user) {
+					canJoin = false
+					break
+				}
+			}
+
+			if (canJoin) {
+				socket.emit('join', {
+					name: sessionRoom.roomname,
+					userid: sessionRoom.user
+				})
+			}
 		}
+		joinedSession = true
 	}
 
 	/** 
@@ -989,7 +1047,9 @@ var chatModule = (function () {
 			'case': false,
 
 			'joinFavorites': false,
+			'trackSession': false,
 			'favRooms': [],
+			'session': [],
 		}
 		if (storedSettings) {
 			chatSettings = Object.assign(chatSettings, storedSettings)
@@ -1011,6 +1071,7 @@ var chatModule = (function () {
 		$('input#pingExactMatch').prop("checked", chatSettings.exact)
 		$('input#pingCaseSense').prop("checked", chatSettings.case)
 
+		$('#trackSession').prop("checked", chatSettings.trackSession)
 		$('#joinFavEnable').prop("checked", chatSettings.joinFavorites)
 		for (var i = 0; i < chatSettings.favRooms.length; i++) {
 			var favRoomObj = chatSettings.favRooms[i]
