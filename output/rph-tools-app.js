@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.3.5
+// @version    4.3.6A
 // @description Adds extended settings to RPH
 // @match      https://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.3.5'
+const VERSION_STRING = '4.3.6A'
 
 const SETTINGS_NAME = "rph_tools_settings"
 /**
@@ -620,7 +620,6 @@ var chatModule = (function () {
 			roomSetup(data)
 			if (chatSettings.trackSession && joinedSession) {
 				chatSettings.session = rph.roomsJoined
-				console.log("Chat session after entering room:", chatSettings.session)
 				saveSettings() 
 			}
 		})
@@ -628,7 +627,6 @@ var chatModule = (function () {
 		socket.on('room-users-leave', () => {
 			if (chatSettings.trackSession && joinedSession) {
 				chatSettings.session = rph.roomsJoined
-				console.log("Chat session after leaving room:", chatSettings.session)
 				saveSettings() 
 			}
 		})
@@ -815,7 +813,6 @@ var chatModule = (function () {
 					}
 					else if (newMsgLines[msgIdx].search('flips a coin' > -1)) {
 						const outcomes = ['heads', 'tails']
-						console.log(newMsgLines[msgIdx])
 						let outcome = outcomes[LcgRng(SEED) % 2]
 						if (newMsgLines[msgIdx].search(outcome) >- 1) {
 							newMsgLines[msgIdx] += ` <span style="background:#4A4; color: #FFF;">&#9745;</span>`
@@ -1060,7 +1057,7 @@ var chatModule = (function () {
 		$('#chatCommandTooltip').hide()
 		if (!floodTracker(User, Room, message)) {
 			if (message[0] === '/' && message.substring(0, 2) !== '//' && chatModule) {
-				chatModule.parseSlashCommand(inputTextarea, Room, User);
+				parseSlashCommand(inputTextarea, Room, User);
 			} else {
 				Room.sendMessage(message, User.props.id)
 			}
@@ -1173,6 +1170,8 @@ var chatModule = (function () {
 			},
 			buttons: {
 				Cancel: () => {
+					joinedSession = true
+					chatSettings.session = []
 					clearTimeout(autoJoinTimer)
 					$('#rpht-autojoin').dialog('close')
 				}
@@ -1214,7 +1213,6 @@ var chatModule = (function () {
 
 			for(let j = 0; chatSettings.joinFavorites && j < favoritesLen; j++) {
 				const favRoom = chatSettings.favRooms[j]
-				console.log(j, favRoom, sessionRoom)
 				if (favRoom.name == sessionRoom.roomname && 
 					favRoom.userId == sessionRoom.user) {
 					canJoin = false
@@ -1372,7 +1370,6 @@ var chatModule = (function () {
 
 	return {
 		init: init,
-		parseSlashCommand: parseSlashCommand,
 		loadSettings: loadSettings,
 		getHtml: getHtml,
 		toString: toString
@@ -1434,10 +1431,16 @@ var pmModule = (function () {
 			'</div>'
 	}
 
+	let audioHtml = 
+			'<audio id="im-sound">' +
+				'<source src="https://www.rphaven.com/sounds/imsound.mp3" type="audio/mpeg">' +
+  			'</audio>'
+
 	var awayMessages = {}
 
 	function init() {
 		loadSettings()
+		$('body').append(audioHtml)
 
 		$('#pmColorEnable').change(() => {
 			pmSettings.colorText = $('#pmColorEnable').is(':checked')
@@ -1476,17 +1479,15 @@ var pmModule = (function () {
 		$('#pmPingURL').change(() => {
 			if (validateSetting('pmPingURL', 'url')) {
 				pmSettings.audioUrl = $('pmPingURL').val()
-				$('#im-sound').children("audio").attr('src', pmSettings.audioUrl)
+				$('#im-sound').children("source").attr('src', pmSettings.audioUrl)
 				settingsModule.saveSettings(localStorageName, pmSettings)
 			}
 		})
 
 		$('#pmMute').change(() => {
 			if ($('#pmMute').is(":checked")) {
-				$('#im-sound').children("audio").attr('src', '')
 				pmSettings.pmMute = true
 			} else {
-				$('#im-sound').children("audio").attr('src', pmSettings.audioUrl)
 				pmSettings.pmMute = false
 			}
 			settingsModule.saveSettings(localStorageName, pmSettings)
@@ -1503,6 +1504,10 @@ var pmModule = (function () {
 				return;
 			}
 			rph.getPm({'from':data.from, 'to':data.to}, (pm) => {
+				if (pmSettings.pmMute === false) {
+					$('#im-sound')[0].play()
+				}
+				
 				getUserByName(pm.to.props.name, (user) => {
 					processPmMsg(user, data, pm)
 				})
@@ -1517,12 +1522,12 @@ var pmModule = (function () {
 				if (awayMessages[data.from] && awayMessages[data.from].enabled) {
 					awayMessages[data.from].usedPmAwayMsg = true;
 					socket.emit('pm', {
-					  'from': data.from,
-					  'to': data.to,
-					  'msg': awayMessages[data.from].message,
-					  'target': 'all'
+						'from': data.from,
+						'to': data.to,
+						'msg': awayMessages[data.from].message,
+						'target': 'all'
 					});
-				  }
+				}
 			})
 		})
 		

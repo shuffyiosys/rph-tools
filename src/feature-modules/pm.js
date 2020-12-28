@@ -55,10 +55,16 @@ var pmModule = (function () {
 			'</div>'
 	}
 
+	let audioHtml = 
+			'<audio id="im-sound">' +
+				'<source src="https://www.rphaven.com/sounds/imsound.mp3" type="audio/mpeg">' +
+  			'</audio>'
+
 	var awayMessages = {}
 
 	function init() {
 		loadSettings()
+		$('body').append(audioHtml)
 
 		$('#pmColorEnable').change(() => {
 			pmSettings.colorText = $('#pmColorEnable').is(':checked')
@@ -97,17 +103,15 @@ var pmModule = (function () {
 		$('#pmPingURL').change(() => {
 			if (validateSetting('pmPingURL', 'url')) {
 				pmSettings.audioUrl = $('pmPingURL').val()
-				$('#im-sound').children("audio").attr('src', pmSettings.audioUrl)
+				$('#im-sound').children("source").attr('src', pmSettings.audioUrl)
 				settingsModule.saveSettings(localStorageName, pmSettings)
 			}
 		})
 
 		$('#pmMute').change(() => {
 			if ($('#pmMute').is(":checked")) {
-				$('#im-sound').children("audio").attr('src', '')
 				pmSettings.pmMute = true
 			} else {
-				$('#im-sound').children("audio").attr('src', pmSettings.audioUrl)
 				pmSettings.pmMute = false
 			}
 			settingsModule.saveSettings(localStorageName, pmSettings)
@@ -124,6 +128,10 @@ var pmModule = (function () {
 				return;
 			}
 			rph.getPm({'from':data.from, 'to':data.to}, (pm) => {
+				if (pmSettings.pmMute === false) {
+					$('#im-sound')[0].play()
+				}
+				
 				getUserByName(pm.to.props.name, (user) => {
 					processPmMsg(user, data, pm)
 				})
@@ -138,12 +146,12 @@ var pmModule = (function () {
 				if (awayMessages[data.from] && awayMessages[data.from].enabled) {
 					awayMessages[data.from].usedPmAwayMsg = true;
 					socket.emit('pm', {
-					  'from': data.from,
-					  'to': data.to,
-					  'msg': awayMessages[data.from].message,
-					  'target': 'all'
+						'from': data.from,
+						'to': data.to,
+						'msg': awayMessages[data.from].message,
+						'target': 'all'
 					});
-				  }
+				}
 			})
 		})
 		

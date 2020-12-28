@@ -341,7 +341,6 @@ var chatModule = (function () {
 			roomSetup(data)
 			if (chatSettings.trackSession && joinedSession) {
 				chatSettings.session = rph.roomsJoined
-				console.log("Chat session after entering room:", chatSettings.session)
 				saveSettings() 
 			}
 		})
@@ -349,7 +348,6 @@ var chatModule = (function () {
 		socket.on('room-users-leave', () => {
 			if (chatSettings.trackSession && joinedSession) {
 				chatSettings.session = rph.roomsJoined
-				console.log("Chat session after leaving room:", chatSettings.session)
 				saveSettings() 
 			}
 		})
@@ -536,7 +534,6 @@ var chatModule = (function () {
 					}
 					else if (newMsgLines[msgIdx].search('flips a coin' > -1)) {
 						const outcomes = ['heads', 'tails']
-						console.log(newMsgLines[msgIdx])
 						let outcome = outcomes[LcgRng(SEED) % 2]
 						if (newMsgLines[msgIdx].search(outcome) >- 1) {
 							newMsgLines[msgIdx] += ` <span style="background:#4A4; color: #FFF;">&#9745;</span>`
@@ -781,7 +778,7 @@ var chatModule = (function () {
 		$('#chatCommandTooltip').hide()
 		if (!floodTracker(User, Room, message)) {
 			if (message[0] === '/' && message.substring(0, 2) !== '//' && chatModule) {
-				chatModule.parseSlashCommand(inputTextarea, Room, User);
+				parseSlashCommand(inputTextarea, Room, User);
 			} else {
 				Room.sendMessage(message, User.props.id)
 			}
@@ -894,6 +891,8 @@ var chatModule = (function () {
 			},
 			buttons: {
 				Cancel: () => {
+					joinedSession = true
+					chatSettings.session = []
 					clearTimeout(autoJoinTimer)
 					$('#rpht-autojoin').dialog('close')
 				}
@@ -935,7 +934,6 @@ var chatModule = (function () {
 
 			for(let j = 0; chatSettings.joinFavorites && j < favoritesLen; j++) {
 				const favRoom = chatSettings.favRooms[j]
-				console.log(j, favRoom, sessionRoom)
 				if (favRoom.name == sessionRoom.roomname && 
 					favRoom.userId == sessionRoom.user) {
 					canJoin = false
@@ -1093,7 +1091,6 @@ var chatModule = (function () {
 
 	return {
 		init: init,
-		parseSlashCommand: parseSlashCommand,
 		loadSettings: loadSettings,
 		getHtml: getHtml,
 		toString: toString

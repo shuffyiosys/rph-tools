@@ -1,3 +1,8 @@
+RPH Tools (4.3.6)
+---------------
+#### Miscellaneous Fixes
+* Added a missing <audio> tag for PM sound and have the script play it back. This will be removed if the site fixes this.
+
 RPH Tools (4.3.5)
 ---------------
 ##### Features Updates
