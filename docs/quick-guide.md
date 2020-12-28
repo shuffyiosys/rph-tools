@@ -1,6 +1,6 @@
 # RPH Tools Quick Guide
 ## Chat
-### General Options
+### Appearance
 The option to color a user's text as they enter messages with their name's basic color is available. 
 
 An option to add padding to the end of messages to increase readibility is also available.
@@ -10,7 +10,7 @@ This will play an audio cue plus highlight the text color when a message with a 
 1. To use it, make sure "Enable Pings" is toggled ON
 1. If you wish to have a browser use a pop-up notification, you can set it to ON
 1. Enter the words you want to use as triggers. Separate them by comma, but with no space between them. e.g., ```Alice,Bob,Charlie``` instead of ```Alice, Bob, Charlie```
-1. Set the URL where the audio file is. It must be a .wav, .mp3, or .ogg.
+1. Set the URL where the audio file is. 
 1. Enter an HTML compliant color code for the text color. There's no restriction.
 1. Enter an HTML compliant color code for the highlight color. There's no restriction.
 1. Add matching options to taste. "Exact Match" will only match whole words (e.g., "Mel" only pings on "Mel" and not "Melody"). Case sensitive will take into account using uppercase letters or not (e.g., "Mel" only pings on "Mel" and not "mel")
@@ -38,15 +38,8 @@ This sets up an auto-reply system in case you're away. To use:
 4. Press the "Disable" when you're done.
  
 ### Other Settings
-* "PM Audio" sets which audio file to play. This is an URL and it must lead to a HTML5 compliant audio container (wav, mp3, or ogg are safe bets)
-* "Mute PMs" if you don't want PM audio pings
+* "PM Audio" sets which audio file to play. 
 * You can toggle if you want browser notifications on.
-
-## Random Numbers
-Generates a random number to send to the chat.
-* Coin toss: simple heads or tails generator
-* Dice Role: Rolls the specificed number of dice of a specified number of sides. An option to calculate the totals is avaialble.
-* General RNG: Generates a random number between a range.
 
 ## Modding
 A set of tools to aid in moderating a room. Note this only works if you are actually a moderator and you own the username. To use:

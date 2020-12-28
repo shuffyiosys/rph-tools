@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.3.6A
+// @version    4.3.7
 // @description Adds extended settings to RPH
 // @match      https://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.3.6A'
+const VERSION_STRING = '4.3.7'
 
 const SETTINGS_NAME = "rph_tools_settings"
 /**
@@ -32,8 +32,8 @@ function markProblem(element, mark) {
  * @return If the input is valid or not
  */
 function validateSetting(settingId, setting) {
-	var validInput = false
-	var input = $(settingId).val()
+	let validInput = false
+	let input = $(settingId).val()
 
 	if (setting === "url") {
 		validInput = validateUrl(input)
@@ -52,7 +52,7 @@ function validateSetting(settingId, setting) {
  * @returns If the color input is valid
  */
 function validateColor(color) {
-	var pattern = new RegExp(/([0-9A-Fa-f]{6}$)|([0-9A-Fa-f]{3}$)/i)
+	let pattern = new RegExp(/([0-9A-Fa-f]{6}$)|([0-9A-Fa-f]{3}$)/i)
 	return pattern.test(color)
 }
 
@@ -61,19 +61,14 @@ function validateColor(color) {
  * @param {string} url URL input
  * @returns If the URL input is valid
  */
-var validateUrl = function (url) {
-	var match = false
-	var regexp = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/
-	var pingExt = url.slice((url.length - 4), (url.length))
-
+let validateUrl = function (url) {
 	if (url === '') {
-		match = true
-	} else if (regexp.test(url) === true) {
-		if (pingExt == ".wav" || pingExt == ".ogg" || pingExt == ".mp3") {
-			match = true
-		}
+		return true
 	}
-	return match
+	else {
+		let regexp = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/
+		return (regexp.test(url) === true)
+	}
 }
 
 /**
@@ -83,7 +78,7 @@ var validateUrl = function (url) {
  * @param {object} droplist Which select element to add option to
  */
 function addToDroplist(value, label, droplist) {
-	var droplist_elem = $(droplist)
+	let droplist_elem = $(droplist)
 	droplist_elem.append($('<option>', {
 		value: value,
 		text: label
@@ -100,7 +95,7 @@ function addToDroplist(value, label, droplist) {
  *         otherwise.
  */
 function arrayObjectIndexOf(objArray, key, value) {
-	for (var i = 0; i < objArray.length; i++) {
+	for (let i = 0; i < objArray.length; i++) {
 		if (objArray[i][key] === value) {
 			return i
 		}
@@ -112,19 +107,19 @@ function arrayObjectIndexOf(objArray, key, value) {
  * Sorts the account's username list to alphabetical order
  */
 function getSortedNames() {
-	var namesToIds = {}
+	let namesToIds = {}
 	account.users.forEach(function (userObj) {
 		namesToIds[userObj.props.name] = userObj.props.id
 	})
 
-	var sorted = []
-	for (var key in namesToIds) {
+	let sorted = []
+	for (let key in namesToIds) {
 		sorted[sorted.length] = key
 	}
 	sorted.sort()
 
-	var tempDict = {}
-	for (var i = 0; i < sorted.length; i++) {
+	let tempDict = {}
+	for (let i = 0; i < sorted.length; i++) {
 		tempDict[sorted[i]] = namesToIds[sorted[i]]
 	}
 	namesToIds = tempDict
@@ -221,8 +216,8 @@ function parseRoll(rollArgs){
 	const DIE_NUM_MAX = 100
 	const DIE_SIDE_MIN = 2
 	const DIE_SIDE_MAX = 1000000
-	var die = 1
-	var sides = 20
+	let die = 1
+	let sides = 20
 	die = parseInt(rollArgs.split('d')[0])
 	sides = parseInt(rollArgs.split('d')[1])
 	die = Math.min(Math.max(die, DIE_NUM_MIN), DIE_NUM_MAX)
@@ -232,12 +227,29 @@ function parseRoll(rollArgs){
 
 function getCssRoomName(roomName) {
 	return roomName.toLowerCase().replace(/ /g, '-')
-}/**
+}
+
+function displayNotification(message, timeout) {
+	if (document.hidden) {
+		let notification = new Notification(message)
+		setTimeout(() => {
+			notification.close()
+		}, timeout)
+	}
+}
+
+function createTimestamp(time) {
+	const timestamp = new Date(time)
+	const dateString = timestamp.toLocaleDateString(navigator.language).substring(0,5)
+	const timeString = timestamp.toTimeString().substring(0,5)
+	return `${dateString} ${timeString}`
+}
+/**
  * Generates a hash value for a string
  * This was modified from https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
  */
 String.prototype.hashCode = function () {
-	var hash = 0,
+	let hash = 0,
 		i, chr, len
 	if (this.length === 0) return hash
 	for (i = 0, len = this.length; i < len; i++) {
@@ -280,20 +292,20 @@ function floodTracker(User, Room, message) {
 /****
  * This module handles the chat functions of the script.
  ****/
-var chatModule = (function () {
-	var chatSettings = {}
+let chatModule = (function () {
+	let chatSettings = {}
 
-	var localStorageName = "chatSettings"
+	let localStorageName = "chatSettings"
 
-	var joinedSession = false
+	let joinedSession = false
 
-	var isRoomMod = {}
+	let isRoomMod = {}
 
-	var pingSound = null
+	let autoDismissTimer = null
 
-	var autoDismissTimer = null
+	let autoJoinTimer = null
 
-	var autoJoinTimer = null
+	let pingHighlightText = ''
 
 	const AUTOJOIN_TIMEOUT_SEC = 5 * 1000
 
@@ -301,11 +313,15 @@ var chatModule = (function () {
 
 	const AUTOJOIN_INTERVAL = 2 * 1000
 
-	var html = {
+	const RNG_TIMEOUT = 30 * 1000
+
+	const ALERT_HIGHLIGHT = `background: #F00; color: #FFF; font-weight: bold;`
+
+	let html = {
 		'tabId': 'chat-module',
 		'tabName': 'Chat',
 		'tabContents': '<h3>Chat Options</h3><br/>' +
-			'<h4>General options</h4>' +
+			'<h4>Appearance</h4>' +
 			'<div class="rpht-option-block">' +
 			'	<div class="rpht-option-section">' +
 			'		<label class="rpht-label checkbox-label" for="chatColorEnable">Stylize messages with user\'s color</label>' +
@@ -321,11 +337,6 @@ var chatModule = (function () {
 			'		<label class="rpht-label checkbox-label" for="chatmsgPaddingEnable">Add padding between messages</label>' +
 			'		<label class="switch"><input type="checkbox" id="chatmsgPaddingEnable"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Adds some padding at the end of each message for readibility</label>' +
-			'	</div>' +
-			'	<div class="rpht-option-section option-section-bottom">' +
-			'		<label class="rpht-label checkbox-label" for="chatCmdPopupEnable">Show chat command popup</label>' +
-			'		<label class="switch"><input type="checkbox" id="chatCmdPopupEnable"><span class="rpht-slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">If you type "/" as the first character, a pop-up shows displaying the commands</label>' +
 			'	</div>' +
 			'</div>' +
 			'<h4>Chat Pinging</h4>' +
@@ -433,15 +444,15 @@ var chatModule = (function () {
 
 	const DICE_ROLL_POPUP_HTML = `<div id="diceRollerPopup" class="rpht-tooltip-common">
 			<p style="margin-bottom:10px;">Dice Roller <span id="diceRollerClose" class="rpht-close-btn">&nbsp;X&nbsp;</span></p>
-			<label class="rpht-die-label"># of die</label> <input id="rpht_dieRollerCount" type="number" max="100" min="1" value="1" style="min-width: 36px; float:none; display:inline-block;">
+			<label class="rpht-die-label"># of die</label> <input id="rpht_dieRollerCount" class="rpht-die-updown" type="number" max="100" min="1" value="1">
 			<br>
-			<label class="rpht-die-label"># of sides</label> <input id="rpht_dieRollerSides" type="number"max="1000" min="2" value="20" style="min-width: 36px; float:none; display:inline-block;">
+			<label class="rpht-die-label"># of sides</label> <input id="rpht_dieRollerSides" class="rpht-die-updown" type="number"max="1000" min="2" value="20">
 			<br><br>
-			<button id="dieRollButton" style="width: 140px;">
+			<button id="dieRollButton">
 				Let's roll!
 			</button>
 			<hr style="margin-top: 6px; margin-bottom: 6px; ">
-			<button id="coinFlipButton" style="width: 140px;">
+			<button id="coinFlipButton">
 				Flip a coin!
 			</button>
 		</div>`
@@ -470,15 +481,6 @@ var chatModule = (function () {
 			saveSettings()
 		})
 
-		$('#chatCmdPopupEnable').change(() => {
-			chatSettings.chatCommandPopup = $('#chatCmdPopupEnable').is(':checked')
-
-			if (!chatSettings.chatCommandPopup) {
-				$('#chatCommandTooltip').hide()
-			}
-			saveSettings()
-		})
-
 		/* Pinging Options */
 		$('#notifyPingEnable').change(() => {
 			chatSettings.enablePings = $('#notifyPingEnable').is(':checked')
@@ -502,14 +504,14 @@ var chatModule = (function () {
 		})
 
 		$('#pingNames').blur(() => {
-			var triggers = $('#pingNames').val().replace('\n', '').replace('\r', '')
+			let triggers = $('#pingNames').val().replace('\n', '').replace('\r', '')
 			chatSettings.triggers = triggers
 			saveSettings()
 		})
 
 		$('#pingURL').blur(() => {
 			chatSettings.audioUrl = $('#pingURL').val()
-			pingSound = new Audio(chatSettings.audioUrl)
+			rph.sounds.notify = new Audio(chatSettings.audioUrl)
 			saveSettings()
 		})
 
@@ -517,27 +519,28 @@ var chatModule = (function () {
 			let colorInput = $('#pingTextColor').val()
 			if (validateColor(colorInput) === true) {
 				chatSettings.color = colorInput
+				generateHighlightStyle()
 				saveSettings()
-				markProblem('#pingHighlightColor', false)
-			} else {
-				markProblem('#pingHighlightColor', true)
-			}
+			} 
 		})
 
 		$('#pingHighlightColor').blur(() => {
 			if (validateSetting('#pingHighlightColor', 'color') === true) {
 				chatSettings.highlight = $('#pingHighlightColor').val()
+				generateHighlightStyle()
 				saveSettings()
 			}
 		})
 
 		$('#pingBoldEnable').change(() => {
 			chatSettings.bold = $('#pingBoldEnable').is(':checked')
+			generateHighlightStyle()
 			saveSettings()
 		})
 
 		$('#pingItalicsEnable').change(() => {
 			chatSettings.italics = $('#pingItalicsEnable').is(':checked')
+			generateHighlightStyle()
 			saveSettings()
 		})
 
@@ -552,11 +555,11 @@ var chatModule = (function () {
 		})
 
 		$('#pingPreviewInput').keyup(() => {
-			var msg = $('#pingPreviewInput').val()
-			var testRegex = matchPing(msg)
+			let msg = $('#pingPreviewInput').val()
+			let testRegex = matchPing(msg)
 			if (testRegex !== null) {
-				msg = highlightPing(msg, testRegex)
-				pingSound.play()
+				msg = msg.replace(testRegex, `<span style="${pingHighlightText}">${msg.match(testRegex)}</span>`)
+				rph.sounds.notify.play()
 				$('#pingPreviewText').html(` &nbsp;${msg}`)
 			} else {
 				$('#pingPreviewText').html(` No match`)
@@ -638,6 +641,8 @@ var chatModule = (function () {
 				let messages = $(`div[data-roomname="${msgData.room}"]`).children()
 				for (let idx = ((messages.length - 2) - dataIdx); idx > 0; idx--) {
 					let message = messages[idx]
+					
+					message.children[0].children[0].innerHTML = createTimestamp(msgData.time)
 					if ($(message.children[0].children[0]).attr('data-userid') == msgData.userid) {
 						processMsg(thisRoom, msgData, message, isRoomMod[msgData.room])
 						break
@@ -659,8 +664,8 @@ var chatModule = (function () {
 		socket.on('account-users', () => {
 			setTimeout(() => {
 				$('#favUserDropList').empty()
-				var namesToIds = getSortedNames()
-				for (var name in namesToIds) {
+				let namesToIds = getSortedNames()
+				for (let name in namesToIds) {
 					addToDroplist(namesToIds[name], name, "#favUserDropList")
 				}
 			}, 3000)
@@ -676,15 +681,15 @@ var chatModule = (function () {
 	 * @param {object} room Room that the user has joined
 	 */
 	function roomSetup(room) {
-		var thisRoom = getRoom(room.room)
-		var userId = getIdFromChatTab(thisRoom)
-		var moddingModule = rphToolsModule.getModule('Modding Module')
+		let thisRoom = getRoom(room.room)
+		let userId = getIdFromChatTab(thisRoom)
 
+		/* This is to filter out double room leaving. */
 		thisRoom.userLeave = (function () {
-			var cached_function = thisRoom.userLeave;
+			let cached_function = thisRoom.userLeave;
 			return function () {
 				if (thisRoom.users.indexOf(arguments[0]) > -1) {
-					cached_function.apply(this, arguments); // use .apply() to call it
+					cached_function.apply(this, arguments); 
 				}
 			};
 		}());
@@ -695,22 +700,22 @@ var chatModule = (function () {
 			}
 		})
 
-		if (!(room.room in isRoomMod)) {
-			isRoomMod[room.room] = false;
-		}
-
-		for (var idx = 0; idx < account.userids.length && isRoomMod[room.room] == false; idx++) {
+		const NUM_USERS = account.userids.length
+		for (let idx = 0; idx < NUM_USERS && !isRoomMod[room.room]; idx++) {
 			if (thisRoom.props.mods.indexOf(account.userids[idx]) > -1 ||
 				thisRoom.props.owners.indexOf(account.userids[idx]) > -1) {
-				isRoomMod[room.room] |= true
+				isRoomMod[room.room] = true
 				break
 			}
 		}
 
 		getUserById(userId, (User) => {
+			const moddingModule = rphToolsModule.getModule('Modding Module')
 			if (moddingModule !== null && isRoomMod[room.room]) {
 				moddingModule.addModRoomPair(User.props, thisRoom.props.name)
 			}
+
+			/* Set up room tab and input box */
 			let roomCss = getCssRoomName(thisRoom.props.name)
 			let chatTextArea = $(`textarea.${User.props.id}_${roomCss}`)
 			let tabsLen = thisRoom.$tabs.length
@@ -725,6 +730,7 @@ var chatModule = (function () {
 				$('#diceRollerPopup').toggle()
 			})
 
+			/* Setup popups and tooltips */
 			$(`li.${User.props.id}_${roomCss} a.close`).click(() => {
 				$('#chatCommandTooltip').hide()
 				$('#diceRollerPopup').hide()
@@ -734,18 +740,15 @@ var chatModule = (function () {
 				intputChatText(ev, User, thisRoom)
 			})
 			chatTextArea.on('input', () => {
-				if (chatSettings.chatCommandPopup) {
-					let chatInput = chatTextArea.val().trim()
-					$('#chatCommandTooltip').hide()
-					if (chatInput[0] === '/' && chatInput.indexOf(' ') === -1) {
-						let commandTable = buildComamndTable(chatTextArea.val().trim())
-						if (chatInput.length === 1 || commandTable.length > 0) {
-							$('#chatCommandTooltip').html(commandTable)
-							$('#chatCommandTooltip').show()
-						}
-					}
+				const chatInput = chatTextArea.val().trim()
+				$('#chatCommandTooltip').hide()
+				if (chatInput[0] === '/') {
+					const commandTable = buildComamndTable(chatTextArea.val().trim())
+					$('#chatCommandTooltip').html(commandTable).show()
 				}
 			})
+
+			/* Adjust chat tab size */
 			resizeChatTabs()
 		})
 	}
@@ -756,6 +759,7 @@ var chatModule = (function () {
 		if (msgHtml.className.includes('action')) {
 			contentQuery = $(msgHtml.children[1].children[1])
 		}
+
 		/* Separate the new content from the previous content */
 		const msgLineCount = msgData.msg.split('\n').length
 		const contentLines = contentQuery[0].innerHTML.split('<br>')
@@ -767,63 +771,48 @@ var chatModule = (function () {
 			contentQuery.removeAttr('style')
 		}
 
-		if (!thisRoom.isActive() && msgData.room === thisRoom.props.name) {
-			$(`li.tab.tab-${getCssRoomName(thisRoom.props.name)}`).css({
-				'border-bottom': chatSettings.highlight,
-				'4px solid #ADF': chatSettings.color
-			})
+		if (!thisRoom.active && msgData.room === thisRoom.props.name) {
+			$(`li.tab.tab-${getCssRoomName(thisRoom.props.name)}`).css('border-bottom', '4px solid #ADF')
 			for (let roomTab of thisRoom.$tabs) {
 				$(roomTab.children()[2]).hide()
 			}
 		}
 
 		getUserById(msgData.userid, (user) => {
-			const fadeTypes = ['', 'vertical-fade', 'horizontal-fade', 'radial-fade']
-			const colorClasses = ['', 'two-color', 'three-color']
-			const selfMsg = account.userids.includes(msgData.userid)
 			let newMsgLines = contentLines.slice(contentLines.length - msgLineCount)
 
 			for (let msgIdx = 0; msgIdx < newMsgLines.length; msgIdx++) {
-				if (newMsgLines[msgIdx].indexOf('\u200b') > -1) {
-					const SEED = newMsgLines[msgIdx].split('\u200b')[1]
-					newMsgLines[msgIdx] = newMsgLines[msgIdx].substring(0, newMsgLines[msgIdx].indexOf(' @\u200b'))
-					const MSG_CHUNKS = newMsgLines[msgIdx].split(/ /g)
+				if (newMsgLines[msgIdx].indexOf('\u200b') === -1) {
+					continue
+				}
 
-					if (newMsgLines[msgIdx].search('rolled') > -1) {
-						const ROLL_PARAMS = parseRoll(MSG_CHUNKS[2])
-						const ROLL_RESULTS = calculateDiceRolls(ROLL_PARAMS[0], ROLL_PARAMS[1], SEED)
-						let validResult = true
+				const SEED = newMsgLines[msgIdx].split('\u200b')[1]
+				const MSG_CHUNKS = newMsgLines[msgIdx].split(/ /g)
+				let validResult = true
+				newMsgLines[msgIdx] = newMsgLines[msgIdx].substring(0, newMsgLines[msgIdx].indexOf(' @\u200b'))
 
-						for(let idx = 0; idx < ROLL_PARAMS[0] && validResult; idx++) {
-							if (ROLL_RESULTS['results'][idx] !== parseInt(MSG_CHUNKS[idx + 3])) {
-								console.log('Roll result mismatch!', ROLL_RESULTS['results'][idx], MSG_CHUNKS[idx + 3])
-								validResult = false
-							}
-						}
-
-						if (validResult === false) {
-							newMsgLines[msgIdx] += ` <span style="background:#F44; color: #FFF;">&#9746;</span>`
-						}
-						else if (msgData.time - SEED > (5 * 60 * 1000)) {
-							newMsgLines[msgIdx] += ` <span style="background:#A44; color: #FFF;">&#9072;</span>`
-						}
-						else {
-							newMsgLines[msgIdx] += ` <span style="background:#4A4; color: #FFF;">&#9745;</span>`
-						}
+				/* If the RNG was a dice roll, verify the roll by running the RNG with the same seed */
+				if (newMsgLines[msgIdx].search('rolled') > -1) {
+					const ROLL_PARAMS = parseRoll(MSG_CHUNKS[2])
+					const ROLL_RESULTS = calculateDiceRolls(ROLL_PARAMS[0], ROLL_PARAMS[1], SEED)
+					for(let idx = 0; idx < ROLL_PARAMS[0] && validResult; idx++) {
+						validResult = !(ROLL_RESULTS['results'][idx] !== parseInt(MSG_CHUNKS[idx + 3]))
 					}
-					else if (newMsgLines[msgIdx].search('flips a coin' > -1)) {
-						const outcomes = ['heads', 'tails']
-						let outcome = outcomes[LcgRng(SEED) % 2]
-						if (newMsgLines[msgIdx].search(outcome) >- 1) {
-							newMsgLines[msgIdx] += ` <span style="background:#4A4; color: #FFF;">&#9745;</span>`
-						}
-						else if (msgData.time - SEED > (5 * 60 * 1000)) {
-							newMsgLines[msgIdx] += ` <span style="background:#A44; color: #FFF;">&#9072;</span>`
-						}
-						else {
-							newMsgLines[msgIdx] += ` <span style="background:#F44; color: #FFF;">&#9746;</span>`
-						}
-					}
+				}
+				else if (newMsgLines[msgIdx].search('flips' > -1)) {
+					const outcomes = ['heads', 'tails']
+					let outcome = outcomes[LcgRng(SEED) % 2]
+					validResult = (newMsgLines[msgIdx].search(outcome) >- 1)
+				}
+
+				if (validResult === false) {
+					newMsgLines[msgIdx] += ` <span style="background:#F44; color: #FFF;" title="Do not use this result">&#9746;</span>`
+				}
+				else if (msgData.time - SEED > (RNG_TIMEOUT)) {
+					newMsgLines[msgIdx] += ` <span style="background:#FFD800; color: #000;" title="This result is outdated">&#9072;</span>`
+				}
+				else {
+					newMsgLines[msgIdx] += ` <span style="background:#4A4; color: #FFF;" title="This result is good">&#9745;</span>`
 				}
 			}
 
@@ -832,71 +821,70 @@ var chatModule = (function () {
 				newMsg += `<br>`
 			}
 			newMsg += `${newMsgLines.join('<br>')}`
+
+			if (!msgData.buffer) {
+				const selfMsg = account.userids.includes(msgData.userid)
+				let notificationTrigger = 0
+				if (chatSettings.enablePings &&
+					((chatSettings.selfPing && selfMsg === true) || selfMsg === false)) 
+				{
+					let testRegex = matchPing(newMsg)
+					if (testRegex) {
+						newMsg = newMsg.replace(testRegex, `<span style="${pingHighlightText}">${newMsg.match(testRegex)}</span>`)
+						rph.sounds.notify.play()
+						notificationTrigger = 1
+
+						if (chatSettings.pingNotify && thisRoom.active === false) {
+							displayNotification(
+								`${user.props.name} pinged you in ${thisRoom.props.name}`,
+								chatSettings.notifyTime)
+						}
+					}
+				}
+
+				/* Process other's messages for issues if a mod */
+				if (isMod && moddingModule && selfMsg === false) {
+					let alertRegex = null
+					let alertWords = moddingModule.getAlertWords()
+					alertRegex = matchPing(newMsg, alertWords, false, true)
+					// Process alert
+					if (alertRegex) {
+						newMsg = newMsg.replace(alertRegex, `<span style="${ALERT_HIGHLIGHT}">${newMsg.match(alertRegex)}</span>`)
+						moddingModule.playAlert()
+						notificationTrigger = 2
+					}
+				}
+
+				if (thisRoom.active === false && notificationTrigger > 0) {
+					let background = (notificationTrigger === 2) ? '#F00' : chatSettings.highlight
+					let textColor = (notificationTrigger === 2) ? '#FFF' : chatSettings.color
+
+					$(`li.tab.tab-${getCssRoomName(thisRoom.props.name)}`).css({
+						'background-color': background,
+						'color': textColor
+					})
+				}
+			}
 			/* Add pings if 
 			   - It's enabled AND 
 			   - The message isn't a buffer from the server AND
 			   - ((self pinging is enabled AND the message is owned by self) OR it's another's) */
-			if (chatSettings.enablePings &&
-				!msgData.buffer &&
-				((chatSettings.selfPing && selfMsg === true) || selfMsg === false)) {
-				let testRegex = null
-				testRegex = matchPing(newMsg)
-				if (testRegex) {
-					newMsg = highlightPing(newMsg, testRegex)
-					if (!thisRoom.isActive()) {
-						$(`li.tab.tab-${getCssRoomName(thisRoom.props.name)}`).css({
-							'background-color': chatSettings.highlight,
-							'color': chatSettings.color
-						})
-					}
-					pingSound.play()
 
-					/* Bring up the notification if enabled, but don't do it if the user pinged themselves*/
-					if (chatSettings.pingNotify && selfMsg === false && document.hidden) {
-						let notification = new Notification(`${user.props.name} pinged you in ${thisRoom.props.name}`)
-						setTimeout(() => {
-							notification.close()
-						}, chatSettings.notifyTime)
-					}
-				}
-			}
-			/* Process other's messages for issues if a mod */
-			if (isMod && moddingModule && selfMsg === false) {
-				let alertRegex = null
-				let alertWords = moddingModule.getAlertWords()
-				alertRegex = matchPing(newMsg, alertWords, false, true)
-				// Process alert
-				if (alertRegex) {
-					newMsg = highlightPing(newMsg, alertRegex, true)
-					if (!thisRoom.isActive()) {
-						for (let roomTab of thisRoom.$tabs) {
-							roomTab.css('background-color', '#F00')
-							roomTab[0].css('color', '#FFF')
-						}
-					}
-					moddingModule.playAlert()
-				}
-			}
+
 			contentQuery.html(`${prevMsgs.join('<br>')} ${newMsg}`)
 
 			if (chatSettings.colorText) {
+				const fadeTypes = ['', 'vertical-fade', 'horizontal-fade', 'radial-fade']
+				const colorClasses = ['', 'two-color', 'three-color']
 				let classString = `${contentQuery[0].className}`
 				let styleString = `color: #${user.props.color[0]};`
 
-				if (user.props.color[1] && !chatSettings.colorSimpleText) {
-					styleString += `--color1: #${user.props.color[0]}; --color2: #${user.props.color[1]};`
-				}
-				if (user.props.color[2] && !chatSettings.colorSimpleText) {
-					styleString += `--color3: #${user.props.color[2]};`
-				}
-
-				if (!classString.includes(colorClasses[user.props.color.length - 1])) {
-					classString += ` ${colorClasses[user.props.color.length - 1]}`
-				}
-				if (!classString.includes(fadeTypes[user.props.fade]) && !chatSettings.colorSimpleText) {
+				classString += ` ${colorClasses[user.props.color.length - 1]}`
+				if (!chatSettings.colorSimpleText) {
+					styleString += `--color1: #${user.props.color[0]}; --color2: #${user.props.color[1]};` || ''
+					styleString += `--color3: #${user.props.color[2]};` || ''
 					classString += ` ${fadeTypes[user.props.fade]}`
 				}
-
 				contentQuery[0].className = classString.trim()
 				contentQuery.attr('style', styleString)
 			}
@@ -913,6 +901,7 @@ var chatModule = (function () {
 			Object.keys(CHAT_COMMANDS).filter(key => key.startsWith(command))
 				.forEach(key => commandEntry += CHAT_COMMANDS[key])
 		}
+
 		if (commandEntry.length > 0) {
 			commandTable = `<table style="width: 100%;">
 					<tbody>
@@ -920,6 +909,10 @@ var chatModule = (function () {
 						${commandEntry}
 					</tbody>
 				</table>`
+			$('#chatCommandTooltip').addClass('rpht-tooltip-common')
+		}
+		else {
+			$('#chatCommandTooltip').removeClass('rpht-tooltip-common')
 		}
 		return commandTable
 	}
@@ -931,9 +924,9 @@ var chatModule = (function () {
 	 * @param {object} User User data
 	 */
 	function parseSlashCommand(inputTextBox, Room, User) {
-		var newMessage = inputTextBox.val()
-		var error = false
-		var cmdArgs = newMessage.split(/ (.+)/)
+		let newMessage = inputTextBox.val()
+		let error = false
+		let cmdArgs = newMessage.split(/ (.+)/)
 
 		switch (cmdArgs[0]) {
 			case '/status':
@@ -941,7 +934,7 @@ var chatModule = (function () {
 				if (cmdArgs.length != 3) {
 					error = true
 				} else {
-					var type = 0
+					let type = 0
 					if (cmdArgs[0] === '/away') {
 						type = 1
 					}
@@ -1003,14 +996,14 @@ var chatModule = (function () {
 			case '/add-mod':
 			case '/remove-owner':
 			case '/remove-mod':
-				var moddingModule = rphToolsModule.getModule('Modding Module')
+				let moddingModule = rphToolsModule.getModule('Modding Module')
 				if (cmdArgs.length < 2) {
 					error = true
 				} else if (moddingModule) {
-					var action = cmdArgs[0].substring(1, cmdArgs[0].length)
-					var commaIdx = cmdArgs[1].indexOf(',')
-					var targetName = cmdArgs[1]
-					var reason = ''
+					let action = cmdArgs[0].substring(1, cmdArgs[0].length)
+					let commaIdx = cmdArgs[1].indexOf(',')
+					let targetName = cmdArgs[1]
+					let reason = ''
 					if (commaIdx > -1) {
 						targetName = cmdArgs[1].substring(0, commaIdx)
 						reason = cmdArgs[1].substring(commaIdx + 1, cmdArgs[1].length)
@@ -1075,15 +1068,15 @@ var chatModule = (function () {
 			return
 		}
 		let result = null
-		let pingNames = triggers.split(',')
-		let regexParam = (caseSensitive ? "m" : 'im')
+		const pingNames = triggers.split(',')
+		const regexParam = (caseSensitive ? "m" : 'im')
 		for (i = 0; i < pingNames.length; i++) {
 			let trigger = pingNames[i].trim()
 			if (trigger === "") {
 				continue
 			}
-			let regexPattern = (exactMatch) ? `\\b${trigger}\\b` : trigger
-			let urlRegex = new RegExp(`href=".*?${trigger}.*?"`, '')
+			const regexPattern = (exactMatch) ? `\\b${trigger}\\b` : trigger
+			const urlRegex = new RegExp(`href=".*?${trigger}.*?"`, '')
 			let testRegex = new RegExp(regexPattern, regexParam)
 			/* Check if search term is not in a link as well */
 			if (!urlRegex.test(msg) && testRegex.test(msg)) {
@@ -1095,35 +1088,13 @@ var chatModule = (function () {
 	}
 
 	/**
-	 * Adds highlights to the ping term
-	 * @param {string} msg - Message to be sent to the www.
-	 * @param {regex} testRegex - Regular expression to use to match the term.
-	 * @returns Modified message
-	 */
-	function highlightPing(msg, testRegex, alert = false) {
-		let styleText = `color: ${chatSettings.color}; background: ${chatSettings.highlight};`
-		if (alert) {
-			styleText = `background: #F00; color: #FFF; font-weight: bold;`
-		} else {
-			if (chatSettings.bold === true) {
-				styleText += ' font-weight: bold;'
-			}
-			if (chatSettings.italics === true) {
-				styleText += ' font-style:italic;'
-			}
-		}
-		msg = msg.replace(testRegex, `<span style="${styleText}">${msg.match(testRegex)}</span>`)
-		return msg
-	}
-
-	/**
 	 * Gets the user's ID from the chat tab (it's in the class)
 	 * @param {} thisRoom - Room to get the ID from
 	 **/
 	function getIdFromChatTab(thisRoom) {
-		var tabsLen = thisRoom.$tabs.length
-		var className = thisRoom.$tabs[tabsLen - 1][0].className
-		var charID = className.match(new RegExp(' [0-9]+', ''))[0]
+		let tabsLen = thisRoom.$tabs.length
+		let className = thisRoom.$tabs[tabsLen - 1][0].className
+		let charID = className.match(new RegExp(' [0-9]+', ''))[0]
 		charID = charID.substring(1, charID.length)
 		return parseInt(charID)
 	}
@@ -1147,6 +1118,16 @@ var chatModule = (function () {
 		setTimeout(() => {
 			$(window).resize(resizeChatTabs)
 		}, 100)
+	}
+
+	function generateHighlightStyle() {
+		pingHighlightText = `color: ${chatSettings.color}; background: ${chatSettings.highlight};`
+		if (chatSettings.bold === true) {
+			pingHighlightText += ' font-weight: bold;'
+		}
+		if (chatSettings.italics === true) {
+			pingHighlightText += ' font-style:italic;'
+		}
 	}
 
 	/** AUTO JOINING FUNCTIONS **********************************************/
@@ -1235,15 +1216,15 @@ var chatModule = (function () {
 	 * @param {string} roomname - Name of the room
 	 */
 	function parseFavoriteRoom(roomname) {
-		var room = getRoom(roomname)
+		let room = getRoom(roomname)
 		if (room === undefined) {
 			markProblem('favRoom', true)
 			return
 		}
 		if (chatSettings.favRooms.length < MAX_ROOMS) {
-			var selectedFav = $('#favUserDropList option:selected')
-			var hashStr = $('#favRoom').val() + selectedFav.html()
-			var favRoomObj = {
+			let selectedFav = $('#favUserDropList option:selected')
+			let hashStr = $('#favRoom').val() + selectedFav.html()
+			let favRoomObj = {
 				_id: hashStr.hashCode(),
 				user: selectedFav.html(),
 				userId: parseInt(selectedFav.val()),
@@ -1277,10 +1258,10 @@ var chatModule = (function () {
 	 * Removes an entry to the Favorite Chat Rooms list
 	 */
 	function removeFavoriteRoom() {
-		var favItem = document.getElementById("favRoomsList")
-		var favItemId = $('#favRoomsList option:selected').val()
+		let favItem = document.getElementById("favRoomsList")
+		let favItemId = $('#favRoomsList option:selected').val()
 		favItem.remove(favItem.selectedIndex)
-		for (var idx = 0; idx < chatSettings.favRooms.length; idx++) {
+		for (let idx = 0; idx < chatSettings.favRooms.length; idx++) {
 			if (chatSettings.favRooms[idx]._id == favItemId) {
 				chatSettings.favRooms.splice(idx, 1)
 				break
@@ -1308,7 +1289,6 @@ var chatModule = (function () {
 			'colorText': true,
 			'colorSimpleText': true,
 			'msgPadding': false,
-			'chatCommandPopup': true,
 
 			'enablePings': true,
 			'pingNotify': false,
@@ -1335,7 +1315,6 @@ var chatModule = (function () {
 		$('#chatColorEnable').prop("checked", chatSettings.colorText)
 		$('#chatSimpleColorEnable').prop("checked", chatSettings.colorSimpleText)
 		$('#chatmsgPaddingEnable').prop("checked", chatSettings.msgPadding)
-		$('#chatCmdPopupEnable').prop("checked", chatSettings.chatCommandPopup)
 
 		$('#notifyPingEnable').prop("checked", chatSettings.enablePings)
 		$('#notifyNotificationEnable').prop("checked", chatSettings.pingNotify)
@@ -1350,14 +1329,16 @@ var chatModule = (function () {
 
 		$('#trackSession').prop("checked", chatSettings.trackSession)
 		$('#joinFavEnable').prop("checked", chatSettings.joinFavorites)
-		for (var i = 0; i < chatSettings.favRooms.length; i++) {
-			var favRoomObj = chatSettings.favRooms[i]
+		for (let i = 0; i < chatSettings.favRooms.length; i++) {
+			let favRoomObj = chatSettings.favRooms[i]
 			$('#favRoomsList').append(
 				'<option value="' + favRoomObj._id + '">' +
 				favRoomObj.user + ": " + favRoomObj.room + '</option>'
 			)
 		}
-		pingSound = new Audio(chatSettings.audioUrl)
+
+		generateHighlightStyle()
+		rph.sounds.notify = new Audio(chatSettings.audioUrl)
 	}
 
 	function getHtml() {
@@ -1377,17 +1358,17 @@ var chatModule = (function () {
 }());/**
  * This module handles features for the PM system.
  */
-var pmModule = (function () {
-	var pmSettings = {}
+let pmModule = (function () {
+	let pmSettings = {}
 
-	var localStorageName = "pmSettings"
+	let localStorageName = "pmSettings"
 
-	var html = {
+	let html = {
 		'tabId': 'pm-module',
 		'tabName': 'PMs',
 		'tabContents': 
 			'<h3>PM Settings</h3><br>' +
-			'<h4>General options</h4>' +
+			'<h4>Appearance</h4>' +
 			'<div class="rpht-option-block">' +
 			'	<div class="rpht-option-section option-section-bottom">' +
 			'		<label class="rpht-label checkbox-label" for="pmColorEnable">Use user text colors</label>' +
@@ -1395,10 +1376,10 @@ var pmModule = (function () {
 			'		<label class="rpht-label descript-label">Use the user\'s color to stylize their text</label>' +
 			'	</div>' +
 			'</div>' +
-			'<h4>PM Notification Settings</h4>' +
+			'<h4>Notifications</h4>' +
 			'<div class="rpht-option-block">' +
 			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="pmNotify">Enable desktop notifications</label>' +
+			'		<label class="rpht-label checkbox-label" for="pmNotify">Desktop notifications</label>' +
 			'		<label class="switch"><input type="checkbox" id="pmNotify"><span class="rpht-slider round"></span></label>' +
 			'		<p>Pops a desktop notification when you get a PM</p>' +
 			'	</div>' +
@@ -1414,11 +1395,9 @@ var pmModule = (function () {
 			'	<div class="rpht-option-section option-section-bottom">' +
 			'		<label class="rpht-label split-input-label">PM sound URL </label>' +
 			'		<input class="split-input-label" type="text" id="pmPingURL" name="pmPingURL" style="margin-bottom: 12px;">' +
-			'		<label class="rpht-label checkbox-label" for="pmMute">Mute PMs</label>' +
-			'		<label class="switch"><input type="checkbox" id="pmMute"><span class="rpht-slider round"></span></label>' +
 			'	</div>' +
 			'</div>' +
-			'<h4>PM Away System</h4>' +
+			'<h4>Away message</h4>' +
 			'<div class="rpht-option-block">' +
 			'	<div class="rpht-option-section option-section-bottom">' +
 			'		<p>Usernames</p>' +
@@ -1431,16 +1410,10 @@ var pmModule = (function () {
 			'</div>'
 	}
 
-	let audioHtml = 
-			'<audio id="im-sound">' +
-				'<source src="https://www.rphaven.com/sounds/imsound.mp3" type="audio/mpeg">' +
-  			'</audio>'
-
-	var awayMessages = {}
+	let awayMessages = {}
 
 	function init() {
 		loadSettings()
-		$('body').append(audioHtml)
 
 		$('#pmColorEnable').change(() => {
 			pmSettings.colorText = $('#pmColorEnable').is(':checked')
@@ -1459,8 +1432,8 @@ var pmModule = (function () {
 		})
 		
 		$('#pmNamesDroplist').change(() => {
-			var userId = $('#pmNamesDroplist option:selected').val()
-			var message = ''
+			let userId = $('#pmNamesDroplist option:selected').val()
+			let message = ''
 
 			if (awayMessages[userId] !== undefined) {
 				message = awayMessages[userId].message
@@ -1477,20 +1450,11 @@ var pmModule = (function () {
 		})
 
 		$('#pmPingURL').change(() => {
-			if (validateSetting('pmPingURL', 'url')) {
-				pmSettings.audioUrl = $('pmPingURL').val()
-				$('#im-sound').children("source").attr('src', pmSettings.audioUrl)
+			if (validateSetting('#pmPingURL', 'url')) {
+				pmSettings.audioUrl = $('#pmPingURL').val()
+				rph.sounds.im = new Audio(pmSettings.audioUrl)
 				settingsModule.saveSettings(localStorageName, pmSettings)
 			}
-		})
-
-		$('#pmMute').change(() => {
-			if ($('#pmMute').is(":checked")) {
-				pmSettings.pmMute = true
-			} else {
-				pmSettings.pmMute = false
-			}
-			settingsModule.saveSettings(localStorageName, pmSettings)
 		})
 
 		$('#pmNotify').change(() => {
@@ -1499,70 +1463,78 @@ var pmModule = (function () {
 		})
 		$('#pm-msgs span').css('opacity', 0.85)
 
-		socket.on('pm', (data) => {
-			if (account.ignores.indexOf(data.to) > -1) {
-				return;
-			}
-			rph.getPm({'from':data.from, 'to':data.to}, (pm) => {
-				if (pmSettings.pmMute === false) {
-					$('#im-sound')[0].play()
-				}
-				
-				getUserByName(pm.to.props.name, (user) => {
-					processPmMsg(user, data, pm)
-				})
-
-				if (pmSettings.notify && document.hidden) {
-					let notification = new Notification(`${pm.to.props.name} sent a PM to you for ${pm.from.props.name}`)
-					setTimeout(() => {
-						notification.close()
-					}, pmSettings.notifyTime)
-				}
-
-				if (awayMessages[data.from] && awayMessages[data.from].enabled) {
-					awayMessages[data.from].usedPmAwayMsg = true;
-					socket.emit('pm', {
-						'from': data.from,
-						'to': data.to,
-						'msg': awayMessages[data.from].message,
-						'target': 'all'
-					});
-				}
-			})
-		})
+		socket.on('pm', handlePm)
 		
-		socket.on('pm-confirmation', (data) => {
-			rph.getPm({'from':data.to, 'to':data.from}, function(pm){
-				getUserByName(pm.from.props.name, (user) => {
-					processPmMsg(user, data, pm)
+		socket.on('pm-confirmation', handlePmConfirmation)
 
-					if (awayMessages[data.to] && awayMessages[data.to].enabled) {
-						$('#pmNamesDroplist option').filter(function () {
-							return this.value == data.to
-						  })
-						  .css("background-color", "")
-						  .html(user.props.name)
-						  awayMessages[data.to].enabled = false
-					}
-				})
+		socket.on('account-users', handleAccountUsers)
+	}
+
+	function handlePm(data) {
+		if (account.ignores.indexOf(data.to) > -1) {
+			return;
+		}
+		rph.getPm({'from':data.from, 'to':data.to}, (pm) => {
+			
+			getUserByName(pm.to.props.name, (user) => {
+				processPmMsg(user, data, pm)
 			})
-		})
 
-		socket.on('account-users', () => {
-			setTimeout(() => {
-				$('#pmNamesDroplist').empty()
-				var namesToIds = getSortedNames()
-				for (var name in namesToIds) {
-					addToDroplist(namesToIds[name], name, "#pmNamesDroplist")
-				}
-			}, 3000)
+			if (pmSettings.notify) {
+				displayNotification(
+					`${pm.to.props.name} sent a PM to you for ${pm.from.props.name}`,
+					pmSettings.notifyTime
+				)
+			}
+
+			if (awayMessages[data.from] && awayMessages[data.from].enabled) {
+				awayMessages[data.from].usedPmAwayMsg = true;
+				socket.emit('pm', {
+					'from': data.from,
+					'to': data.to,
+					'msg': awayMessages[data.from].message,
+					'target': 'all'
+				});
+			}
 		})
 	}
+
+	function handlePmConfirmation(data) {
+		rph.getPm({'from':data.to, 'to':data.from}, function(pm){
+			getUserByName(pm.from.props.name, (user) => {
+				processPmMsg(user, data, pm)
+
+				if (awayMessages[data.to] && awayMessages[data.to].enabled) {
+					$('#pmNamesDroplist option').filter(function () {
+						return this.value == data.to
+					  })
+					  .css("background-color", "")
+					  .html(user.props.name)
+					  awayMessages[data.to].enabled = false
+				}
+			})
+		})
+	}
+
+	function handleAccountUsers() {
+		setTimeout(() => {
+			$('#pmNamesDroplist').empty()
+			let namesToIds = getSortedNames()
+			for (let name in namesToIds) {
+				addToDroplist(namesToIds[name], name, "#pmNamesDroplist")
+			}
+		}, 3000)
+	}
+	
 	function processPmMsg(user, data, pm) {
+		if (pm.$msgs[0].childNodes.length === 0) {
+			console.log(pm.$msgs[0].childNodes)
+		}
 		let pmMsgQuery = pm.$msgs[0].childNodes[pm.$msgs[0].childNodes.length - 1]
 		let nameQuery = $(pmMsgQuery.childNodes[1].childNodes[1])
 		let msgQuery = $(pmMsgQuery.childNodes[1].childNodes[2])
 		let pmCommand = parsePostCommand(data.msg)
+		pmMsgQuery.childNodes[1].childNodes[0].innerHTML = createTimestamp(data.date)
 
 		if (pmCommand.includes('rng')) {
 			msgQuery[0].innerHTML = ` ${generateRngResult(pmCommand, data.msg, data.date)} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
@@ -1585,10 +1557,10 @@ var pmModule = (function () {
 	 * Adds an away status to a character
 	 */
 	function setPmAway() {
-		var userId = $('#pmNamesDroplist option:selected').val()
-		var name = $("#pmNamesDroplist option:selected").html()
+		let userId = $('#pmNamesDroplist option:selected').val()
+		let name = $("#pmNamesDroplist option:selected").html()
 		if (!awayMessages[userId]) {
-			var awayMsgObj = {
+			let awayMsgObj = {
 				"usedPmAwayMsg": false,
 				"message": "",
 				"enabled": false
@@ -1615,7 +1587,7 @@ var pmModule = (function () {
 		if (!awayMessages[userId]) {
 			return
 		}
-		var name = $("#pmNamesDroplist option:selected").html()
+		let name = $("#pmNamesDroplist option:selected").html()
 		if (awayMessages[userId].enabled && name.startsWith('[Away]')) {
 			awayMessages[userId].enabled = false
 			$("#pmNamesDroplist option:selected").html(name.substring(6, name.length))
@@ -1626,13 +1598,12 @@ var pmModule = (function () {
 	}
 
 	function loadSettings() {
-		var storedSettings = settingsModule.getSettings(localStorageName)
+		let storedSettings = settingsModule.getSettings(localStorageName)
 		pmSettings = {
 			'colorText': false,
 			'notify': false,
 			'notifyTime': 6000,
-			'audioUrl': 'https://www.rphaven.com/sounds/imsound.mp3',
-			'pmMute': false,
+			'audioUrl': 'https://www.rphaven.com/sounds/imsound.mp3'
 		}
 
 		if (storedSettings) {
@@ -1643,7 +1614,7 @@ var pmModule = (function () {
 		$('#pmNotify').prop("checked", pmSettings.notify)
 		$('#pmNotifyTimeoutSelect').val(pmSettings.notifyTime.toString())
 		$('#pmPingURL').val(pmSettings.audioUrl)
-		$('#pmMute').prop("checked", pmSettings.pmMute)
+		rph.sounds.im = new Audio(pmSettings.audioUrl)
 	}
 
 	function getHtml() {
@@ -1665,12 +1636,12 @@ var pmModule = (function () {
  * issue kicks, bans, promotions and demotions. It also can set up monitoring
  * of certain words and alert the mod.
  */
-var moddingModule = (function () {
-	var settings = {}
+let moddingModule = (function () {
+	let settings = {}
 
-	var localStorageName = "modSettings"
+	let localStorageName = "modSettings"
 
-	var html = {
+	let html = {
 		'tabId': 'modding-module',
 		'tabName': 'Modding',
 		'tabContents':
@@ -1734,16 +1705,16 @@ var moddingModule = (function () {
 			'</div>'
 	}
 
-	var alertSound = null
+	let alertSound = null
 
-	var roomNamePairs = {}
+	let roomNamePairs = {}
 
 	function init() {
 		loadSettings()
 		
 		$('#roomModSelect').change(function () {
-			var roomModeIdx = $('#roomModSelect')[0].selectedIndex
-			var roomModVal = $('#roomModSelect')[0].options[roomModeIdx].value
+			let roomModeIdx = $('#roomModSelect')[0].selectedIndex
+			let roomModVal = $('#roomModSelect')[0].options[roomModeIdx].value
 			if (roomNamePairs[roomModVal]) {
 				$('input#modRoomTextInput').val(roomNamePairs[roomModVal].roomName)
 				$('input#modFromTextInput').val(roomNamePairs[roomModVal].modName)
@@ -1754,7 +1725,7 @@ var moddingModule = (function () {
 		})
 
 		$('#resetPwButton').click(function () {
-			var room = $('input#modRoomTextInput').val()
+			let room = $('input#modRoomTextInput').val()
 
 			getUserByName($('input#modFromTextInput').val(), function (user) {
 				socket.emit('modify', {
@@ -1824,7 +1795,7 @@ var moddingModule = (function () {
 	 * @param {string} action Name of the action being performed
 	 */
 	function modAction(action) {
-		var targets = $('#modTargetTextInput').val().replace(/\r?\n|\r/, '')
+		let targets = $('#modTargetTextInput').val().replace(/\r?\n|\r/, '')
 		let vanityMap = getVanityNamesToIds()
 		targets = targets.split(',')
 		console.log('RPH Tools[modAction]: Performing', action, 'on', targets)
@@ -1846,7 +1817,7 @@ var moddingModule = (function () {
 	function emitModAction(action, targetName, modName, roomName, reasonMsg) {
 		getUserByName(targetName, function (target) {
 			getUserByName(modName, function (user) {
-				var modMessage = ''
+				let modMessage = ''
 				if (action === 'kick' || action === 'ban' || action === 'unban') {
 					modMessage = reasonMsg
 				}
@@ -1862,7 +1833,7 @@ var moddingModule = (function () {
 
 	function findUserAsMod(userObj) {
 		Object.keys(rph.rooms).forEach((roomname) => {
-			var roomObj = getRoom(roomname)
+			let roomObj = getRoom(roomname)
 			if (roomObj.props.mods.indexOf(userObj.props.id) > -1 ||
 				roomObj.props.owners.indexOf(userObj.props.id) > -1) {
 				addModRoomPair(userObj.props, roomname)
@@ -1876,9 +1847,9 @@ var moddingModule = (function () {
 	 * @param {object} thisRoom Object containing the room data.
 	 */
 	function addModRoomPair(userProps, roomName) {
-		var roomNamePair = roomName + ': ' + userProps.name
-		var roomNameValue = roomName + '.' + userProps.id
-		var roomNameObj = {
+		let roomNamePair = roomName + ': ' + userProps.name
+		let roomNameValue = roomName + '.' + userProps.id
+		let roomNameObj = {
 			'roomName': roomName,
 			'modName': userProps.name,
 			'modId': userProps.id
@@ -1904,7 +1875,7 @@ var moddingModule = (function () {
 			'alertWords': '',
 			'alertUrl': 'https://www.rphaven.com/sounds/boop.mp3',
 		}
-		var storedSettings = settingsModule.getSettings(localStorageName)
+		let storedSettings = settingsModule.getSettings(localStorageName)
 
 		if (storedSettings) {
 			settings = Object.assign(settings, storedSettings)
@@ -1944,8 +1915,8 @@ var moddingModule = (function () {
 }());/**
  * Handles importing, exporting, and deleting of settings.
  */
-var settingsModule = (function () {
-	var html = {
+let settingsModule = (function () {
+	let html = {
 		'tabId': 'settings-module',
 		'tabName': 'Settings',
 		'tabContents': '<h3>Script Settings</h3><br>' +
@@ -1957,9 +1928,9 @@ var settingsModule = (function () {
 			'<button type="button" style="margin-left: 376px; " id="deleteSettingsButton">Delete settings</button>'
 	}
 
-	var confirmDelete = false
+	let confirmDelete = false
 
-	var deleteTimer = null
+	let deleteTimer = null
 
 	/** 
 	 * Initializes the GUI components of the module.
@@ -1991,7 +1962,7 @@ var settingsModule = (function () {
 	 */
 	function importSettingsHanlder() {
 		try {
-			var newSettings = JSON.parse($('textarea#importExportTextarea').val())
+			let newSettings = JSON.parse($('textarea#importExportTextarea').val())
 			localStorage.setItem(SETTINGS_NAME, JSON.stringify(newSettings))
 			rphToolsModule.getAllModules().forEach((module) => {
 				if (module.loadSettings){
@@ -2044,15 +2015,15 @@ var settingsModule = (function () {
 	}
 
 	function saveSettings(moduleName, moduleSettings) {
-		var settings = JSON.parse(localStorage.getItem(SETTINGS_NAME))
+		let settings = JSON.parse(localStorage.getItem(SETTINGS_NAME))
 		settings[moduleName] = {}
 		settings[moduleName] = moduleSettings
 		localStorage.setItem(SETTINGS_NAME, JSON.stringify(settings))
 	}
 
 	function getSettings(moduleName) {
-		var settings = JSON.parse(localStorage.getItem(SETTINGS_NAME))
-		var moduleSettings = null
+		let settings = JSON.parse(localStorage.getItem(SETTINGS_NAME))
+		let moduleSettings = null
 		if (settings[moduleName]) {
 			moduleSettings = settings[moduleName]
 		}
@@ -2080,8 +2051,8 @@ var settingsModule = (function () {
 }());/**
  * This module handles the "About" section for information on RPH Tools.
  */
-var aboutModule = (function () {
-	var html = {
+let aboutModule = (function () {
+	let html = {
 		'tabId': 'about-module',
 		'tabName': 'About',
 		'tabContents': '<h3>RPH Tools</h3><br>' +
@@ -2115,10 +2086,10 @@ var aboutModule = (function () {
 }());/**
  * Main RPH Tools module
  */
-var rphToolsModule = (function () {
-	var modules = []
+let rphToolsModule = (function () {
+	let modules = []
 
-	var rpht_css =
+	let rpht_css =
 		'<style>' +
 		'#settings-dialog .inner > div > div.rpht-option-block{width:640px;border:#888 solid 1px;border-radius:10px;padding:12px;padding-top:16px;padding-bottom:16px;margin-bottom:16px;}' +
 		'.rpht-option-section{border-bottom:#444 solid 1px;padding-bottom:12px;margin-bottom:12px;}' +
@@ -2129,11 +2100,11 @@ var rphToolsModule = (function () {
 		'.text-input-label{width:400px;}' +
 		'.split-input-label {width: 300px;}' +
 		'.rpht_textarea{border:1px solid #000;width:611px;padding:2px;background:#e6e3df;}' +
-		'.rpht_chat_tab{position:absolute;height:54px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;}' +
+		'.rpht_chat_tab{height:54px;overflow-x:scroll;overflow-y:hidden;white-space:nowrap;}' +
 		'.rpht-checkbox{height:16px;width:16px;}' +
 		'input.rpht-short-input{width:200px;}' +
 		'input.rpht-long-input{max-width:100%;}' +
-		'.msg-padding{line-height: 1.25em}'+
+		'.msg-padding{line-height: 1.5em}'+
 		'.switch{position:relative;right:12px;width:50px;height:24px;float:right;}' +
 		'.switch input{opacity:0;width:0;height:0;}' +
 		'.rpht-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;-webkit-transition:.4s;transition:.4s}' +
@@ -2144,11 +2115,13 @@ var rphToolsModule = (function () {
 		'.rpht-slider.round{border-radius:34px}' +
 		'.rpht-slider.round:before{border-radius:50%}' +
 		'.rpht-tooltip-common{position: absolute; bottom: 120px; left: 200px; width: auto; height: auto; color: #dedbd9; background: #303235; opacity: 0.9; padding: 10px;}' +
-		'.rpht-cmd-tooltip{width: 800px;}' +
+		'.rpht-cmd-tooltip{width: 800px; height: auto;}' +
 		'.rpht-cmd-tooltip:hover{opacity: 0;}' +
-		'.rpht-die-label{text-align: right; display: inline-block; width: 92px;}' +
-		'.rpht-close-btn{margin-left: 56px; width: 24px; cursor: pointer;}'+
+		'.rpht-die-label{text-align: right; display: inline-block; width: 74px; margin-right: 7px;}' +
+		'.rpht-die-updown{width: 60px; min-width: 0px;}'+
+		'.rpht-close-btn{margin-left: 40px; width: 24px; cursor: pointer;}'+
 		'.rpht-close-btn:hover{background: #CA7169;}'+
+		'#diceRollerPopup button{width: 146px;}'+
 		'</style>'
 
 	/**
@@ -2156,7 +2129,7 @@ var rphToolsModule = (function () {
 	 * @param {Array} addonModules Modules to add into the system.
 	 */
 	function init (addonModules) {
-		var $settingsDialog = $('#settings-dialog')
+		let $settingsDialog = $('#settings-dialog')
 		modules = addonModules
 
 		if (Notification.permission !== 'denied') {
@@ -2168,7 +2141,7 @@ var rphToolsModule = (function () {
 		
 		/* Checks to see if there's a local store for settings and creates one
 		 * if there isn't. */
-		var settings = localStorage.getItem(SETTINGS_NAME)
+		let settings = localStorage.getItem(SETTINGS_NAME)
 		if (!settings) {
 			settings = {}
 			localStorage.setItem(SETTINGS_NAME, JSON.stringify(settings))
@@ -2201,9 +2174,9 @@ var rphToolsModule = (function () {
 	 * @param {string} name Name of the module to get the data
 	 * @returns Returns the module, if found. Otherwise returns null.
 	 */
-	var getModule = function (name) {
-		var module = null
-		for (var i = 0; i < modules.length; i++) {
+	let getModule = function (name) {
+		let module = null
+		for (let i = 0; i < modules.length; i++) {
 			if (modules[i].toString() === name) {
 				module = modules[i]
 				break
@@ -2236,7 +2209,7 @@ var rphToolsModule = (function () {
  ***************************************************************************/
 $(function () {
 	console.log(`RPH Tools ${VERSION_STRING} start`)
-	var modules = [
+	let modules = [
 		chatModule,
 		pmModule,
 		moddingModule,

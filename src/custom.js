@@ -3,7 +3,7 @@
  * This was modified from https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
  */
 String.prototype.hashCode = function () {
-	var hash = 0,
+	let hash = 0,
 		i, chr, len
 	if (this.length === 0) return hash
 	for (i = 0, len = this.length; i < len; i++) {

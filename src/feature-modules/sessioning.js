@@ -1,8 +1,8 @@
 /**
  * This module handles the "Session" section in RPH Tools
  */
-var sessionModule = (function () {
-	var sessionSettings = {
+let sessionModule = (function () {
+	let sessionSettings = {
 		'autoRefreshAttempts': 5,
 		'dcHappened': false,
 		'autoRefresh': false,
@@ -17,23 +17,23 @@ var sessionModule = (function () {
 		'pmTextboxes': []
 	}
 
-	var localStorageName = "sessionSettings"
+	let localStorageName = "sessionSettings"
 
-	var autoJoinTimer = null
+	let autoJoinTimer = null
 
-	var sessionShadow = []
+	let sessionShadow = []
 
-	var MAX_ROOMS = 30
+	let MAX_ROOMS = 30
 
-	var AUTOJOIN_TIMEOUT_SEC = 5 * 1000
+	let AUTOJOIN_TIMEOUT_SEC = 5 * 1000
 
-	var MAX_AUTO_REFRESH_ATTEMPTS = 5
+	let MAX_AUTO_REFRESH_ATTEMPTS = 5
 
-	var REFRESH_ATTEMPTS_TIMEOUT = 10 * 60 * 1000
+	let REFRESH_ATTEMPTS_TIMEOUT = 10 * 60 * 1000
 
-	var AUTOJOIN_INTERVAL = 2 * 1000
+	let AUTOJOIN_INTERVAL = 2 * 1000
 
-	var html = {
+	let html = {
 		'tabId': 'session-module',
 		'tabName': 'Sessions',
 		'tabContents': '<h3>Sessions</h3>' +
@@ -138,8 +138,8 @@ var sessionModule = (function () {
 		socket.on('restore-pms', () => {
 			if (sessionSettings.pmTextboxSave){
 				setTimeout(() => {
-					var pmTextBoxes = $("#pm-bottom .textarea textarea")
-					for (var i = 0; i < pmTextBoxes.length; i++){
+					let pmTextBoxes = $("#pm-bottom .textarea textarea")
+					for (let i = 0; i < pmTextBoxes.length; i++){
 						if (sessionSettings.pmTextboxes[i])
 							pmTextBoxes[i].value = sessionSettings.pmTextboxes[i]
 					}
@@ -148,19 +148,19 @@ var sessionModule = (function () {
 		})
 
 		chatSocket.on('disconnect', () => {
-			var chatTextBoxes = $("#chat-bottom .textarea textarea")
-			var pmTextBoxes = $("#pm-bottom .textarea textarea")
+			let chatTextBoxes = $("#chat-bottom .textarea textarea")
+			let pmTextBoxes = $("#pm-bottom .textarea textarea")
 			sessionSettings.chatTextboxes = []
 			sessionSettings.pmTextboxes = []
-			for (var i = 0; i < chatTextBoxes.length; i++){
-				var textboxInfo = {
+			for (let i = 0; i < chatTextBoxes.length; i++){
+				let textboxInfo = {
 					value: chatTextBoxes[i].value,
 					className: chatTextBoxes[i].className,
 				}
 				sessionSettings.chatTextboxes.push(textboxInfo)
 			}
 
-			for (var i = 0; i < pmTextBoxes.length; i++){
+			for (let i = 0; i < pmTextBoxes.length; i++){
 				sessionSettings.pmTextboxes.push(pmTextBoxes[i].value)
 			}
 
@@ -192,8 +192,8 @@ var sessionModule = (function () {
 		socket.on('account-users', () => {
 			setTimeout(() => {
 				$('#favUserDropList').empty()
-				var namesToIds = getSortedNames()
-				for (var name in namesToIds) {
+				let namesToIds = getSortedNames()
+				for (let name in namesToIds) {
 					addToDroplist(namesToIds[name], name, "#favUserDropList")
 				}
 			}, 3000)
@@ -207,7 +207,7 @@ var sessionModule = (function () {
 	 * 3. Auto refresh & disconnect happened & there are refresh attempts left
 	 */
 	function determineAutojoin() {
-		var autoJoin = false
+		let autoJoin = false
 
 		if (sessionSettings.joinFavorites === true &&
 			sessionSettings.favRooms.length > 0) {
@@ -284,11 +284,11 @@ var sessionModule = (function () {
 	 * Join rooms that were in the last session.
 	 */
 	function joinSessionedRooms() {
-		for (var i = 0; i < sessionShadow.length; i++) {
-			var room = sessionShadow[i]
-			var roomJoined = arrayObjectIndexOf(rph.roomsJoined, 'roomname', room.roomname) > -1
-			var userJoined = arrayObjectIndexOf(rph.roomsJoined, 'user', room.user) > -1
-			var alreadyInRoom = roomJoined && userJoined
+		for (let i = 0; i < sessionShadow.length; i++) {
+			let room = sessionShadow[i]
+			let roomJoined = arrayObjectIndexOf(rph.roomsJoined, 'roomname', room.roomname) > -1
+			let userJoined = arrayObjectIndexOf(rph.roomsJoined, 'user', room.user) > -1
+			let alreadyInRoom = roomJoined && userJoined
 			if (!alreadyInRoom) {
 				chatSocket.emit('join', {
 					name: room.roomname,
@@ -307,8 +307,8 @@ var sessionModule = (function () {
 	 * Joins all the rooms in the favorite rooms list
 	 */
 	function joinFavoriteRooms() {
-		for (var i = 0; i < sessionSettings.favRooms.length; i++) {
-			var favRoom = sessionSettings.favRooms[i]
+		for (let i = 0; i < sessionSettings.favRooms.length; i++) {
+			let favRoom = sessionSettings.favRooms[i]
 			chatSocket.emit('join', {
 				name: favRoom.room,
 				userid: favRoom.userId,
@@ -323,9 +323,9 @@ var sessionModule = (function () {
 
 	function populateChatTextboxes () {
 		setTimeout(() => {
-			var chatTextBoxes = $("#chat-bottom .textarea textarea")
-			for (var i = 0; i < chatTextBoxes.length; i++){
-				var idx = arrayObjectIndexOf(sessionSettings.chatTextboxes, 'className', chatTextBoxes[i].className)
+			let chatTextBoxes = $("#chat-bottom .textarea textarea")
+			for (let i = 0; i < chatTextBoxes.length; i++){
+				let idx = arrayObjectIndexOf(sessionSettings.chatTextboxes, 'className', chatTextBoxes[i].className)
 				if (idx > -1) {
 					chatTextBoxes[i].value = sessionSettings.chatTextboxes[idx].value
 				}
@@ -334,10 +334,10 @@ var sessionModule = (function () {
 	}
 
 	function addRoomToSession(roomname, userid) {
-		var alreadyInSession = false
-		var roomSession = sessionSettings.roomSession
-		for (var i = 0; i < roomSession.length && alreadyInSession === false; i++) {
-			var room = roomSession[i]
+		let alreadyInSession = false
+		let roomSession = sessionSettings.roomSession
+		for (let i = 0; i < roomSession.length && alreadyInSession === false; i++) {
+			let room = roomSession[i]
 			if (room.roomname == roomname && room.user == userid) {
 				alreadyInSession = true
 			}
@@ -354,9 +354,9 @@ var sessionModule = (function () {
 	}
 
 	function removeRoomFromSession(roomname, userid) {
-		var roomSession = sessionSettings.roomSession
-		for (var i = 0; i < roomSession.length; i++) {
-			var room = roomSession[i]
+		let roomSession = sessionSettings.roomSession
+		for (let i = 0; i < roomSession.length; i++) {
+			let room = roomSession[i]
 			if (room.roomname == roomname && room.user == userid) {
 				console.log('RPH Tools[removeRoomFromSession]: Removing room -', room)
 				sessionSettings.roomSession.splice(i, 1)
@@ -378,7 +378,7 @@ var sessionModule = (function () {
 	 * @param {string} roomname - Name of the room
 	 */
 	function parseFavoriteRoom(roomname) {
-		var room = getRoom(roomname)
+		let room = getRoom(roomname)
 
 		if (room === undefined) {
 			markProblem('favRoom', true)
@@ -386,9 +386,9 @@ var sessionModule = (function () {
 		}
 
 		if (sessionSettings.favRooms.length < MAX_ROOMS) {
-			var selectedFav = $('#favUserDropList option:selected')
-			var hashStr = $('#favRoom').val() + selectedFav.html()
-			var favRoomObj = {
+			let selectedFav = $('#favUserDropList option:selected')
+			let hashStr = $('#favRoom').val() + selectedFav.html()
+			let favRoomObj = {
 				_id: hashStr.hashCode(),
 				user: selectedFav.html(),
 				userId: parseInt(selectedFav.val()),
@@ -422,10 +422,10 @@ var sessionModule = (function () {
 	 * Removes an entry to the Favorite Chat Rooms list
 	 */
 	function removeFavoriteRoom() {
-		var favItem = document.getElementById("favRoomsList")
-		var favItemId = $('#favRoomsList option:selected').val()
+		let favItem = document.getElementById("favRoomsList")
+		let favItemId = $('#favRoomsList option:selected').val()
 		favItem.remove(favItem.selectedIndex)
-		for (var idx = 0; idx < sessionSettings.favRooms.length; idx++) {
+		for (let idx = 0; idx < sessionSettings.favRooms.length; idx++) {
 			if (sessionSettings.favRooms[idx]._id == favItemId) {
 				sessionSettings.favRooms.splice(idx, 1)
 				break
@@ -438,10 +438,10 @@ var sessionModule = (function () {
 	}
 
 	function loadSettings() {
-		var storedSettings = settingsModule.getSettings(localStorageName)
+		let storedSettings = settingsModule.getSettings(localStorageName)
 
 		if (storedSettings) {
-			for (var key in storedSettings) {
+			for (let key in storedSettings) {
 				sessionSettings[key] = storedSettings[key]
 			}
 		}
@@ -467,8 +467,8 @@ var sessionModule = (function () {
 		$('input#favEnable').prop("checked", sessionSettings.joinFavorites)
 		$('#roomSessioning').prop("checked", sessionSettings.joinSession)
 
-		for (var i = 0; i < sessionSettings.favRooms.length; i++) {
-			var favRoomObj = sessionSettings.favRooms[i]
+		for (let i = 0; i < sessionSettings.favRooms.length; i++) {
+			let favRoomObj = sessionSettings.favRooms[i]
 			$('#favRoomsList').append(
 				'<option value="' + favRoomObj._id + '">' +
 				favRoomObj.user + ": " + favRoomObj.room + '</option>'

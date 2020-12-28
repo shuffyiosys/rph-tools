@@ -2,12 +2,12 @@
  * This module handles adding blocking of users. This is meant to supersede
  * RPH's blocking mechanisms since it isn't always reliable.
  */
-var blockingModule = (function () {
-	var blockedUsers = []
+let blockingModule = (function () {
+	let blockedUsers = []
 
-	var localStorageName = 'blockingSettings'
+	let localStorageName = 'blockingSettings'
 
-	var html = {
+	let html = {
 		'tabId': 'blocking-module',
 		'tabName': 'Blocking',
 		'tabContents': '<h3>User blocking</h3>' +
@@ -25,7 +25,7 @@ var blockingModule = (function () {
 		loadSettings()
 
 		$('#blockButton').click(function () {
-			var username = $('#nameCheckTextbox').val()
+			let username = $('#nameCheckTextbox').val()
 			if (username) {
 				getUserByName(username, function (user) {
 					addToBlockList(user)
@@ -36,8 +36,8 @@ var blockingModule = (function () {
 		})
 
 		$('#unblockButton').click(function () {
-			var names = document.getElementById("blockedDropList")
-			var userId = $('#blockedDropList option:selected').val()
+			let names = document.getElementById("blockedDropList")
+			let userId = $('#blockedDropList option:selected').val()
 			getUserById(userId, function (user) {
 				socket.emit('unblock', {
 					'id': user.props.id
@@ -74,9 +74,9 @@ var blockingModule = (function () {
 	 * @param {object} User object for the username being blocked
 	 */
 	function addToBlockList(user) {
-		var inList = false
+		let inList = false
 
-		for (var i = 0; i < blockedUsers.length && !inList; i++) {
+		for (let i = 0; i < blockedUsers.length && !inList; i++) {
 			if (user.props.id == blockedUsers[i].id) {
 				inList = true
 			}
@@ -105,7 +105,7 @@ var blockingModule = (function () {
 	}
 
 	function loadSettings() {
-		var storedSettings = settingsModule.getSettings(localStorageName)
+		let storedSettings = settingsModule.getSettings(localStorageName)
 		if (storedSettings) {
 			blockedUsers = storedSettings
 		}

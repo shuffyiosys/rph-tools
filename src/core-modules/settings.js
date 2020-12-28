@@ -1,8 +1,8 @@
 /**
  * Handles importing, exporting, and deleting of settings.
  */
-var settingsModule = (function () {
-	var html = {
+let settingsModule = (function () {
+	let html = {
 		'tabId': 'settings-module',
 		'tabName': 'Settings',
 		'tabContents': '<h3>Script Settings</h3><br>' +
@@ -14,9 +14,9 @@ var settingsModule = (function () {
 			'<button type="button" style="margin-left: 376px; " id="deleteSettingsButton">Delete settings</button>'
 	}
 
-	var confirmDelete = false
+	let confirmDelete = false
 
-	var deleteTimer = null
+	let deleteTimer = null
 
 	/** 
 	 * Initializes the GUI components of the module.
@@ -48,7 +48,7 @@ var settingsModule = (function () {
 	 */
 	function importSettingsHanlder() {
 		try {
-			var newSettings = JSON.parse($('textarea#importExportTextarea').val())
+			let newSettings = JSON.parse($('textarea#importExportTextarea').val())
 			localStorage.setItem(SETTINGS_NAME, JSON.stringify(newSettings))
 			rphToolsModule.getAllModules().forEach((module) => {
 				if (module.loadSettings){
@@ -101,15 +101,15 @@ var settingsModule = (function () {
 	}
 
 	function saveSettings(moduleName, moduleSettings) {
-		var settings = JSON.parse(localStorage.getItem(SETTINGS_NAME))
+		let settings = JSON.parse(localStorage.getItem(SETTINGS_NAME))
 		settings[moduleName] = {}
 		settings[moduleName] = moduleSettings
 		localStorage.setItem(SETTINGS_NAME, JSON.stringify(settings))
 	}
 
 	function getSettings(moduleName) {
-		var settings = JSON.parse(localStorage.getItem(SETTINGS_NAME))
-		var moduleSettings = null
+		let settings = JSON.parse(localStorage.getItem(SETTINGS_NAME))
+		let moduleSettings = null
 		if (settings[moduleName]) {
 			moduleSettings = settings[moduleName]
 		}

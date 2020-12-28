@@ -18,8 +18,8 @@ function markProblem(element, mark) {
  * @return If the input is valid or not
  */
 function validateSetting(settingId, setting) {
-	var validInput = false
-	var input = $(settingId).val()
+	let validInput = false
+	let input = $(settingId).val()
 
 	if (setting === "url") {
 		validInput = validateUrl(input)
@@ -38,7 +38,7 @@ function validateSetting(settingId, setting) {
  * @returns If the color input is valid
  */
 function validateColor(color) {
-	var pattern = new RegExp(/([0-9A-Fa-f]{6}$)|([0-9A-Fa-f]{3}$)/i)
+	let pattern = new RegExp(/([0-9A-Fa-f]{6}$)|([0-9A-Fa-f]{3}$)/i)
 	return pattern.test(color)
 }
 
@@ -47,19 +47,14 @@ function validateColor(color) {
  * @param {string} url URL input
  * @returns If the URL input is valid
  */
-var validateUrl = function (url) {
-	var match = false
-	var regexp = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/
-	var pingExt = url.slice((url.length - 4), (url.length))
-
+let validateUrl = function (url) {
 	if (url === '') {
-		match = true
-	} else if (regexp.test(url) === true) {
-		if (pingExt == ".wav" || pingExt == ".ogg" || pingExt == ".mp3") {
-			match = true
-		}
+		return true
 	}
-	return match
+	else {
+		let regexp = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/
+		return (regexp.test(url) === true)
+	}
 }
 
 /**
@@ -69,7 +64,7 @@ var validateUrl = function (url) {
  * @param {object} droplist Which select element to add option to
  */
 function addToDroplist(value, label, droplist) {
-	var droplist_elem = $(droplist)
+	let droplist_elem = $(droplist)
 	droplist_elem.append($('<option>', {
 		value: value,
 		text: label
@@ -86,7 +81,7 @@ function addToDroplist(value, label, droplist) {
  *         otherwise.
  */
 function arrayObjectIndexOf(objArray, key, value) {
-	for (var i = 0; i < objArray.length; i++) {
+	for (let i = 0; i < objArray.length; i++) {
 		if (objArray[i][key] === value) {
 			return i
 		}
@@ -98,19 +93,19 @@ function arrayObjectIndexOf(objArray, key, value) {
  * Sorts the account's username list to alphabetical order
  */
 function getSortedNames() {
-	var namesToIds = {}
+	let namesToIds = {}
 	account.users.forEach(function (userObj) {
 		namesToIds[userObj.props.name] = userObj.props.id
 	})
 
-	var sorted = []
-	for (var key in namesToIds) {
+	let sorted = []
+	for (let key in namesToIds) {
 		sorted[sorted.length] = key
 	}
 	sorted.sort()
 
-	var tempDict = {}
-	for (var i = 0; i < sorted.length; i++) {
+	let tempDict = {}
+	for (let i = 0; i < sorted.length; i++) {
 		tempDict[sorted[i]] = namesToIds[sorted[i]]
 	}
 	namesToIds = tempDict
@@ -207,8 +202,8 @@ function parseRoll(rollArgs){
 	const DIE_NUM_MAX = 100
 	const DIE_SIDE_MIN = 2
 	const DIE_SIDE_MAX = 1000000
-	var die = 1
-	var sides = 20
+	let die = 1
+	let sides = 20
 	die = parseInt(rollArgs.split('d')[0])
 	sides = parseInt(rollArgs.split('d')[1])
 	die = Math.min(Math.max(die, DIE_NUM_MIN), DIE_NUM_MAX)
@@ -218,4 +213,20 @@ function parseRoll(rollArgs){
 
 function getCssRoomName(roomName) {
 	return roomName.toLowerCase().replace(/ /g, '-')
+}
+
+function displayNotification(message, timeout) {
+	if (document.hidden) {
+		let notification = new Notification(message)
+		setTimeout(() => {
+			notification.close()
+		}, timeout)
+	}
+}
+
+function createTimestamp(time) {
+	const timestamp = new Date(time)
+	const dateString = timestamp.toLocaleDateString(navigator.language).substring(0,5)
+	const timeString = timestamp.toTimeString().substring(0,5)
+	return `${dateString} ${timeString}`
 }

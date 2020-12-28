@@ -1,10 +1,10 @@
 /**
  * Main RPH Tools module
  */
-var rphToolsModule = (function () {
-	var modules = []
+let rphToolsModule = (function () {
+	let modules = []
 
-	var rpht_css =
+	let rpht_css =
 		'<style>' +
 		'#settings-dialog .inner > div > div.rpht-option-block{width:640px;border:#888 solid 1px;border-radius:10px;padding:12px;padding-top:16px;padding-bottom:16px;margin-bottom:16px;}' +
 		'.rpht-option-section{border-bottom:#444 solid 1px;padding-bottom:12px;margin-bottom:12px;}' +
@@ -15,11 +15,11 @@ var rphToolsModule = (function () {
 		'.text-input-label{width:400px;}' +
 		'.split-input-label {width: 300px;}' +
 		'.rpht_textarea{border:1px solid #000;width:611px;padding:2px;background:#e6e3df;}' +
-		'.rpht_chat_tab{position:absolute;height:54px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;}' +
+		'.rpht_chat_tab{height:54px;overflow-x:scroll;overflow-y:hidden;white-space:nowrap;}' +
 		'.rpht-checkbox{height:16px;width:16px;}' +
 		'input.rpht-short-input{width:200px;}' +
 		'input.rpht-long-input{max-width:100%;}' +
-		'.msg-padding{line-height: 1.25em}'+
+		'.msg-padding{line-height: 1.5em}'+
 		'.switch{position:relative;right:12px;width:50px;height:24px;float:right;}' +
 		'.switch input{opacity:0;width:0;height:0;}' +
 		'.rpht-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;-webkit-transition:.4s;transition:.4s}' +
@@ -30,11 +30,13 @@ var rphToolsModule = (function () {
 		'.rpht-slider.round{border-radius:34px}' +
 		'.rpht-slider.round:before{border-radius:50%}' +
 		'.rpht-tooltip-common{position: absolute; bottom: 120px; left: 200px; width: auto; height: auto; color: #dedbd9; background: #303235; opacity: 0.9; padding: 10px;}' +
-		'.rpht-cmd-tooltip{width: 800px;}' +
+		'.rpht-cmd-tooltip{width: 800px; height: auto;}' +
 		'.rpht-cmd-tooltip:hover{opacity: 0;}' +
-		'.rpht-die-label{text-align: right; display: inline-block; width: 92px;}' +
-		'.rpht-close-btn{margin-left: 56px; width: 24px; cursor: pointer;}'+
+		'.rpht-die-label{text-align: right; display: inline-block; width: 74px; margin-right: 7px;}' +
+		'.rpht-die-updown{width: 60px; min-width: 0px;}'+
+		'.rpht-close-btn{margin-left: 40px; width: 24px; cursor: pointer;}'+
 		'.rpht-close-btn:hover{background: #CA7169;}'+
+		'#diceRollerPopup button{width: 146px;}'+
 		'</style>'
 
 	/**
@@ -42,7 +44,7 @@ var rphToolsModule = (function () {
 	 * @param {Array} addonModules Modules to add into the system.
 	 */
 	function init (addonModules) {
-		var $settingsDialog = $('#settings-dialog')
+		let $settingsDialog = $('#settings-dialog')
 		modules = addonModules
 
 		if (Notification.permission !== 'denied') {
@@ -54,7 +56,7 @@ var rphToolsModule = (function () {
 		
 		/* Checks to see if there's a local store for settings and creates one
 		 * if there isn't. */
-		var settings = localStorage.getItem(SETTINGS_NAME)
+		let settings = localStorage.getItem(SETTINGS_NAME)
 		if (!settings) {
 			settings = {}
 			localStorage.setItem(SETTINGS_NAME, JSON.stringify(settings))
@@ -87,9 +89,9 @@ var rphToolsModule = (function () {
 	 * @param {string} name Name of the module to get the data
 	 * @returns Returns the module, if found. Otherwise returns null.
 	 */
-	var getModule = function (name) {
-		var module = null
-		for (var i = 0; i < modules.length; i++) {
+	let getModule = function (name) {
+		let module = null
+		for (let i = 0; i < modules.length; i++) {
 			if (modules[i].toString() === name) {
 				module = modules[i]
 				break

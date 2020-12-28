@@ -1,8 +1,8 @@
 /**
  * This module handles the "About" section for information on RPH Tools.
  */
-var aboutModule = (function () {
-	var html = {
+let aboutModule = (function () {
+	let html = {
 		'tabId': 'about-module',
 		'tabName': 'About',
 		'tabContents': '<h3>RPH Tools</h3><br>' +

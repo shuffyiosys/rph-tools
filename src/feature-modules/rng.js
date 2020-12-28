@@ -2,15 +2,15 @@
  * Random number generator module. This is mostly used for chance games that
  * can happen in the chat
  */
-var rngModule = (function () {
-	var DIE_MIN = 1
-	var DIE_MAX = 100
-	var DIE_SIDE_MIN = 2
-	var DIE_SIDE_MAX = 100
-	var RNG_NUM_MIN = -10000000000000
-	var RNG_NUM_MAX = 10000000000000
+let rngModule = (function () {
+	let DIE_MIN = 1
+	let DIE_MAX = 100
+	let DIE_SIDE_MIN = 2
+	let DIE_SIDE_MAX = 100
+	let RNG_NUM_MIN = -10000000000000
+	let RNG_NUM_MAX = 10000000000000
 
-	var html = {
+	let html = {
 		'tabId': 'rng-module',
 		'tabName': 'Random Numbers',
 		'tabContents':
@@ -65,7 +65,7 @@ var rngModule = (function () {
 	 */
 	function init() {
 		$('#diceNum').blur(function () {
-			var dieNum = parseInt($('#diceNum').val())
+			let dieNum = parseInt($('#diceNum').val())
 			if (dieNum < DIE_MIN) {
 				$('#diceNum').val(DIE_MIN)
 			} else if (DIE_MAX < dieNum) {
@@ -74,7 +74,7 @@ var rngModule = (function () {
 		})
 
 		$('#diceSides').blur(function () {
-			var dieSides = parseInt($('#diceSides').val())
+			let dieSides = parseInt($('#diceSides').val())
 			if (dieSides < DIE_SIDE_MIN) {
 				$('#diceSides').val(DIE_SIDE_MIN)
 			} else if (DIE_SIDE_MAX < dieSides) {
@@ -83,7 +83,7 @@ var rngModule = (function () {
 		})
 
 		$('#rngMinNumber').blur(function () {
-			var minNum = parseInt($('#rngMinNumber').val())
+			let minNum = parseInt($('#rngMinNumber').val())
 			if (minNum < RNG_NUM_MIN) {
 				$('#rngMinNumber').val(RNG_NUM_MIN)
 			} else if (RNG_NUM_MAX < minNum) {
@@ -92,7 +92,7 @@ var rngModule = (function () {
 		})
 
 		$('#rngMaxNumber').blur(function () {
-			var maxNum = parseInt($('#rngMaxNumber').val())
+			let maxNum = parseInt($('#rngMaxNumber').val())
 			if (maxNum < RNG_NUM_MIN) {
 				$('#rngMaxNumber').val(RNG_NUM_MIN)
 			} else if (RNG_NUM_MAX < maxNum) {
@@ -105,8 +105,8 @@ var rngModule = (function () {
 		})
 
 		$('#diceRngButton').click(function () {
-			var dieNum = parseInt($('#diceNum').val())
-			var dieSides = parseInt($('#diceSides').val())
+			let dieNum = parseInt($('#diceNum').val())
+			let dieSides = parseInt($('#diceSides').val())
 			sendResult(getDiceRoll(dieNum, dieSides))
 		})
 
@@ -120,7 +120,7 @@ var rngModule = (function () {
 	 * @returns String contaning the coin flip results.
 	 */
 	function genCoinFlip() {
-		var coinMsg = '/me flips a coin. It lands on... '
+		let coinMsg = '/me flips a coin. It lands on... '
 		if (Math.ceil(Math.random() * 2) == 2) {
 			coinMsg += 'heads!'
 		} else {
@@ -144,10 +144,10 @@ var rngModule = (function () {
 		dieSides = (dieSides > DIE_SIDE_MAX) ? DIE_SIDE_MAX : dieSides
 		dieSides = (dieSides < DIE_SIDE_MIN) ? DIE_SIDE_MIN : dieSides
 
-		var dieMsg = '/me rolled ' + dieNum + 'd' + dieSides + ':'
+		let dieMsg = '/me rolled ' + dieNum + 'd' + dieSides + ':'
 
 		for (i = 0; i < dieNum; i++) {
-			var result = Math.ceil(Math.random() * dieSides)
+			let result = Math.ceil(Math.random() * dieSides)
 			dieMsg += ' '
 			dieMsg += result
 		}
@@ -161,9 +161,9 @@ var rngModule = (function () {
 	 * @returns String containing the random number result.
 	 */
 	function genRandomNum() {
-		var minNum = parseInt($('#rngMinNumber').val())
-		var maxNum = parseInt($('#rngMaxNumber').val())
-		var ranNumMsg = '(( Random number generated (' + minNum + ' to ' +
+		let minNum = parseInt($('#rngMinNumber').val())
+		let maxNum = parseInt($('#rngMaxNumber').val())
+		let ranNumMsg = '(( Random number generated (' + minNum + ' to ' +
 			maxNum + '): '
 		ranNumMsg += Math.floor((Math.random() * (maxNum - minNum) + minNum)) +
 			' ))'
@@ -175,11 +175,11 @@ var rngModule = (function () {
 	 * @param {string} outcomeMsg A built string to show up on the chat.
 	 */
 	function sendResult(outcomeMsg) {
-		var class_name = $('li.active')[0].className.split(" ")
-		var room_name = ""
-		var this_room = null
-		var userID = parseInt(class_name[2].substring(0, 6))
-		var chatModule = rphToolsModule.getModule('Chat Module')
+		let class_name = $('li.active')[0].className.split(" ")
+		let room_name = ""
+		let this_room = null
+		let userID = parseInt(class_name[2].substring(0, 6))
+		let chatModule = rphToolsModule.getModule('Chat Module')
 		
 
 		/* Populate room name based on if showing usernames is checked. */

@@ -4,16 +4,16 @@ RPH tools is built off the idea that each component is built into self-contained
 
 The module template is as follows:
 ```Javascript
-var [ModuleName] = (function(){
+let [ModuleName] = (function(){
   /* Declare module members here */
-    var html = {
+    let html = {
     'tabId': [Module ID name],
     'tabName': [Module title],
     'tabContents': [Module HTML]
   };
 
   /* Initializes the module */
-  var init = function(){
+  let init = function(){
       
   };
 

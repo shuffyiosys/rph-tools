@@ -3,12 +3,12 @@
  * issue kicks, bans, promotions and demotions. It also can set up monitoring
  * of certain words and alert the mod.
  */
-var moddingModule = (function () {
-	var settings = {}
+let moddingModule = (function () {
+	let settings = {}
 
-	var localStorageName = "modSettings"
+	let localStorageName = "modSettings"
 
-	var html = {
+	let html = {
 		'tabId': 'modding-module',
 		'tabName': 'Modding',
 		'tabContents':
@@ -72,16 +72,16 @@ var moddingModule = (function () {
 			'</div>'
 	}
 
-	var alertSound = null
+	let alertSound = null
 
-	var roomNamePairs = {}
+	let roomNamePairs = {}
 
 	function init() {
 		loadSettings()
 		
 		$('#roomModSelect').change(function () {
-			var roomModeIdx = $('#roomModSelect')[0].selectedIndex
-			var roomModVal = $('#roomModSelect')[0].options[roomModeIdx].value
+			let roomModeIdx = $('#roomModSelect')[0].selectedIndex
+			let roomModVal = $('#roomModSelect')[0].options[roomModeIdx].value
 			if (roomNamePairs[roomModVal]) {
 				$('input#modRoomTextInput').val(roomNamePairs[roomModVal].roomName)
 				$('input#modFromTextInput').val(roomNamePairs[roomModVal].modName)
@@ -92,7 +92,7 @@ var moddingModule = (function () {
 		})
 
 		$('#resetPwButton').click(function () {
-			var room = $('input#modRoomTextInput').val()
+			let room = $('input#modRoomTextInput').val()
 
 			getUserByName($('input#modFromTextInput').val(), function (user) {
 				socket.emit('modify', {
@@ -162,7 +162,7 @@ var moddingModule = (function () {
 	 * @param {string} action Name of the action being performed
 	 */
 	function modAction(action) {
-		var targets = $('#modTargetTextInput').val().replace(/\r?\n|\r/, '')
+		let targets = $('#modTargetTextInput').val().replace(/\r?\n|\r/, '')
 		let vanityMap = getVanityNamesToIds()
 		targets = targets.split(',')
 		console.log('RPH Tools[modAction]: Performing', action, 'on', targets)
@@ -184,7 +184,7 @@ var moddingModule = (function () {
 	function emitModAction(action, targetName, modName, roomName, reasonMsg) {
 		getUserByName(targetName, function (target) {
 			getUserByName(modName, function (user) {
-				var modMessage = ''
+				let modMessage = ''
 				if (action === 'kick' || action === 'ban' || action === 'unban') {
 					modMessage = reasonMsg
 				}
@@ -200,7 +200,7 @@ var moddingModule = (function () {
 
 	function findUserAsMod(userObj) {
 		Object.keys(rph.rooms).forEach((roomname) => {
-			var roomObj = getRoom(roomname)
+			let roomObj = getRoom(roomname)
 			if (roomObj.props.mods.indexOf(userObj.props.id) > -1 ||
 				roomObj.props.owners.indexOf(userObj.props.id) > -1) {
 				addModRoomPair(userObj.props, roomname)
@@ -214,9 +214,9 @@ var moddingModule = (function () {
 	 * @param {object} thisRoom Object containing the room data.
 	 */
 	function addModRoomPair(userProps, roomName) {
-		var roomNamePair = roomName + ': ' + userProps.name
-		var roomNameValue = roomName + '.' + userProps.id
-		var roomNameObj = {
+		let roomNamePair = roomName + ': ' + userProps.name
+		let roomNameValue = roomName + '.' + userProps.id
+		let roomNameObj = {
 			'roomName': roomName,
 			'modName': userProps.name,
 			'modId': userProps.id
@@ -242,7 +242,7 @@ var moddingModule = (function () {
 			'alertWords': '',
 			'alertUrl': 'https://www.rphaven.com/sounds/boop.mp3',
 		}
-		var storedSettings = settingsModule.getSettings(localStorageName)
+		let storedSettings = settingsModule.getSettings(localStorageName)
 
 		if (storedSettings) {
 			settings = Object.assign(settings, storedSettings)

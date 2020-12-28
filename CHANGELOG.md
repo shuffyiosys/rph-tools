@@ -1,5 +1,25 @@
+RPH Tools (4.3.7)
+---------------
+##### Feature Updates
+* Timestamps are now in numerical format (e.g., December 20 now shows as 12/20)
+  * This does not work on PMs if retrieved from logs
+* Padding between chat messages is larger
+* Removed the option to disable the command window, as it was a kludge to fix problems with hiding it
+* Custom ping and PM sounds overwrite RPH's system sounds
+* Removed option to mute PM sounds, as there are other ways to do this (e.g., mute the tab or set the option in RPH itself)
+
+##### Bug Fixes
+* Fixed the CSS rules for the chat tabs area to show the scrollbar if the width of the area is smaller than main section
+* Fixed an issue setting the indicator on a chat tab when an unfocused room gets a new message
+
+#### Miscellaneous Fixes
+* Removed the audio tag added in 4.3.6 since this was fixed on the site itself
+
 RPH Tools (4.3.6)
 ---------------
+##### Bug Fixes
+* Fixed issues with slash command parsing
+
 #### Miscellaneous Fixes
 * Added a missing <audio> tag for PM sound and have the script play it back. This will be removed if the site fixes this.
 

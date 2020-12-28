@@ -3,7 +3,7 @@
  ***************************************************************************/
 $(function () {
 	console.log(`RPH Tools ${VERSION_STRING} start`)
-	var modules = [
+	let modules = [
 		chatModule,
 		pmModule,
 		moddingModule,
