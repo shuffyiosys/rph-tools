@@ -3,10 +3,12 @@ RPH Tools (4.3.7)
 ##### Feature Updates
 * Timestamps are now in numerical format (e.g., December 20 now shows as 12/20)
   * This does not work on PMs if retrieved from logs
-* Padding between chat messages is larger
+* ~~Padding between chat messages is larger~~
 * Removed the option to disable the command window, as it was a kludge to fix problems with hiding it
 * Custom ping and PM sounds overwrite RPH's system sounds
 * Removed option to mute PM sounds, as there are other ways to do this (e.g., mute the tab or set the option in RPH itself)
+* Added an option to highlight chat tabs with unread messages or not, using a simple marker or RPH's default
+* Timestamps now use numerical dates instead of full dates
 
 ##### Bug Fixes
 * Fixed the CSS rules for the chat tabs area to show the scrollbar if the width of the area is smaller than main section

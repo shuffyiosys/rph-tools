@@ -226,7 +226,8 @@ function displayNotification(message, timeout) {
 
 function createTimestamp(time) {
 	const timestamp = new Date(time)
-	const dateString = timestamp.toLocaleDateString(navigator.language).substring(0,5)
+	const dateString = timestamp.toLocaleDateString(navigator.language)
+	const delim = dateString.indexOf('/', 2)
 	const timeString = timestamp.toTimeString().substring(0,5)
-	return `${dateString} ${timeString}`
+	return `${dateString.substring(0, delim)} ${timeString}`
 }

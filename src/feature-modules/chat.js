@@ -43,6 +43,15 @@ let chatModule = (function () {
 			'		<label class="rpht-label descript-label">Only stylize with the user\'s primary color</label>' +
 			'	</div>' +
 			'	<div class="rpht-option-section">' +
+			'		<label style="font-weight: bold; width:522px; padding: 0px;" for="unreadMarkerSelection">Mark rooms with unread messages</label>' +
+			'		<select style="float: right; width: 80px;" id="unreadMarkerSelection">' +
+			'			<option value="0">No marker</option>' +
+			'			<option value="1" selected>Simple Marker</option>' +
+			'			<option value="2">RPH Default</option>' +
+			'		</select>' +
+			'		<label class="rpht-label descript-label">Adds a marker on a room\'s tab if there\'s an unread message</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
 			'		<label class="rpht-label checkbox-label" for="chatmsgPaddingEnable">Add padding between messages</label>' +
 			'		<label class="switch"><input type="checkbox" id="chatmsgPaddingEnable"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Adds some padding at the end of each message for readibility</label>' +
@@ -187,6 +196,12 @@ let chatModule = (function () {
 
 		$('#chatmsgPaddingEnable').change(() => {
 			chatSettings.msgPadding = $('#chatmsgPaddingEnable').is(':checked')
+			saveSettings()
+		})
+
+		$('#unreadMarkerSelection').change(() => {
+			let timeoutHtml = $('#unreadMarkerSelection option:selected')
+			chatSettings.unreadMarkerSelection = parseInt(timeoutHtml.val())
 			saveSettings()
 		})
 
@@ -350,9 +365,8 @@ let chatModule = (function () {
 				let messages = $(`div[data-roomname="${msgData.room}"]`).children()
 				for (let idx = ((messages.length - 2) - dataIdx); idx > 0; idx--) {
 					let message = messages[idx]
-					
-					message.children[0].children[0].innerHTML = createTimestamp(msgData.time)
 					if ($(message.children[0].children[0]).attr('data-userid') == msgData.userid) {
+						message.children[0].children[0].innerHTML = createTimestamp(msgData.time)
 						processMsg(thisRoom, msgData, message, isRoomMod[msgData.room])
 						break
 					}
@@ -431,6 +445,7 @@ let chatModule = (function () {
 			let idRoomName = thisRoom.$tabs[tabsLen - 1][0].className.split(' ')[2]
 			thisRoom.$tabs[tabsLen - 1].prepend(`<p style="font-size: x-small; height:16px; margin-top: -10px;">${User.props.name}</p>`)
 			$(`textarea.${idRoomName}`).prop('placeholder', `Post as ${User.props.name}`)
+			$(`textarea.${idRoomName}`).css('color', `${User.props.color}`)
 			$(`div.${User.props.id}_${roomCss} .user-for-textarea span`).css('overflow', 'hidden')
 			$(`div.${User.props.id}_${roomCss} .user-for-textarea div`)
 				.css('width', '234px')
@@ -458,6 +473,7 @@ let chatModule = (function () {
 			})
 
 			/* Adjust chat tab size */
+			$('#chat-tabs').addClass('rpht_chat_tab')
 			resizeChatTabs()
 		})
 	}
@@ -481,10 +497,19 @@ let chatModule = (function () {
 		}
 
 		if (!thisRoom.active && msgData.room === thisRoom.props.name) {
-			$(`li.tab.tab-${getCssRoomName(thisRoom.props.name)}`).css('border-bottom', '4px solid #ADF')
-			for (let roomTab of thisRoom.$tabs) {
-				$(roomTab.children()[2]).hide()
+			switch(chatSettings.unreadMarkerSelection) {
+				case 2:
+					break;
+				case 1: 
+					$(`li.tab.tab-${getCssRoomName(thisRoom.props.name)}`).css('border-bottom', '4px solid #ADF')
+					/* Falling through intentionally */
+				default:
+					for (let roomTab of thisRoom.$tabs) {
+						$(roomTab.children()[2]).hide()
+					}
+					break;
 			}
+		
 		}
 
 		getUserById(msgData.userid, (user) => {
@@ -812,7 +837,6 @@ let chatModule = (function () {
 	 * Resizes chat tabs based on the width of the tabs vs. the screen size.
 	 */
 	function resizeChatTabs() {
-		$('#chat-tabs').addClass('rpht_chat_tab')
 		/* Window is smaller than the tabs width */
 		if ($('#chat-tabs')[0].clientWidth < $('#chat-tabs')[0].scrollWidth ||
 			$('#chat-tabs')[0].clientWidth > $('#chat-bottom')[0].clientWidth) {
@@ -997,6 +1021,7 @@ let chatModule = (function () {
 		chatSettings = {
 			'colorText': true,
 			'colorSimpleText': true,
+			'unreadMarkerSelection': 1,
 			'msgPadding': false,
 
 			'enablePings': true,
@@ -1023,10 +1048,12 @@ let chatModule = (function () {
 
 		$('#chatColorEnable').prop("checked", chatSettings.colorText)
 		$('#chatSimpleColorEnable').prop("checked", chatSettings.colorSimpleText)
+		$(`#unreadMarkerSelection option[value='${chatSettings.unreadMarkerSelection}']`).prop('selected', true)
 		$('#chatmsgPaddingEnable').prop("checked", chatSettings.msgPadding)
 
 		$('#notifyPingEnable').prop("checked", chatSettings.enablePings)
 		$('#notifyNotificationEnable').prop("checked", chatSettings.pingNotify)
+		$(`#pingNotifyTimeoutSelect option[value='${chatSettings.notifyTime}']`).prop('selected', true)
 		$('#pingNames').val(chatSettings.triggers)
 		$('#pingURL').val(chatSettings.audioUrl)
 		$('#pingTextColor').val(chatSettings.color)

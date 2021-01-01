@@ -240,9 +240,10 @@ function displayNotification(message, timeout) {
 
 function createTimestamp(time) {
 	const timestamp = new Date(time)
-	const dateString = timestamp.toLocaleDateString(navigator.language).substring(0,5)
+	const dateString = timestamp.toLocaleDateString(navigator.language)
+	const delim = dateString.indexOf('/', 2)
 	const timeString = timestamp.toTimeString().substring(0,5)
-	return `${dateString} ${timeString}`
+	return `${dateString.substring(0, delim)} ${timeString}`
 }
 /**
  * Generates a hash value for a string
@@ -334,6 +335,15 @@ let chatModule = (function () {
 			'		<label class="rpht-label descript-label">Only stylize with the user\'s primary color</label>' +
 			'	</div>' +
 			'	<div class="rpht-option-section">' +
+			'		<label style="font-weight: bold; width:522px; padding: 0px;" for="unreadMarkerSelection">Mark rooms with unread messages</label>' +
+			'		<select style="float: right; width: 80px;" id="unreadMarkerSelection">' +
+			'			<option value="0">No marker</option>' +
+			'			<option value="1" selected>Simple Marker</option>' +
+			'			<option value="2">RPH Default</option>' +
+			'		</select>' +
+			'		<label class="rpht-label descript-label">Adds a marker on a room\'s tab if there\'s an unread message</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
 			'		<label class="rpht-label checkbox-label" for="chatmsgPaddingEnable">Add padding between messages</label>' +
 			'		<label class="switch"><input type="checkbox" id="chatmsgPaddingEnable"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Adds some padding at the end of each message for readibility</label>' +
@@ -478,6 +488,12 @@ let chatModule = (function () {
 
 		$('#chatmsgPaddingEnable').change(() => {
 			chatSettings.msgPadding = $('#chatmsgPaddingEnable').is(':checked')
+			saveSettings()
+		})
+
+		$('#unreadMarkerSelection').change(() => {
+			let timeoutHtml = $('#unreadMarkerSelection option:selected')
+			chatSettings.unreadMarkerSelection = parseInt(timeoutHtml.val())
 			saveSettings()
 		})
 
@@ -641,9 +657,8 @@ let chatModule = (function () {
 				let messages = $(`div[data-roomname="${msgData.room}"]`).children()
 				for (let idx = ((messages.length - 2) - dataIdx); idx > 0; idx--) {
 					let message = messages[idx]
-					
-					message.children[0].children[0].innerHTML = createTimestamp(msgData.time)
 					if ($(message.children[0].children[0]).attr('data-userid') == msgData.userid) {
+						message.children[0].children[0].innerHTML = createTimestamp(msgData.time)
 						processMsg(thisRoom, msgData, message, isRoomMod[msgData.room])
 						break
 					}
@@ -722,6 +737,7 @@ let chatModule = (function () {
 			let idRoomName = thisRoom.$tabs[tabsLen - 1][0].className.split(' ')[2]
 			thisRoom.$tabs[tabsLen - 1].prepend(`<p style="font-size: x-small; height:16px; margin-top: -10px;">${User.props.name}</p>`)
 			$(`textarea.${idRoomName}`).prop('placeholder', `Post as ${User.props.name}`)
+			$(`textarea.${idRoomName}`).css('color', `${User.props.color}`)
 			$(`div.${User.props.id}_${roomCss} .user-for-textarea span`).css('overflow', 'hidden')
 			$(`div.${User.props.id}_${roomCss} .user-for-textarea div`)
 				.css('width', '234px')
@@ -749,6 +765,7 @@ let chatModule = (function () {
 			})
 
 			/* Adjust chat tab size */
+			$('#chat-tabs').addClass('rpht_chat_tab')
 			resizeChatTabs()
 		})
 	}
@@ -772,10 +789,19 @@ let chatModule = (function () {
 		}
 
 		if (!thisRoom.active && msgData.room === thisRoom.props.name) {
-			$(`li.tab.tab-${getCssRoomName(thisRoom.props.name)}`).css('border-bottom', '4px solid #ADF')
-			for (let roomTab of thisRoom.$tabs) {
-				$(roomTab.children()[2]).hide()
+			switch(chatSettings.unreadMarkerSelection) {
+				case 2:
+					break;
+				case 1: 
+					$(`li.tab.tab-${getCssRoomName(thisRoom.props.name)}`).css('border-bottom', '4px solid #ADF')
+					/* Falling through intentionally */
+				default:
+					for (let roomTab of thisRoom.$tabs) {
+						$(roomTab.children()[2]).hide()
+					}
+					break;
 			}
+		
 		}
 
 		getUserById(msgData.userid, (user) => {
@@ -1103,7 +1129,6 @@ let chatModule = (function () {
 	 * Resizes chat tabs based on the width of the tabs vs. the screen size.
 	 */
 	function resizeChatTabs() {
-		$('#chat-tabs').addClass('rpht_chat_tab')
 		/* Window is smaller than the tabs width */
 		if ($('#chat-tabs')[0].clientWidth < $('#chat-tabs')[0].scrollWidth ||
 			$('#chat-tabs')[0].clientWidth > $('#chat-bottom')[0].clientWidth) {
@@ -1288,6 +1313,7 @@ let chatModule = (function () {
 		chatSettings = {
 			'colorText': true,
 			'colorSimpleText': true,
+			'unreadMarkerSelection': 1,
 			'msgPadding': false,
 
 			'enablePings': true,
@@ -1314,10 +1340,12 @@ let chatModule = (function () {
 
 		$('#chatColorEnable').prop("checked", chatSettings.colorText)
 		$('#chatSimpleColorEnable').prop("checked", chatSettings.colorSimpleText)
+		$(`#unreadMarkerSelection option[value='${chatSettings.unreadMarkerSelection}']`).prop('selected', true)
 		$('#chatmsgPaddingEnable').prop("checked", chatSettings.msgPadding)
 
 		$('#notifyPingEnable').prop("checked", chatSettings.enablePings)
 		$('#notifyNotificationEnable').prop("checked", chatSettings.pingNotify)
+		$(`#pingNotifyTimeoutSelect option[value='${chatSettings.notifyTime}']`).prop('selected', true)
 		$('#pingNames').val(chatSettings.triggers)
 		$('#pingURL').val(chatSettings.audioUrl)
 		$('#pingTextColor').val(chatSettings.color)
@@ -2100,11 +2128,11 @@ let rphToolsModule = (function () {
 		'.text-input-label{width:400px;}' +
 		'.split-input-label {width: 300px;}' +
 		'.rpht_textarea{border:1px solid #000;width:611px;padding:2px;background:#e6e3df;}' +
-		'.rpht_chat_tab{height:54px;overflow-x:scroll;overflow-y:hidden;white-space:nowrap;}' +
+		'.rpht_chat_tab{height:54px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;}' +
 		'.rpht-checkbox{height:16px;width:16px;}' +
 		'input.rpht-short-input{width:200px;}' +
 		'input.rpht-long-input{max-width:100%;}' +
-		'.msg-padding{line-height: 1.5em}'+
+		'.msg-padding{line-height: 1.25em}'+
 		'.switch{position:relative;right:12px;width:50px;height:24px;float:right;}' +
 		'.switch input{opacity:0;width:0;height:0;}' +
 		'.rpht-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;-webkit-transition:.4s;transition:.4s}' +
