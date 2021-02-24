@@ -33,28 +33,32 @@ let chatModule = (function () {
 			'<h4>Appearance</h4>' +
 			'<div class="rpht-option-block">' +
 			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="chatColorEnable">Stylize messages with user\'s color</label>' +
-			'		<label class="switch"><input type="checkbox" id="chatColorEnable"><span class="rpht-slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">Stylize a user\'s text with their color(s)</label>' +
-			'	</div>' +
-			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="chatSimpleColorEnable">Use simple color stylizing</label>' +
-			'		<label class="switch"><input type="checkbox" id="chatSimpleColorEnable"><span class="rpht-slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">Only stylize with the user\'s primary color</label>' +
+			'		<label class="rpht-label checkbox-label" for="chatColorSelection">Stylize user\'s messages</label>' +
+			'		<select style="float: right; width: 110px;" id="chatColorSelection">' +
+			'			<option value="0">None</option>' +
+			'			<option value="1" selected>Speech</option>' +
+			'			<option value="2">Everything</option>' +
+			'		</select>' +
+			'		<label class="rpht-label descript-label">Changes the color of user\'s messages to no additional color, highlighting speech, or the entire message</label>' +
 			'	</div>' +
 			'	<div class="rpht-option-section">' +
 			'		<label style="font-weight: bold; width:522px; padding: 0px;" for="unreadMarkerSelection">Mark rooms with unread messages</label>' +
-			'		<select style="float: right; width: 80px;" id="unreadMarkerSelection">' +
+			'		<select style="float: right; width: 110px;" id="unreadMarkerSelection">' +
 			'			<option value="0">No marker</option>' +
-			'			<option value="1" selected>Simple Marker</option>' +
-			'			<option value="2">RPH Default</option>' +
+			'			<option value="1" selected>Simple</option>' +
+			'			<option value="2"># unread</option>' +
 			'		</select>' +
 			'		<label class="rpht-label descript-label">Adds a marker on a room\'s tab if there\'s an unread message</label>' +
 			'	</div>' +
-			'	<div class="rpht-option-section option-section-bottom">' +
+			'	<div class="rpht-option-section">' +
 			'		<label class="rpht-label checkbox-label" for="chatmsgPaddingEnable">Add padding between messages</label>' +
 			'		<label class="switch"><input type="checkbox" id="chatmsgPaddingEnable"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Adds some padding at the end of each message for readibility</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<label class="rpht-label checkbox-label" for="hideCommandWindowEnable">Hide command window</label>' +
+			'		<label class="switch"><input type="checkbox" id="hideCommandWindowEnable"><span class="rpht-slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Hides the command window when typing a command.</label>' +
 			'	</div>' +
 			'</div>' +
 			'<h4>Chat Pinging</h4>' +
@@ -184,13 +188,15 @@ let chatModule = (function () {
 		$('#diceRollerPopup').hide()
 
 		/* General Options */
-		$('#chatColorEnable').change(() => {
-			chatSettings.colorText = $('#chatColorEnable').is(':checked')
+		$('#chatColorSelection').change(() => {
+			let colorSelection = $('#chatColorSelection option:selected')
+			chatSettings.colorStylizing = parseInt(colorSelection.val())
 			saveSettings()
 		})
 
-		$('#chatSimpleColorEnable').change(() => {
-			chatSettings.colorSimpleText = $('#chatSimpleColorEnable').is(':checked')
+		$('#unreadMarkerSelection').change(() => {
+			let unreadSelection = $('#unreadMarkerSelection option:selected')
+			chatSettings.unreadMarkerSelection = parseInt(unreadSelection.val())
 			saveSettings()
 		})
 
@@ -199,9 +205,8 @@ let chatModule = (function () {
 			saveSettings()
 		})
 
-		$('#unreadMarkerSelection').change(() => {
-			let timeoutHtml = $('#unreadMarkerSelection option:selected')
-			chatSettings.unreadMarkerSelection = parseInt(timeoutHtml.val())
+		$('#hideCommandWindowEnable').change(() => {
+			chatSettings.hideCommandWindow = $('#hideCommandWindowEnable').is(':checked')
 			saveSettings()
 		})
 
@@ -393,6 +398,13 @@ let chatModule = (function () {
 				}
 			}, 3000)
 		})
+
+		/* Fix the room management dialog */
+		$("#room-management-dialog > div.inner").css('height', '100%')
+		$("#room-management-dialog > div.inner > div").css('width', '640px')
+		$("#room-management-dialog > div.inner > div").css('float', 'right')
+		$('iframe.group-iframe').css('width', 'calc(100% - 640px)')
+		$('iframe.group-iframe').css('height', '100%')
 	}
 
 	/**
@@ -466,7 +478,7 @@ let chatModule = (function () {
 			chatTextArea.on('input', () => {
 				const chatInput = chatTextArea.val().trim()
 				$('#chatCommandTooltip').hide()
-				if (chatInput[0] === '/') {
+				if (chatInput[0] === '/' && chatSettings.hideCommandWindow == false) {
 					const commandTable = buildComamndTable(chatTextArea.val().trim())
 					$('#chatCommandTooltip').html(commandTable).show()
 				}
@@ -599,26 +611,25 @@ let chatModule = (function () {
 					})
 				}
 			}
-			/* Add pings if 
-			   - It's enabled AND 
-			   - The message isn't a buffer from the server AND
-			   - ((self pinging is enabled AND the message is owned by self) OR it's another's) */
-
 
 			contentQuery.html(`${prevMsgs.join('<br>')} ${newMsg}`)
 
-			if (chatSettings.colorText) {
-				const fadeTypes = ['', 'vertical-fade', 'horizontal-fade', 'radial-fade']
+			
+			if (chatSettings.colorStylizing == 0) {
+				const CHILD_NODE_COUNT = contentQuery[0].childNodes.length
+				for(let i = 0; i < CHILD_NODE_COUNT; i++) {
+					console.log(contentQuery[0].childNodes[i])
+					if('classLlist' in contentQuery[0].childNodes[i]) {
+						contentQuery[0].childNodes[i].classList = []
+					}
+				}
+			}
+			else if (chatSettings.colorStylizing == 2) {
 				const colorClasses = ['', 'two-color', 'three-color']
 				let classString = `${contentQuery[0].className}`
 				let styleString = `color: #${user.props.color[0]};`
 
 				classString += ` ${colorClasses[user.props.color.length - 1]}`
-				if (!chatSettings.colorSimpleText) {
-					styleString += `--color1: #${user.props.color[0]}; --color2: #${user.props.color[1]};` || ''
-					styleString += `--color3: #${user.props.color[2]};` || ''
-					classString += ` ${fadeTypes[user.props.fade]}`
-				}
 				contentQuery[0].className = classString.trim()
 				contentQuery.attr('style', styleString)
 			}
@@ -779,6 +790,8 @@ let chatModule = (function () {
 			return
 		} else if (ev.keyCode !== 13 || ev.shiftKey === true || ev.ctrlKey === true) {
 			return
+		} else if (ev.keyCode === 13 && (ev.shiftKey === true || ev.ctrlKey === true)) {
+			inputTextarea.val(inputTextarea.val() + "\n")
 		}
 
 		$('#chatCommandTooltip').hide()
@@ -1019,10 +1032,10 @@ let chatModule = (function () {
 	function loadSettings() {
 		let storedSettings = settingsModule.getSettings(localStorageName)
 		chatSettings = {
-			'colorText': true,
-			'colorSimpleText': true,
+			'colorStylizing': 1,
 			'unreadMarkerSelection': 1,
 			'msgPadding': false,
+			'hideCommandWindow': false,
 
 			'enablePings': true,
 			'pingNotify': false,
@@ -1048,6 +1061,7 @@ let chatModule = (function () {
 
 		$('#chatColorEnable').prop("checked", chatSettings.colorText)
 		$('#chatSimpleColorEnable').prop("checked", chatSettings.colorSimpleText)
+		$(`#chatColorSelection option[value='${chatSettings.colorStylizing}']`).prop('selected', true)
 		$(`#unreadMarkerSelection option[value='${chatSettings.unreadMarkerSelection}']`).prop('selected', true)
 		$('#chatmsgPaddingEnable').prop("checked", chatSettings.msgPadding)
 

@@ -11,7 +11,7 @@ let rphToolsModule = (function () {
 		'.option-section-bottom{border-bottom:none;margin-bottom:0;}' +
 		'.rpht-label{padding-left: 0px;text-align:justify;display:inline-block;cursor:default;}' +
 		'.checkbox-label{font-weight:700;width:542px;cursor:pointer;}' +
-		'.descript-label{width:500px;margin-top:8px;}' +
+		'.descript-label{width:480px;margin-top:8px;}' +
 		'.text-input-label{width:400px;}' +
 		'.split-input-label {width: 300px;}' +
 		'.rpht_textarea{border:1px solid #000;width:611px;padding:2px;background:#e6e3df;}' +

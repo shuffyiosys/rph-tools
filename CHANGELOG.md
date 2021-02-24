@@ -1,3 +1,11 @@
+RPH Tools (4.3.8)
+---------------
+##### Feature Updates
+* Combined the coloring options by allowing no color, speech highlighting (this is the default), and simple coloring
+* Removed the option to stylize with multiple colors if the user has that set
+* Added back the option to hide the command window
+* Room management window's layout uses a side-by-side layout, with the group's page on the left and the management settings on the right
+
 RPH Tools (4.3.7)
 ---------------
 ##### Feature Updates
@@ -8,7 +16,6 @@ RPH Tools (4.3.7)
 * Custom ping and PM sounds overwrite RPH's system sounds
 * Removed option to mute PM sounds, as there are other ways to do this (e.g., mute the tab or set the option in RPH itself)
 * Added an option to highlight chat tabs with unread messages or not, using a simple marker or RPH's default
-* Timestamps now use numerical dates instead of full dates
 
 ##### Bug Fixes
 * Fixed the CSS rules for the chat tabs area to show the scrollbar if the width of the area is smaller than main section
