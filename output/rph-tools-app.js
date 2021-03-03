@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.3.8
+// @version    4.3.9
 // @description Adds extended settings to RPH
 // @match      https://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.3.8'
+const VERSION_STRING = '4.3.9'
 
 const SETTINGS_NAME = "rph_tools_settings"
 /**
@@ -641,11 +641,13 @@ let chatModule = (function () {
 		$(window).resize(resizeChatTabs)
 
 		socket.on('confirm-room-join', (data) => {
-			roomSetup(data)
-			if (chatSettings.trackSession && joinedSession) {
-				chatSettings.session = rph.roomsJoined
-				saveSettings() 
-			}
+			setTimeout(() => {
+				roomSetup(data)
+				if (chatSettings.trackSession && joinedSession) {
+					chatSettings.session = rph.roomsJoined
+					saveSettings() 
+				}
+			}, 100)
 		})
 
 		socket.on('room-users-leave', () => {
@@ -709,7 +711,7 @@ let chatModule = (function () {
 	 */
 	function roomSetup(room) {
 		let thisRoom = getRoom(room.room)
-		let userId = getIdFromChatTab(thisRoom)
+
 
 		/* This is to filter out double room leaving. */
 		thisRoom.userLeave = (function () {
@@ -736,7 +738,7 @@ let chatModule = (function () {
 			}
 		}
 
-		getUserById(userId, (User) => {
+		getUserById(room.userid, (User) => {
 			const moddingModule = rphToolsModule.getModule('Modding Module')
 			if (moddingModule !== null && isRoomMod[room.room]) {
 				moddingModule.addModRoomPair(User.props, thisRoom.props.name)
@@ -1131,6 +1133,7 @@ let chatModule = (function () {
 	 * @param {} thisRoom - Room to get the ID from
 	 **/
 	function getIdFromChatTab(thisRoom) {
+		console.log(thisRoom)
 		let tabsLen = thisRoom.$tabs.length
 		let className = thisRoom.$tabs[tabsLen - 1][0].className
 		let charID = className.match(new RegExp(' [0-9]+', ''))[0]

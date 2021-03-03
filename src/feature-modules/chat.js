@@ -349,11 +349,13 @@ let chatModule = (function () {
 		$(window).resize(resizeChatTabs)
 
 		socket.on('confirm-room-join', (data) => {
-			roomSetup(data)
-			if (chatSettings.trackSession && joinedSession) {
-				chatSettings.session = rph.roomsJoined
-				saveSettings() 
-			}
+			setTimeout(() => {
+				roomSetup(data)
+				if (chatSettings.trackSession && joinedSession) {
+					chatSettings.session = rph.roomsJoined
+					saveSettings() 
+				}
+			}, 100)
 		})
 
 		socket.on('room-users-leave', () => {
@@ -417,7 +419,7 @@ let chatModule = (function () {
 	 */
 	function roomSetup(room) {
 		let thisRoom = getRoom(room.room)
-		let userId = getIdFromChatTab(thisRoom)
+
 
 		/* This is to filter out double room leaving. */
 		thisRoom.userLeave = (function () {
@@ -444,7 +446,7 @@ let chatModule = (function () {
 			}
 		}
 
-		getUserById(userId, (User) => {
+		getUserById(room.userid, (User) => {
 			const moddingModule = rphToolsModule.getModule('Modding Module')
 			if (moddingModule !== null && isRoomMod[room.room]) {
 				moddingModule.addModRoomPair(User.props, thisRoom.props.name)
@@ -832,18 +834,6 @@ let chatModule = (function () {
 			}
 		}
 		return result
-	}
-
-	/**
-	 * Gets the user's ID from the chat tab (it's in the class)
-	 * @param {} thisRoom - Room to get the ID from
-	 **/
-	function getIdFromChatTab(thisRoom) {
-		let tabsLen = thisRoom.$tabs.length
-		let className = thisRoom.$tabs[tabsLen - 1][0].className
-		let charID = className.match(new RegExp(' [0-9]+', ''))[0]
-		charID = charID.substring(1, charID.length)
-		return parseInt(charID)
 	}
 
 	/**
