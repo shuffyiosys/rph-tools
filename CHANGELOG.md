@@ -1,3 +1,8 @@
+RPH Tools (4.3.9)
+---------------
+##### Bug Fixes
+* Fixed how the tabs for chats are selected.
+
 RPH Tools (4.3.8)
 ---------------
 ##### Feature Updates

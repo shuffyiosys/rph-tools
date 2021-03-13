@@ -14,6 +14,8 @@ let chatModule = (function () {
 
 	let autoJoinTimer = null
 
+	let setupTimer = null
+
 	let pingHighlightText = ''
 
 	const AUTOJOIN_TIMEOUT_SEC = 5 * 1000
@@ -349,20 +351,12 @@ let chatModule = (function () {
 		$(window).resize(resizeChatTabs)
 
 		socket.on('confirm-room-join', (data) => {
-			setTimeout(() => {
-				roomSetup(data)
-				if (chatSettings.trackSession && joinedSession) {
-					chatSettings.session = rph.roomsJoined
-					saveSettings() 
-				}
-			}, 100)
+			roomSetup(data)
 		})
 
 		socket.on('room-users-leave', () => {
-			if (chatSettings.trackSession && joinedSession) {
-				chatSettings.session = rph.roomsJoined
-				saveSettings() 
-			}
+			chatSettings.session = rph.roomsJoined
+			saveSettings() 
 		})
 
 		socket.on('msg', (data) => {
@@ -384,11 +378,10 @@ let chatModule = (function () {
 		/* Setup the timer for automatically dismissing the opening dialog once
 		   rooms are available. The timer clears after. */
 		autoDismissTimer = setInterval(() => {
-			if (Object.keys(rph.rooms).length === 0) {
-				return
+			if (Object.keys(rph.rooms).length > 0) {
+				$("button span:contains('Continue')").trigger('click')
+				clearTimeout(autoDismissTimer)
 			}
-			$("button span:contains('Continue')").trigger('click')
-			clearTimeout(autoDismissTimer)
 		}, 500)
 
 		socket.on('account-users', () => {
@@ -420,7 +413,6 @@ let chatModule = (function () {
 	function roomSetup(room) {
 		let thisRoom = getRoom(room.room)
 
-
 		/* This is to filter out double room leaving. */
 		thisRoom.userLeave = (function () {
 			let cached_function = thisRoom.userLeave;
@@ -430,12 +422,6 @@ let chatModule = (function () {
 				}
 			};
 		}());
-
-		thisRoom.$tabs[thisRoom.$tabs.length - 1].click(() => {
-			for (let roomTab of thisRoom.$tabs) {
-				roomTab.removeAttr('style')
-			}
-		})
 
 		const NUM_USERS = account.userids.length
 		for (let idx = 0; idx < NUM_USERS && !isRoomMod[room.room]; idx++) {
@@ -447,48 +433,68 @@ let chatModule = (function () {
 		}
 
 		getUserById(room.userid, (User) => {
+			const roomCss = getCssRoomName(thisRoom.props.name)
 			const moddingModule = rphToolsModule.getModule('Modding Module')
 			if (moddingModule !== null && isRoomMod[room.room]) {
 				moddingModule.addModRoomPair(User.props, thisRoom.props.name)
 			}
 
-			/* Set up room tab and input box */
-			let roomCss = getCssRoomName(thisRoom.props.name)
-			let chatTextArea = $(`textarea.${User.props.id}_${roomCss}`)
-			let tabsLen = thisRoom.$tabs.length
-			let idRoomName = thisRoom.$tabs[tabsLen - 1][0].className.split(' ')[2]
-			thisRoom.$tabs[tabsLen - 1].prepend(`<p style="font-size: x-small; height:16px; margin-top: -10px;">${User.props.name}</p>`)
-			$(`textarea.${idRoomName}`).prop('placeholder', `Post as ${User.props.name}`)
-			$(`textarea.${idRoomName}`).css('color', `${User.props.color}`)
-			$(`div.${User.props.id}_${roomCss} .user-for-textarea span`).css('overflow', 'hidden')
-			$(`div.${User.props.id}_${roomCss} .user-for-textarea div`)
-				.css('width', '234px')
-				.append(`<span class="${User.props.id}_${roomCss} roller-button" style="cursor:pointer; float: right; width: auto;" title="Dice roller">🎲</span>`)
-			$(`span.${User.props.id}_${roomCss}.roller-button`).click(()=> {
-				$('#diceRollerPopup').toggle()
-			})
-
-			/* Setup popups and tooltips */
-			$(`li.${User.props.id}_${roomCss} a.close`).click(() => {
-				$('#chatCommandTooltip').hide()
-				$('#diceRollerPopup').hide()
-			})
-			chatTextArea.unbind('keyup')
-			chatTextArea.bind('keydown', (ev) => {
-				intputChatText(ev, User, thisRoom)
-			})
-			chatTextArea.on('input', () => {
-				const chatInput = chatTextArea.val().trim()
-				$('#chatCommandTooltip').hide()
-				if (chatInput[0] === '/' && chatSettings.hideCommandWindow == false) {
-					const commandTable = buildComamndTable(chatTextArea.val().trim())
-					$('#chatCommandTooltip').html(commandTable).show()
+			$(`li.${User.props.id}_${roomCss}`).click(() => {
+				for (let roomTab of thisRoom.$tabs) {
+					roomTab.removeAttr('style')
 				}
 			})
+
+			/* Set up room tab and input box */
+			setupRoomTabs(User, roomCss)
+
+			/* Setup popups and tooltips */
+			setupTextboxInput(User, roomCss)
 
 			/* Adjust chat tab size */
 			$('#chat-tabs').addClass('rpht_chat_tab')
 			resizeChatTabs()
+		})
+
+		chatSettings.session = rph.roomsJoined
+		saveSettings() 
+	}
+
+	function setupRoomTabs(User, roomCss) {
+		const userId = User.props.id
+		const username = User.props.name
+		const color = User.props.color[0]
+
+		$(`li.${userId}_${roomCss}`).prepend(`<p style="font-size: x-small; height:16px; margin-top: -10px;">${username}</p>`)
+		$(`textarea.${userId}_${roomCss}`).prop('placeholder', `Post as ${username}`)
+		$(`textarea${userId}_${roomCss}`).css('color', `${color}`)
+		$(`div.${userId}_${roomCss} .user-for-textarea span`).css('overflow', 'hidden')
+		$(`div.${userId}_${roomCss} .user-for-textarea div`)
+			.css('width', '234px')
+			.append(`<span class="${userId}_${roomCss} roller-button" style="cursor:pointer; float: right; width: auto;" title="Dice roller">🎲</span>`)
+		$(`span.${userId}_${roomCss}.roller-button`).click(()=> {
+			$('#diceRollerPopup').toggle()
+		})
+	}
+
+	function setupTextboxInput(User, roomCss) {
+		const userId = User.props.id
+		let chatTextArea = $(`textarea.${userId}_${roomCss}`)
+		$(`li.${userId}_${roomCss} a.close`).click(() => {
+			$('#chatCommandTooltip').hide()
+			$('#diceRollerPopup').hide()
+		})
+		chatTextArea.unbind('keyup')
+		chatTextArea.bind('keydown', (ev) => {
+			intputChatText(ev, User, thisRoom)
+		})
+		chatTextArea.on('input', () => {
+			const chatInput = chatTextArea.val().trim()
+			$('#chatCommandTooltip').hide()
+			if (chatInput[0] === '/' && chatSettings.hideCommandWindow == false) {
+				const commandTable = buildComamndTable(chatTextArea.val().trim())
+				$('#chatCommandTooltip').html(commandTable).show()
+			}
 		})
 	}
 
@@ -874,6 +880,11 @@ let chatModule = (function () {
 		/* Don't run this if there's no rooms yet. */
 		if (Object.keys(rph.rooms).length === 0) {
 			return
+		}
+		/* If RPH's sessioning kicked in, clear the timeout and return. */
+		else if ($('#chat-tabs')[0].childNodes.length > 0) {
+			clearTimeout(autoJoinTimer)
+			return;
 		}
 		$('<div id="rpht-autojoin" class="inner" style="background: #333;">' +
 			'<p>Autojoining or restoring session in about 5 seconds.</p>' +
