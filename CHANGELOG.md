@@ -1,7 +1,7 @@
 RPH Tools (4.3.9)
 ---------------
 ##### Bug Fixes
-* Fixed how the tabs for chats are selected.
+* Fixed an issue when joining rooms that caused issues with various chat related features
 
 RPH Tools (4.3.8)
 ---------------
