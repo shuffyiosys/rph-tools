@@ -741,7 +741,7 @@ let chatModule = (function () {
 			setupRoomTabs(User, roomCss)
 
 			/* Setup popups and tooltips */
-			setupTextboxInput(User, roomCss)
+			setupTextboxInput(User, roomCss, thisRoom)
 
 			/* Adjust chat tab size */
 			$('#chat-tabs').addClass('rpht_chat_tab')
@@ -769,7 +769,7 @@ let chatModule = (function () {
 		})
 	}
 
-	function setupTextboxInput(User, roomCss) {
+	function setupTextboxInput(User, roomCss, thisRoom) {
 		const userId = User.props.id
 		let chatTextArea = $(`textarea.${userId}_${roomCss}`)
 		$(`li.${userId}_${roomCss} a.close`).click(() => {
@@ -1206,6 +1206,9 @@ let chatModule = (function () {
 	 * Join rooms in the favorites and what was in the session.
 	 */
 	function joinRooms() {
+		if ($('#chat-tabs')[0].childNodes.length > 0) {
+			return;
+		}
 		if (chatSettings.joinFavorites === true) {
 			joinFavoriteRooms()
 		}
@@ -2100,13 +2103,13 @@ let aboutModule = (function () {
 		'tabName': 'About',
 		'tabContents': '<h3>RPH Tools</h3><br>' +
 			'<p><strong>Version: ' + VERSION_STRING + '</strong>' +
-			' | <a href="https://github.com/shuffyiosys/rph-tools/blob/master/CHANGELOG.md" target="_blank">Version history</a>' +
 			' | <a href="https://openuserjs.org/install/shuffyiosys/RPH_Tools.user.js" target="_blank">Install the latest version</a>' +
+			' | <a href="https://github.com/shuffyiosys/rph-tools/blob/master/CHANGELOG.md" target="_blank">Version history</a>' +
 			' | <a href="https://discord.gg/HBEaGjs" target="_blank">Discord channel</a>' + 
+			' | <a href="https://openuserjs.org/scripts/shuffyiosys/RPH_Tools" target="_blank">OpenUserJs page</a>' +
 			'</p></br>' +
 			'<p>Created by shuffyiosys. Under MIT License (SPDX: MIT). Feel free to make contributions to <a href="https://github.com/shuffyiosys/rph-tools" target="_blank">the repo</a>!</p><br />' +
-			'<p><a href="https://github.com/shuffyiosys/rph-tools/blob/master/docs/quick-guide.md" target="_blank">Quick guide to using RPH Tools</a></p></br>' +
-			'<p>If the script isn\'t working, try some <a href="https://openuserjs.org/scripts/shuffyiosys/RPH_Tools#troubleshooting" target="_blank">Troubleshooting Tips</a></p><br />'
+			'<p><a href="https://github.com/shuffyiosys/rph-tools/blob/master/docs/quick-guide.md" target="_blank">Quick guide to using RPH Tools</a></p></br>'
 	}
 
 	function init() {

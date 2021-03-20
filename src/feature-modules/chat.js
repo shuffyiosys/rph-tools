@@ -449,7 +449,7 @@ let chatModule = (function () {
 			setupRoomTabs(User, roomCss)
 
 			/* Setup popups and tooltips */
-			setupTextboxInput(User, roomCss)
+			setupTextboxInput(User, roomCss, thisRoom)
 
 			/* Adjust chat tab size */
 			$('#chat-tabs').addClass('rpht_chat_tab')
@@ -477,7 +477,7 @@ let chatModule = (function () {
 		})
 	}
 
-	function setupTextboxInput(User, roomCss) {
+	function setupTextboxInput(User, roomCss, thisRoom) {
 		const userId = User.props.id
 		let chatTextArea = $(`textarea.${userId}_${roomCss}`)
 		$(`li.${userId}_${roomCss} a.close`).click(() => {
@@ -914,6 +914,9 @@ let chatModule = (function () {
 	 * Join rooms in the favorites and what was in the session.
 	 */
 	function joinRooms() {
+		if ($('#chat-tabs')[0].childNodes.length > 0) {
+			return;
+		}
 		if (chatSettings.joinFavorites === true) {
 			joinFavoriteRooms()
 		}
