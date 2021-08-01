@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.3.9
+// @version    4.3.10
 // @description Adds extended settings to RPH
 // @match      https://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.3.9'
+const VERSION_STRING = '4.3.10'
 
 const SETTINGS_NAME = "rph_tools_settings"
 /**
@@ -418,7 +418,7 @@ let chatModule = (function () {
 			'<h4>Auto Joining</h4>' +
 			'<div class="rpht-option-block">' +
 			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="trackSession">Sessioning</label>' +
+			'		`<label class="rpht-label` checkbox-label" for="trackSession">Sessioning</label>' +
 			'		<label class="switch"><input type="checkbox" id="trackSession"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Keeps track of which rooms you were in, then rejoins them when you log in again.</label>' +
 			'	</div>' +
@@ -767,6 +767,8 @@ let chatModule = (function () {
 		$(`span.${userId}_${roomCss}.roller-button`).click(()=> {
 			$('#diceRollerPopup').toggle()
 		})
+
+		$(`li.${userId}_${roomCss}`).click(() => {scrollToRoomList(roomCss)})
 	}
 
 	function setupTextboxInput(User, roomCss, thisRoom) {
@@ -1164,6 +1166,14 @@ let chatModule = (function () {
 		}
 	}
 
+	function scrollToRoomList(roomName) {
+		const elementPrefix = "div.room-header-";
+		if ($(`${elementPrefix}${roomName} > .content > .users`).is(':visible') === false) {
+			$(`${elementPrefix}${roomName} > .header`).click()
+		}
+		$(`${elementPrefix}${roomName}`)[0].scrollIntoView()
+	}
+
 	/** AUTO JOINING FUNCTIONS **********************************************/
 	/**
 	 * Handler for the auto-joining mechanism.
@@ -1545,7 +1555,7 @@ let pmModule = (function () {
 		})
 	}
 
-	function handlePmConfirmation(data) {
+	async function handlePmConfirmation(data) {
 		rph.getPm({'from':data.to, 'to':data.from}, function(pm){
 			getUserByName(pm.from.props.name, (user) => {
 				processPmMsg(user, data, pm)
@@ -1560,6 +1570,8 @@ let pmModule = (function () {
 				}
 			})
 		})
+
+		return Promise.resolve(true)
 	}
 
 	function handleAccountUsers() {
@@ -1574,7 +1586,8 @@ let pmModule = (function () {
 	
 	function processPmMsg(user, data, pm) {
 		if (pm.$msgs[0].childNodes.length === 0) {
-			console.log(pm.$msgs[0].childNodes)
+			console.log('Child nodes on this message = 0', pm.$msgs[0].childNodes)
+			return;
 		}
 		let pmMsgQuery = pm.$msgs[0].childNodes[pm.$msgs[0].childNodes.length - 1]
 		let nameQuery = $(pmMsgQuery.childNodes[1].childNodes[1])
@@ -1971,8 +1984,27 @@ let settingsModule = (function () {
 			'<br /><br />' +
 			'<button type="button" style="width: 60px;" id="exportButton">Export</button>' +
 			'<button type="button" style="margin-left: 10px; width: 60px;" id="importButton">Import</button>' +
-			'<button type="button" style="margin-left: 376px; " id="deleteSettingsButton">Delete settings</button>'
+			'<button type="button" style="margin-left: 376px; " id="deleteSettingsButton">Delete settings</button>' +
+			'<h4>Import/Export settings</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label split-input-label">Export settings to a JSON text file</label>' +
+			`		<a class="split-input-label" id="downloadSettingsLink" download="settings.txt">Download settings</a>` +
+			'	</div>' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label split-input-label">Import settings from a JSON text file</label>' +
+			'		<input class="split-input-label" id="importFileInput" type="file" /> <button style="display: none;" id="retryImportButton">Retry</button>' +
+			'		<p id="importStatus"></p>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<label class="rpht-label checkbox-label">Import settings from text</label>' +
+			'		<label class="rpht-label descript-label">Paste in the settings that are JSON formatted</label>' +
+			'		<textarea name="importTextarea" id="importTextarea" rows=10 class="rpht_textarea"></textarea>' +
+			'		<button id="importTextButton">Import</button>' +
+			'	</div>' +
+			'</div>'
 	}
+
 
 	let confirmDelete = false
 
@@ -1986,12 +2018,23 @@ let settingsModule = (function () {
 			localStorage.setItem(SETTINGS_NAME, JSON.stringify({}))
 		}
 		$('#importButton').click(function () {
-			importSettingsHanlder()
+			importSettingsHanlder($('textarea#importExportTextarea').val())
 		})
 
-		$('#exportButton').click(function () {
-			$('textarea#importExportTextarea').val(exportSettings())
+		$('#downloadSettingsLink').click(function () {
+			let link = document.getElementById('downloadSettingsLink');
+			link.href =  makeTextFile(localStorage.getItem(SETTINGS_NAME))
+			$('#downloadSettingsLink').attr('download', `rph-tools-settings.txt`)
 		})
+
+		$('#importFileInput').change(() => {
+			let file = $("#importFileInput")[0].files[0];
+			(async () => {
+				fileContent = await file.text();
+				importSettingsHanlder(fileContent)
+			})();
+		})
+	
 
 		$('#printSettingsButton').click(function () {
 			printSettings()
@@ -2006,9 +2049,9 @@ let settingsModule = (function () {
 	 * Handles the initial portion of importing settings. This checks the input
 	 * to see if it's a valid JSON formatted string.
 	 */
-	function importSettingsHanlder() {
+	function importSettingsHanlder(jsonText) {
 		try {
-			let newSettings = JSON.parse($('textarea#importExportTextarea').val())
+			let newSettings = JSON.parse(jsonText)
 			localStorage.setItem(SETTINGS_NAME, JSON.stringify(newSettings))
 			rphToolsModule.getAllModules().forEach((module) => {
 				if (module.loadSettings){
@@ -2018,16 +2061,7 @@ let settingsModule = (function () {
 		}
 		catch {
 			console.log('[RPHT.Settings]: There was a problem with importing settings')
-			markProblem('textarea#importExportTextarea', true)
 		}
-	}
-
-	/**
-	 * Exports settings into a JSON formatted string
-	 */
-	function exportSettings() {
-		markProblem('textarea#importExportTextarea', false)
-		return localStorage.getItem(SETTINGS_NAME)
 	}
 
 	/** 
@@ -2059,6 +2093,21 @@ let settingsModule = (function () {
 			})
 		}
 	}
+
+	function makeTextFile (text) {
+		let textFile = null
+		let data = new Blob([text], {type: 'text/plain'});
+	
+		// If we are replacing a previously generated file we need to
+		// manually revoke the object URL to avoid memory leaks.
+		if (textFile !== null) {
+			window.URL.revokeObjectURL(textFile);
+		}
+	
+		textFile = window.URL.createObjectURL(data);
+	
+		return textFile;
+	};
 
 	function saveSettings(moduleName, moduleSettings) {
 		let settings = JSON.parse(localStorage.getItem(SETTINGS_NAME))

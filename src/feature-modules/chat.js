@@ -32,8 +32,13 @@ let chatModule = (function () {
 		'tabId': 'chat-module',
 		'tabName': 'Chat',
 		'tabContents': '<h3>Chat Options</h3><br/>' +
-			'<h4>Appearance</h4>' +
+			'<h4>Appearance & Behavior</h4>' +
 			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="snapRoomListEnable">Snap to room list to room</label>' +
+			'		<label class="switch"><input type="checkbox" id="snapRoomListEnable"><span class="rpht-slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">When you select a chat tab, snap the room list to the room and expand it if it\'s collapsed</label>' +
+			'	</div>' +
 			'	<div class="rpht-option-section">' +
 			'		<label class="rpht-label checkbox-label" for="chatColorSelection">Stylize user\'s messages</label>' +
 			'		<select style="float: right; width: 110px;" id="chatColorSelection">' +
@@ -126,7 +131,7 @@ let chatModule = (function () {
 			'<h4>Auto Joining</h4>' +
 			'<div class="rpht-option-block">' +
 			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="trackSession">Sessioning</label>' +
+			'		`<label class="rpht-label` checkbox-label" for="trackSession">Sessioning</label>' +
 			'		<label class="switch"><input type="checkbox" id="trackSession"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Keeps track of which rooms you were in, then rejoins them when you log in again.</label>' +
 			'	</div>' +
@@ -190,6 +195,11 @@ let chatModule = (function () {
 		$('#diceRollerPopup').hide()
 
 		/* General Options */
+		$('#snapRoomListEnable').change(() => {
+			chatSettings.snapRoomList = $('#snapRoomListEnable').is(':checked')
+			saveSettings()
+		})
+
 		$('#chatColorSelection').change(() => {
 			let colorSelection = $('#chatColorSelection option:selected')
 			chatSettings.colorStylizing = parseInt(colorSelection.val())
@@ -475,6 +485,10 @@ let chatModule = (function () {
 		$(`span.${userId}_${roomCss}.roller-button`).click(()=> {
 			$('#diceRollerPopup').toggle()
 		})
+
+		if (chatSettings.snapRoomList === true) {
+			$(`li.${userId}_${roomCss}`).click(() => {scrollToRoomList(roomCss)})
+		}
 	}
 
 	function setupTextboxInput(User, roomCss, thisRoom) {
@@ -872,6 +886,14 @@ let chatModule = (function () {
 		}
 	}
 
+	function scrollToRoomList(roomName) {
+		const elementPrefix = "div.room-header-";
+		if ($(`${elementPrefix}${roomName} > .content > .users`).is(':visible') === false) {
+			$(`${elementPrefix}${roomName} > .header`).click()
+		}
+		$(`${elementPrefix}${roomName}`)[0].scrollIntoView()
+	}
+
 	/** AUTO JOINING FUNCTIONS **********************************************/
 	/**
 	 * Handler for the auto-joining mechanism.
@@ -1036,6 +1058,7 @@ let chatModule = (function () {
 	function loadSettings() {
 		let storedSettings = settingsModule.getSettings(localStorageName)
 		chatSettings = {
+			'snapRoomList': true,
 			'colorStylizing': 1,
 			'unreadMarkerSelection': 1,
 			'msgPadding': false,
@@ -1063,6 +1086,7 @@ let chatModule = (function () {
 			chatSettings = Object.assign(chatSettings, storedSettings)
 		}
 
+		$('#snapRoomListEnable').prop("checked", chatSettings.snapRoomList)
 		$('#chatColorEnable').prop("checked", chatSettings.colorText)
 		$('#chatSimpleColorEnable').prop("checked", chatSettings.colorSimpleText)
 		$(`#chatColorSelection option[value='${chatSettings.colorStylizing}']`).prop('selected', true)

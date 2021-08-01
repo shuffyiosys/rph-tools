@@ -1,3 +1,8 @@
+RPH Tools (4.3.10)
+---------------
+##### Feature Updates
+* Added feature where if you click on a tab, it brings the room list to that room and expands it if it's closed.
+
 RPH Tools (4.3.9)
 ---------------
 ##### Bug Fixes
