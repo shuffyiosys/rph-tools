@@ -142,7 +142,7 @@ let pmModule = (function () {
 		})
 	}
 
-	function handlePmConfirmation(data) {
+	async function handlePmConfirmation(data) {
 		rph.getPm({'from':data.to, 'to':data.from}, function(pm){
 			getUserByName(pm.from.props.name, (user) => {
 				processPmMsg(user, data, pm)
@@ -157,6 +157,8 @@ let pmModule = (function () {
 				}
 			})
 		})
+
+		return Promise.resolve(true)
 	}
 
 	function handleAccountUsers() {
@@ -171,7 +173,8 @@ let pmModule = (function () {
 	
 	function processPmMsg(user, data, pm) {
 		if (pm.$msgs[0].childNodes.length === 0) {
-			console.log(pm.$msgs[0].childNodes)
+			console.log('Child nodes on this message = 0', pm.$msgs[0].childNodes)
+			return;
 		}
 		let pmMsgQuery = pm.$msgs[0].childNodes[pm.$msgs[0].childNodes.length - 1]
 		let nameQuery = $(pmMsgQuery.childNodes[1].childNodes[1])

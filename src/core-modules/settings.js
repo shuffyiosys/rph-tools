@@ -6,12 +6,26 @@ let settingsModule = (function () {
 		'tabId': 'settings-module',
 		'tabName': 'Settings',
 		'tabContents': '<h3>Script Settings</h3><br>' +
-			'<p>Press "Export" to export savable settings. To import settings, paste them into the text box and press "Import".</p>' +
-			'<textarea name="importExportText" id="importExportTextarea" rows=10 class="rpht_textarea"></textarea>' +
-			'<br /><br />' +
-			'<button type="button" style="width: 60px;" id="exportButton">Export</button>' +
-			'<button type="button" style="margin-left: 10px; width: 60px;" id="importButton">Import</button>' +
-			'<button type="button" style="margin-left: 376px; " id="deleteSettingsButton">Delete settings</button>'
+			'<h4>Import/Export settings</h4>' +
+			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label split-input-label">Export settings to a JSON text file</label>' +
+			`		<a class="split-input-label" id="downloadSettingsLink" download="settings.txt">Download settings</a>` +
+			'	</div>' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label split-input-label">Import settings from a JSON text file</label>' +
+			'		<input class="split-input-label" id="importFileInput" type="file" /> <button style="display: none;" id="retryImportButton">Retry</button>' +
+			'		<p id="importSettingsStatus"></p>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<label class="rpht-label checkbox-label">Import/export settings from text</label>' +
+			'		<textarea name="importExportText" id="importExportTextarea" rows=10 class="rpht_textarea"></textarea>' +
+			'		<br /><br />' +
+			'		<button type="button" style="width: 60px;" id="exportButton">Export</button>' +
+			'		<button type="button" style="margin-left: 10px; width: 60px;" id="importButton">Import</button>' +
+			'		<button type="button" style="float: right; background: red;" id="deleteSettingsButton">Delete settings</button>' +
+			'	</div>' +
+			'</div>'
 	}
 
 	let confirmDelete = false
@@ -25,19 +39,48 @@ let settingsModule = (function () {
 		if (!localStorage.getItem(SETTINGS_NAME)){
 			localStorage.setItem(SETTINGS_NAME, JSON.stringify({}))
 		}
-		$('#importButton').click(function () {
-			importSettingsHanlder()
+
+		$('#importButton').click(() => {
+			let importSuccess = importSettingsHanlder($('textarea#importExportTextarea').val())
+			if (importSuccess) {
+				markProblem('textarea#importExportTextarea', false)
+			}
+			else {
+				markProblem('textarea#importExportTextarea', true)
+			}
 		})
 
-		$('#exportButton').click(function () {
+		$('#exportButton').click(() => {
 			$('textarea#importExportTextarea').val(exportSettings())
 		})
 
-		$('#printSettingsButton').click(function () {
+		$('#downloadSettingsLink').click(() => {
+			let link = document.getElementById('downloadSettingsLink');
+			link.href =  makeTextFile(localStorage.getItem(SETTINGS_NAME))
+			$('#downloadSettingsLink').attr('download', `rph-tools-settings.txt`)
+		})
+
+		$('#importFileInput').change(() => {
+			let file = $("#importFileInput")[0].files[0];
+			(async () => {
+				fileContent = await file.text();
+				let successfulImport = importSettingsHanlder(fileContent)
+
+				if (successfulImport === false) {
+					$('#importSettingsStatus').first().text('There was a problem with the import')	
+				}
+				else {
+					$('#importSettingsStatus').first().text('Import successful')
+				}
+			})();
+		})
+	
+
+		$('#printSettingsButton').click(() => {
 			printSettings()
 		})
 
-		$('#deleteSettingsButton').click(function () {
+		$('#deleteSettingsButton').click(() => {
 			deleteSettingsHanlder()
 		})
 	}
@@ -46,29 +89,32 @@ let settingsModule = (function () {
 	 * Handles the initial portion of importing settings. This checks the input
 	 * to see if it's a valid JSON formatted string.
 	 */
-	function importSettingsHanlder() {
+	function importSettingsHanlder(jsonText) {
+		let successfulImport = false
 		try {
-			let newSettings = JSON.parse($('textarea#importExportTextarea').val())
+			let newSettings = JSON.parse(jsonText)
 			localStorage.setItem(SETTINGS_NAME, JSON.stringify(newSettings))
 			rphToolsModule.getAllModules().forEach((module) => {
 				if (module.loadSettings){
 					module.loadSettings()
 				}
 			})
+			successfulImport = true
 		}
 		catch {
 			console.log('[RPHT.Settings]: There was a problem with importing settings')
-			markProblem('textarea#importExportTextarea', true)
 		}
+		return successfulImport
 	}
 
 	/**
 	 * Exports settings into a JSON formatted string
 	 */
-	function exportSettings() {
-		markProblem('textarea#importExportTextarea', false)
-		return localStorage.getItem(SETTINGS_NAME)
-	}
+		function exportSettings() {
+			markProblem('textarea#importExportTextarea', false)
+			return localStorage.getItem(SETTINGS_NAME)
+		}
+	
 
 	/** 
 	 * Logic to confirm deleting settings. The button needs to be pressed twice
@@ -80,7 +126,7 @@ let settingsModule = (function () {
 			confirmDelete = true
 
 			/* Set a timeout to make "confirmDelete" false automatically */
-			deleteTimer = setTimeout(function () {
+			deleteTimer = setTimeout(() => {
 				confirmDelete = false
 				$('#deleteSettingsButton').text('Delete Settings')
 			}, 10 * 1000)
@@ -99,6 +145,21 @@ let settingsModule = (function () {
 			})
 		}
 	}
+
+	function makeTextFile (text) {
+		let textFile = null
+		let data = new Blob([text], {type: 'text/plain'});
+	
+		// If we are replacing a previously generated file we need to
+		// manually revoke the object URL to avoid memory leaks.
+		if (textFile !== null) {
+			window.URL.revokeObjectURL(textFile);
+		}
+	
+		textFile = window.URL.createObjectURL(data);
+	
+		return textFile;
+	};
 
 	function saveSettings(moduleName, moduleSettings) {
 		let settings = JSON.parse(localStorage.getItem(SETTINGS_NAME))

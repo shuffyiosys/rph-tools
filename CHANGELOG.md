@@ -1,3 +1,12 @@
+RPH Tools (4.3.11)
+---------------
+##### Feature Updates
+* Snap room list to room (feature added in 4.3.10) can be toggled on or off
+* Settings can be exported and imported directly from a file.
+
+##### Bug Fixes
+* Fixed an issue where the settings for hiding the command window and self ping were not loaded.
+
 RPH Tools (4.3.10)
 ---------------
 ##### Feature Updates

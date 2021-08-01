@@ -198,6 +198,21 @@ let chatModule = (function () {
 		$('#snapRoomListEnable').change(() => {
 			chatSettings.snapRoomList = $('#snapRoomListEnable').is(':checked')
 			saveSettings()
+
+			if (chatSettings.snapRoomList === true) {
+				for (idx in rph.roomsJoined) {
+					const room = rph.roomsJoined[idx] 
+					const roomCssName = getCssRoomName(room.roomname)
+					$(`li.${room.user}_${roomCssName}`).click(() => {scrollToRoomList(roomCssName)})
+				}
+			}
+			else {
+				for (idx in rph.roomsJoined) {
+					const room = rph.roomsJoined[idx] 
+					const roomCssName = getCssRoomName(room.roomname)
+					$._data($(`li.${room.user}_${roomCssName}`)[0], "events").click.pop();
+				}
+			}
 		})
 
 		$('#chatColorSelection').change(() => {
@@ -1087,13 +1102,13 @@ let chatModule = (function () {
 		}
 
 		$('#snapRoomListEnable').prop("checked", chatSettings.snapRoomList)
-		$('#chatColorEnable').prop("checked", chatSettings.colorText)
-		$('#chatSimpleColorEnable').prop("checked", chatSettings.colorSimpleText)
 		$(`#chatColorSelection option[value='${chatSettings.colorStylizing}']`).prop('selected', true)
 		$(`#unreadMarkerSelection option[value='${chatSettings.unreadMarkerSelection}']`).prop('selected', true)
 		$('#chatmsgPaddingEnable').prop("checked", chatSettings.msgPadding)
+		$('#hideCommandWindowEnable').prop("checked", chatSettings.hideCommandWindow)
 
 		$('#notifyPingEnable').prop("checked", chatSettings.enablePings)
+		$('#selfPingEnable').prop("checked", chatSettings.selfPing)
 		$('#notifyNotificationEnable').prop("checked", chatSettings.pingNotify)
 		$(`#pingNotifyTimeoutSelect option[value='${chatSettings.notifyTime}']`).prop('selected', true)
 		$('#pingNames').val(chatSettings.triggers)

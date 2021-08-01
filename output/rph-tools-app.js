@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.3.10
+// @version    4.3.11
 // @description Adds extended settings to RPH
 // @match      https://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -9,7 +9,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.3.10'
+const VERSION_STRING = '4.3.11'
 
 const SETTINGS_NAME = "rph_tools_settings"
 /**
@@ -324,8 +324,13 @@ let chatModule = (function () {
 		'tabId': 'chat-module',
 		'tabName': 'Chat',
 		'tabContents': '<h3>Chat Options</h3><br/>' +
-			'<h4>Appearance</h4>' +
+			'<h4>Appearance & Behavior</h4>' +
 			'<div class="rpht-option-block">' +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="snapRoomListEnable">Snap to room list to room</label>' +
+			'		<label class="switch"><input type="checkbox" id="snapRoomListEnable"><span class="rpht-slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">When you select a chat tab, snap the room list to the room and expand it if it\'s collapsed</label>' +
+			'	</div>' +
 			'	<div class="rpht-option-section">' +
 			'		<label class="rpht-label checkbox-label" for="chatColorSelection">Stylize user\'s messages</label>' +
 			'		<select style="float: right; width: 110px;" id="chatColorSelection">' +
@@ -482,6 +487,26 @@ let chatModule = (function () {
 		$('#diceRollerPopup').hide()
 
 		/* General Options */
+		$('#snapRoomListEnable').change(() => {
+			chatSettings.snapRoomList = $('#snapRoomListEnable').is(':checked')
+			saveSettings()
+
+			if (chatSettings.snapRoomList === true) {
+				for (idx in rph.roomsJoined) {
+					const room = rph.roomsJoined[idx] 
+					const roomCssName = getCssRoomName(room.roomname)
+					$(`li.${room.user}_${roomCssName}`).click(() => {scrollToRoomList(roomCssName)})
+				}
+			}
+			else {
+				for (idx in rph.roomsJoined) {
+					const room = rph.roomsJoined[idx] 
+					const roomCssName = getCssRoomName(room.roomname)
+					$._data($(`li.${room.user}_${roomCssName}`)[0], "events").click.pop();
+				}
+			}
+		})
+
 		$('#chatColorSelection').change(() => {
 			let colorSelection = $('#chatColorSelection option:selected')
 			chatSettings.colorStylizing = parseInt(colorSelection.val())
@@ -768,7 +793,9 @@ let chatModule = (function () {
 			$('#diceRollerPopup').toggle()
 		})
 
-		$(`li.${userId}_${roomCss}`).click(() => {scrollToRoomList(roomCss)})
+		if (chatSettings.snapRoomList === true) {
+			$(`li.${userId}_${roomCss}`).click(() => {scrollToRoomList(roomCss)})
+		}
 	}
 
 	function setupTextboxInput(User, roomCss, thisRoom) {
@@ -1338,6 +1365,7 @@ let chatModule = (function () {
 	function loadSettings() {
 		let storedSettings = settingsModule.getSettings(localStorageName)
 		chatSettings = {
+			'snapRoomList': true,
 			'colorStylizing': 1,
 			'unreadMarkerSelection': 1,
 			'msgPadding': false,
@@ -1365,13 +1393,14 @@ let chatModule = (function () {
 			chatSettings = Object.assign(chatSettings, storedSettings)
 		}
 
-		$('#chatColorEnable').prop("checked", chatSettings.colorText)
-		$('#chatSimpleColorEnable').prop("checked", chatSettings.colorSimpleText)
+		$('#snapRoomListEnable').prop("checked", chatSettings.snapRoomList)
 		$(`#chatColorSelection option[value='${chatSettings.colorStylizing}']`).prop('selected', true)
 		$(`#unreadMarkerSelection option[value='${chatSettings.unreadMarkerSelection}']`).prop('selected', true)
 		$('#chatmsgPaddingEnable').prop("checked", chatSettings.msgPadding)
+		$('#hideCommandWindowEnable').prop("checked", chatSettings.hideCommandWindow)
 
 		$('#notifyPingEnable').prop("checked", chatSettings.enablePings)
+		$('#selfPingEnable').prop("checked", chatSettings.selfPing)
 		$('#notifyNotificationEnable').prop("checked", chatSettings.pingNotify)
 		$(`#pingNotifyTimeoutSelect option[value='${chatSettings.notifyTime}']`).prop('selected', true)
 		$('#pingNames').val(chatSettings.triggers)
@@ -1979,12 +2008,6 @@ let settingsModule = (function () {
 		'tabId': 'settings-module',
 		'tabName': 'Settings',
 		'tabContents': '<h3>Script Settings</h3><br>' +
-			'<p>Press "Export" to export savable settings. To import settings, paste them into the text box and press "Import".</p>' +
-			'<textarea name="importExportText" id="importExportTextarea" rows=10 class="rpht_textarea"></textarea>' +
-			'<br /><br />' +
-			'<button type="button" style="width: 60px;" id="exportButton">Export</button>' +
-			'<button type="button" style="margin-left: 10px; width: 60px;" id="importButton">Import</button>' +
-			'<button type="button" style="margin-left: 376px; " id="deleteSettingsButton">Delete settings</button>' +
 			'<h4>Import/Export settings</h4>' +
 			'<div class="rpht-option-block">' +
 			'	<div class="rpht-option-section">' +
@@ -1994,17 +2017,18 @@ let settingsModule = (function () {
 			'	<div class="rpht-option-section">' +
 			'		<label class="rpht-label split-input-label">Import settings from a JSON text file</label>' +
 			'		<input class="split-input-label" id="importFileInput" type="file" /> <button style="display: none;" id="retryImportButton">Retry</button>' +
-			'		<p id="importStatus"></p>' +
+			'		<p id="importSettingsStatus"></p>' +
 			'	</div>' +
 			'	<div class="rpht-option-section option-section-bottom">' +
-			'		<label class="rpht-label checkbox-label">Import settings from text</label>' +
-			'		<label class="rpht-label descript-label">Paste in the settings that are JSON formatted</label>' +
-			'		<textarea name="importTextarea" id="importTextarea" rows=10 class="rpht_textarea"></textarea>' +
-			'		<button id="importTextButton">Import</button>' +
+			'		<label class="rpht-label checkbox-label">Import/export settings from text</label>' +
+			'		<textarea name="importExportText" id="importExportTextarea" rows=10 class="rpht_textarea"></textarea>' +
+			'		<br /><br />' +
+			'		<button type="button" style="width: 60px;" id="exportButton">Export</button>' +
+			'		<button type="button" style="margin-left: 10px; width: 60px;" id="importButton">Import</button>' +
+			'		<button type="button" style="float: right; background: red;" id="deleteSettingsButton">Delete settings</button>' +
 			'	</div>' +
 			'</div>'
 	}
-
 
 	let confirmDelete = false
 
@@ -2017,11 +2041,22 @@ let settingsModule = (function () {
 		if (!localStorage.getItem(SETTINGS_NAME)){
 			localStorage.setItem(SETTINGS_NAME, JSON.stringify({}))
 		}
-		$('#importButton').click(function () {
-			importSettingsHanlder($('textarea#importExportTextarea').val())
+
+		$('#importButton').click(() => {
+			let importSuccess = importSettingsHanlder($('textarea#importExportTextarea').val())
+			if (importSuccess) {
+				markProblem('textarea#importExportTextarea', false)
+			}
+			else {
+				markProblem('textarea#importExportTextarea', true)
+			}
 		})
 
-		$('#downloadSettingsLink').click(function () {
+		$('#exportButton').click(() => {
+			$('textarea#importExportTextarea').val(exportSettings())
+		})
+
+		$('#downloadSettingsLink').click(() => {
 			let link = document.getElementById('downloadSettingsLink');
 			link.href =  makeTextFile(localStorage.getItem(SETTINGS_NAME))
 			$('#downloadSettingsLink').attr('download', `rph-tools-settings.txt`)
@@ -2031,16 +2066,23 @@ let settingsModule = (function () {
 			let file = $("#importFileInput")[0].files[0];
 			(async () => {
 				fileContent = await file.text();
-				importSettingsHanlder(fileContent)
+				let successfulImport = importSettingsHanlder(fileContent)
+
+				if (successfulImport === false) {
+					$('#importSettingsStatus').first().text('There was a problem with the import')	
+				}
+				else {
+					$('#importSettingsStatus').first().text('Import successful')
+				}
 			})();
 		})
 	
 
-		$('#printSettingsButton').click(function () {
+		$('#printSettingsButton').click(() => {
 			printSettings()
 		})
 
-		$('#deleteSettingsButton').click(function () {
+		$('#deleteSettingsButton').click(() => {
 			deleteSettingsHanlder()
 		})
 	}
@@ -2050,6 +2092,7 @@ let settingsModule = (function () {
 	 * to see if it's a valid JSON formatted string.
 	 */
 	function importSettingsHanlder(jsonText) {
+		let successfulImport = false
 		try {
 			let newSettings = JSON.parse(jsonText)
 			localStorage.setItem(SETTINGS_NAME, JSON.stringify(newSettings))
@@ -2058,11 +2101,22 @@ let settingsModule = (function () {
 					module.loadSettings()
 				}
 			})
+			successfulImport = true
 		}
 		catch {
 			console.log('[RPHT.Settings]: There was a problem with importing settings')
 		}
+		return successfulImport
 	}
+
+	/**
+	 * Exports settings into a JSON formatted string
+	 */
+		function exportSettings() {
+			markProblem('textarea#importExportTextarea', false)
+			return localStorage.getItem(SETTINGS_NAME)
+		}
+	
 
 	/** 
 	 * Logic to confirm deleting settings. The button needs to be pressed twice
@@ -2074,7 +2128,7 @@ let settingsModule = (function () {
 			confirmDelete = true
 
 			/* Set a timeout to make "confirmDelete" false automatically */
-			deleteTimer = setTimeout(function () {
+			deleteTimer = setTimeout(() => {
 				confirmDelete = false
 				$('#deleteSettingsButton').text('Delete Settings')
 			}, 10 * 1000)
