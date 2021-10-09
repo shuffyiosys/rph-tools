@@ -1,3 +1,15 @@
+RPH Tools (4.3.13)
+---------------
+##### Bug Fixes
+* Fixed an issue with ```getCssRoomName```, where it was failing on special characters
+* Fixed an issue with ```createTimestamp``` to work with two-digit months. Dates will now be padded out to two digits.
+* Removed instances of places calling ```makeTimestamp``` as it doesn't exist anymore.
+
+RPH Tools (4.3.12)
+---------------
+##### Feature Updates
+* The last 30 messsages of a chat are stored and recalled if a user refreshes the page and the server hasn't timed out the user. 
+
 RPH Tools (4.3.11)
 ---------------
 ##### Feature Updates

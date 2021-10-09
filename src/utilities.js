@@ -212,7 +212,12 @@ function parseRoll(rollArgs){
 }
 
 function getCssRoomName(roomName) {
-	return roomName.toLowerCase().replace(/ /g, '-')
+	return roomName.replace(/[^a-z0-9]/g, function(s) {
+		var c = s.charCodeAt(0);
+		if (c === 32) return '-';
+		if (c >= 65 && c <= 90) return '' + s.toLowerCase();
+		return ('000' + c.toString(16)).slice(-4);
+	});
 }
 
 function displayNotification(message, timeout) {
@@ -226,8 +231,12 @@ function displayNotification(message, timeout) {
 
 function createTimestamp(time) {
 	const timestamp = new Date(time)
-	const dateString = timestamp.toLocaleDateString(navigator.language)
-	const delim = dateString.indexOf('/', 2)
+	const dateString = timestamp.toLocaleDateString(navigator.language, {
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	})
+	const delim = dateString.indexOf('/', 3)
 	const timeString = timestamp.toTimeString().substring(0,5)
 	return `${dateString.substring(0, delim)} ${timeString}`
 }

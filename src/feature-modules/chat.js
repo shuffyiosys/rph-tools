@@ -4,17 +4,17 @@
 let chatModule = (function () {
 	let chatSettings = {}
 
+	let chatRoomLogs = null
+
 	let localStorageName = "chatSettings"
 
-	let joinedSession = false
+	const chatLogsStorageName = "chatLogs"
 
 	let isRoomMod = {}
 
 	let autoDismissTimer = null
 
 	let autoJoinTimer = null
-
-	let setupTimer = null
 
 	let pingHighlightText = ''
 
@@ -131,7 +131,7 @@ let chatModule = (function () {
 			'<h4>Auto Joining</h4>' +
 			'<div class="rpht-option-block">' +
 			'	<div class="rpht-option-section">' +
-			'		`<label class="rpht-label` checkbox-label" for="trackSession">Sessioning</label>' +
+			'		<label class="rpht-label checkbox-label" for="trackSession">Sessioning</label>' +
 			'		<label class="switch"><input type="checkbox" id="trackSession"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Keeps track of which rooms you were in, then rejoins them when you log in again.</label>' +
 			'	</div>' +
@@ -371,6 +371,10 @@ let chatModule = (function () {
 		$('#diceRollerClose').click(() => {
 			$('#diceRollerPopup').hide()
 		})
+		
+		$(window).unload(function () {
+			settingsModule.saveSettings(chatLogsStorageName, chatRoomLogs)
+		});
 
 		/* General intialization */
 		$(window).resize(resizeChatTabs)
@@ -392,6 +396,7 @@ let chatModule = (function () {
 				for (let idx = ((messages.length - 2) - dataIdx); idx > 0; idx--) {
 					let message = messages[idx]
 					if ($(message.children[0].children[0]).attr('data-userid') == msgData.userid) {
+						console.log(createTimestamp(msgData.time), msgData.time)
 						message.children[0].children[0].innerHTML = createTimestamp(msgData.time)
 						processMsg(thisRoom, msgData, message, isRoomMod[msgData.room])
 						break
@@ -558,7 +563,6 @@ let chatModule = (function () {
 					}
 					break;
 			}
-		
 		}
 
 		getUserById(msgData.userid, (user) => {
@@ -649,9 +653,7 @@ let chatModule = (function () {
 				}
 			}
 
-			contentQuery.html(`${prevMsgs.join('<br>')} ${newMsg}`)
-
-			
+			contentQuery.html(`${prevMsgs.join('<br>')} ${newMsg}`)			
 			if (chatSettings.colorStylizing == 0) {
 				const CHILD_NODE_COUNT = contentQuery[0].childNodes.length
 				for(let i = 0; i < CHILD_NODE_COUNT; i++) {
@@ -669,6 +671,22 @@ let chatModule = (function () {
 				classString += ` ${colorClasses[user.props.color.length - 1]}`
 				contentQuery[0].className = classString.trim()
 				contentQuery.attr('style', styleString)
+			}
+
+			if ((thisRoom.props.name in chatRoomLogs) === false) {
+				chatRoomLogs[thisRoom.props.name] = []
+			}
+			if (chatRoomLogs[thisRoom.props.name].length >= 30) {
+				chatRoomLogs[thisRoom.props.name].shift()
+			}
+			
+			if (contentLines.length !== 1) {
+				const lastIdx = chatRoomLogs[thisRoom.props.name].length - 1
+				chatRoomLogs[thisRoom.props.name][lastIdx] = msgHtml.innerHTML
+				
+			}
+			else {
+				chatRoomLogs[thisRoom.props.name].push(msgHtml.innerHTML)
 			}
 		})
 	}
@@ -802,8 +820,7 @@ let chatModule = (function () {
 
 		if (error) {
 			Room.appendMessage(
-				'<span class="first">&nbsp;</span><span title="' +
-				makeTimestamp(false, true) + '">Error in command input</span>'
+				'<span class="first">&nbsp;</span><span title=>Error in command input</span>'
 			).addClass('sys')
 		}
 	}
@@ -820,7 +837,7 @@ let chatModule = (function () {
 
 		if (message.length > 4000) {
 			Room.appendMessage(
-				`<span class="first">&nbsp;</span><span title="${makeTimestamp(null, true)}">Message too long</span>`
+				`<span class="first">&nbsp;</span><span title="">Message too long</span>`
 			).addClass('sys')
 			return
 		} else if (message.length === 0) {
@@ -920,6 +937,12 @@ let chatModule = (function () {
 		}
 		/* If RPH's sessioning kicked in, clear the timeout and return. */
 		else if ($('#chat-tabs')[0].childNodes.length > 0) {
+			setTimeout(() => {
+				rph.roomsJoined.forEach((joinedRoom) => {
+					populateChatLog(joinedRoom.roomname)
+				})
+			}, 250)
+
 			clearTimeout(autoJoinTimer)
 			return;
 		}
@@ -945,6 +968,15 @@ let chatModule = (function () {
 
 		clearTimeout(autoJoinTimer)
 		autoJoinTimer = setTimeout(joinRooms, AUTOJOIN_TIMEOUT_SEC)
+	}
+
+	function populateChatLog(roomName) {
+		const thisRoom = getRoom(roomName)
+		if (roomName in chatRoomLogs) {
+			chatRoomLogs[roomName].forEach((logEntry) => {
+				thisRoom.appendMessage(logEntry)
+			})
+		}
 	}
 
 	/**
@@ -1072,6 +1104,10 @@ let chatModule = (function () {
 	 */
 	function loadSettings() {
 		let storedSettings = settingsModule.getSettings(localStorageName)
+		chatRoomLogs = settingsModule.getSettings(chatLogsStorageName)
+		if (chatRoomLogs === null) {
+			chatRoomLogs = {}
+		}
 		chatSettings = {
 			'snapRoomList': true,
 			'colorStylizing': 1,

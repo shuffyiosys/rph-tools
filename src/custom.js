@@ -34,7 +34,7 @@ function floodTracker(User, Room, message) {
 	} else if (thisTab.offenses === 2) {
 		Room.appendMessage(
 			'<span class="first">&nbsp;</span>\n\
-		<span title="' + makeTimestamp(false, true) + '">You are flooding. Be careful or you\'ll be kicked</span>'
+		<span title="">You are flooding. Be careful or you\'ll be kicked</span>'
 		).addClass('sys')
 		setTimeout(() => {
 			thisTab.offenses = 0
