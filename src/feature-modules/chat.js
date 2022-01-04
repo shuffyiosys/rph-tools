@@ -396,7 +396,6 @@ let chatModule = (function () {
 				for (let idx = ((messages.length - 2) - dataIdx); idx > 0; idx--) {
 					let message = messages[idx]
 					if ($(message.children[0].children[0]).attr('data-userid') == msgData.userid) {
-						console.log(createTimestamp(msgData.time), msgData.time)
 						message.children[0].children[0].innerHTML = createTimestamp(msgData.time)
 						processMsg(thisRoom, msgData, message, isRoomMod[msgData.room])
 						break
@@ -501,13 +500,87 @@ let chatModule = (function () {
 		$(`div.${userId}_${roomCss} .user-for-textarea span`).css('overflow', 'hidden')
 		$(`div.${userId}_${roomCss} .user-for-textarea div`)
 			.css('width', '234px')
-			.append(`<span class="${userId}_${roomCss} roller-button" style="cursor:pointer; float: right; width: auto;" title="Dice roller">🎲</span>`)
-		$(`span.${userId}_${roomCss}.roller-button`).click(()=> {
+			.append(`<button class="${userId}_${roomCss} roller-button" style="cursor:pointer; float: right; width: auto;" title="Dice roller">🎲</button>`)
+			.append(`<button class="${userId}_${roomCss} bold-button" style="cursor:pointer; float: right; width: auto; font-weight: bold;" title="Bold selection">B</button>`)
+			.append(`<button class="${userId}_${roomCss} italics-button" style="cursor:pointer; float: right; width: auto; font-style: italic;" title="Italics selection">I</button>`)
+			.append(`<button class="${userId}_${roomCss} linethrough-button" style="cursor:pointer; float: right; width: auto; text-decoration: line-through;" title="Linethrough selection">T</button>`)
+			.append(`<button class="${userId}_${roomCss} spoiler-button" style="cursor:pointer; float: right; width: auto; font-style: italic;" title="Spoiler selection"><span class="spoiler">S</span></button>`)
+			.append(`<button class="${userId}_${roomCss} superscript-button" style="cursor:pointer; float: right; width: auto; font-style: italic;" title="Superscript selection"><sup>T</sup></button>`)
+			.append(`<button class="${userId}_${roomCss} subscript-button" style="cursor:pointer; float: right; width: auto; font-size: smaller;" title="Subscript selection"><sub>T</sub></button>`)
+		$(`button.${userId}_${roomCss}.roller-button`).click(()=> {
 			$('#diceRollerPopup').toggle()
+		})
+		$(`button.${userId}_${roomCss}.bold-button`).click(()=> {
+			styleSelection(`${userId}_${roomCss}`, 'bold');
+		})
+		$(`button.${userId}_${roomCss}.italics-button`).click(()=> {
+			styleSelection(`${userId}_${roomCss}`, 'italics');
+		})
+		$(`button.${userId}_${roomCss}.linethrough-button`).click(()=> {
+			styleSelection(`${userId}_${roomCss}`, 'linethrough');
+		})
+		$(`button.${userId}_${roomCss}.spoiler-button`).click(()=> {
+			styleSelection(`${userId}_${roomCss}`, 'spoiler');
+		})
+		$(`button.${userId}_${roomCss}.subscript-button`).click(()=> {
+			styleSelection(`${userId}_${roomCss}`, 'sub');
+		})
+		$(`button.${userId}_${roomCss}.superscript-button`).click(()=> {
+			styleSelection(`${userId}_${roomCss}`, 'super');
 		})
 
 		if (chatSettings.snapRoomList === true) {
 			$(`li.${userId}_${roomCss}`).click(() => {scrollToRoomList(roomCss)})
+		}
+	}
+
+	function styleSelection(textareaClass, styleType) {
+		const chatTextbox = $(`textarea.${textareaClass}`)[0]
+		const start = chatTextbox.selectionStart
+		const end = chatTextbox.selectionEnd
+
+		let tag = ''
+		if( styleType == 'bold') { tag = '**' }
+		if( styleType == 'italics') { tag = '//' }
+		if( styleType == 'linethrough') { tag = '--' }
+		if( styleType == 'spoiler') { tag = '[spoiler]' }
+		if( styleType == 'sub') { tag = 'vv' }
+		if( styleType == 'super') { tag = '^^' }
+
+		if (start != end) {
+			const original = chatTextbox.value
+			const highlighted = original.substring(start, end).trim()
+			chatTextbox.value = original.substring(0, start)
+	
+			if (original[start] == ' ') {
+				chatTextbox.value += ' '
+			}
+			
+			chatTextbox.value += tag
+			chatTextbox.value += highlighted
+			if (styleType == 'spoiler') {
+				chatTextbox.value += '[/spoiler]'
+			}
+			else {
+				chatTextbox.value += tag;
+			}
+			if (original[end - 1] == ' ') {
+				chatTextbox.value += ' '
+			}
+	
+			chatTextbox.value += original.substring(end)
+		}
+		else {
+			chatTextbox.value += tag;
+			let position = chatTextbox.value.length
+			if (styleType == 'spoiler') {
+				chatTextbox.value += '[/spoiler]'
+			}
+			else {
+				chatTextbox.value += tag;
+			}
+			$(`textarea.${textareaClass}`).focus()
+			$(`textarea.${textareaClass}`)[0].setSelectionRange(position, position)
 		}
 	}
 

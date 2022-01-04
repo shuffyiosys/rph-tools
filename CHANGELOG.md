@@ -1,3 +1,12 @@
+RPH Tools (4.3.14)
+---------------
+##### Feature Updates
+* For the chat text input, added buttons to insert formatting tags. This supports surrounding highlighted text with tags and adding tags at the end if the button is pressed without selecting anything.
+
+##### Bug Fixes (sort of)
+* Prevented an exception from occuring in PMs when a status message appears after the last message received. Though this prevents the message processing from working.
+
+
 RPH Tools (4.3.13)
 ---------------
 ##### Bug Fixes
