@@ -493,6 +493,7 @@ let chatModule = (function () {
 		const userId = User.props.id
 		const username = User.props.name
 		const color = User.props.color[0]
+		const buttonCommonStyle = "cursor:pointer; float: right; width: 21px; height: 21px;";
 
 		$(`li.${userId}_${roomCss}`).prepend(`<p style="font-size: x-small; height:16px; margin-top: -10px;">${username}</p>`)
 		$(`textarea.${userId}_${roomCss}`).prop('placeholder', `Post as ${username}`)
@@ -500,13 +501,13 @@ let chatModule = (function () {
 		$(`div.${userId}_${roomCss} .user-for-textarea span`).css('overflow', 'hidden')
 		$(`div.${userId}_${roomCss} .user-for-textarea div`)
 			.css('width', '234px')
-			.append(`<button class="${userId}_${roomCss} roller-button" style="cursor:pointer; float: right; width: auto;" title="Dice roller">🎲</button>`)
-			.append(`<button class="${userId}_${roomCss} bold-button" style="cursor:pointer; float: right; width: auto; font-weight: bold;" title="Bold selection">B</button>`)
-			.append(`<button class="${userId}_${roomCss} italics-button" style="cursor:pointer; float: right; width: auto; font-style: italic;" title="Italics selection">I</button>`)
-			.append(`<button class="${userId}_${roomCss} linethrough-button" style="cursor:pointer; float: right; width: auto; text-decoration: line-through;" title="Linethrough selection">T</button>`)
-			.append(`<button class="${userId}_${roomCss} spoiler-button" style="cursor:pointer; float: right; width: auto; font-style: italic;" title="Spoiler selection"><span class="spoiler">S</span></button>`)
-			.append(`<button class="${userId}_${roomCss} superscript-button" style="cursor:pointer; float: right; width: auto; font-style: italic;" title="Superscript selection"><sup>T</sup></button>`)
-			.append(`<button class="${userId}_${roomCss} subscript-button" style="cursor:pointer; float: right; width: auto; font-size: smaller;" title="Subscript selection"><sub>T</sub></button>`)
+			.append(`<button class="${userId}_${roomCss} roller-button" style="cursor:pointer; float: right; width: auto; height: 21px;" title="Dice roller">🎲</button>`)
+			.append(`<button class="${userId}_${roomCss} bold-button" style="${buttonCommonStyle} font-weight: bold;" title="Bold selection">B</button>`)
+			.append(`<button class="${userId}_${roomCss} italics-button" style="${buttonCommonStyle} font-style: italic;" title="Italics selection">I</button>`)
+			.append(`<button class="${userId}_${roomCss} linethrough-button" style="${buttonCommonStyle} text-decoration: line-through;" title="Linethrough selection">S</button>`)
+			.append(`<button class="${userId}_${roomCss} spoiler-button" style="${buttonCommonStyle} font-style: italic;" title="Spoiler selection"><span class="spoiler">S</span></button>`)
+			.append(`<button class="${userId}_${roomCss} superscript-button" style="${buttonCommonStyle} font-style: italic;" title="Superscript selection"><sup>S</sup></button>`)
+			.append(`<button class="${userId}_${roomCss} subscript-button" style="${buttonCommonStyle} font-size: smaller;" title="Subscript selection"><sub>S</sub></button>`)
 		$(`button.${userId}_${roomCss}.roller-button`).click(()=> {
 			$('#diceRollerPopup').toggle()
 		})
@@ -538,7 +539,6 @@ let chatModule = (function () {
 		const chatTextbox = $(`textarea.${textareaClass}`)[0]
 		const start = chatTextbox.selectionStart
 		const end = chatTextbox.selectionEnd
-
 		let tag = ''
 		if( styleType == 'bold') { tag = '**' }
 		if( styleType == 'italics') { tag = '//' }
@@ -547,40 +547,33 @@ let chatModule = (function () {
 		if( styleType == 'sub') { tag = 'vv' }
 		if( styleType == 'super') { tag = '^^' }
 
-		if (start != end) {
-			const original = chatTextbox.value
-			const highlighted = original.substring(start, end).trim()
-			chatTextbox.value = original.substring(0, start)
-	
-			if (original[start] == ' ') {
-				chatTextbox.value += ' '
-			}
-			
-			chatTextbox.value += tag
-			chatTextbox.value += highlighted
-			if (styleType == 'spoiler') {
-				chatTextbox.value += '[/spoiler]'
-			}
-			else {
-				chatTextbox.value += tag;
-			}
-			if (original[end - 1] == ' ') {
-				chatTextbox.value += ' '
-			}
-	
-			chatTextbox.value += original.substring(end)
+		const original = chatTextbox.value
+		const highlighted = original.substring(start, end).trim()
+		chatTextbox.value = original.substring(0, start)
+
+		if (original[start] == ' ') {
+			chatTextbox.value += ' '
+		}
+		
+		chatTextbox.value += tag
+		chatTextbox.value += highlighted
+		if (styleType == 'spoiler') {
+			chatTextbox.value += '[/spoiler]'
 		}
 		else {
 			chatTextbox.value += tag;
-			let position = chatTextbox.value.length
-			if (styleType == 'spoiler') {
-				chatTextbox.value += '[/spoiler]'
-			}
-			else {
-				chatTextbox.value += tag;
-			}
-			$(`textarea.${textareaClass}`).focus()
-			$(`textarea.${textareaClass}`)[0].setSelectionRange(position, position)
+		}
+		if (original[end - 1] == ' ') {
+			chatTextbox.value += ' '
+		}
+
+		chatTextbox.value += original.substring(end)
+		$(`textarea.${textareaClass}`).focus()
+		if (start != end) {
+			$(`textarea.${textareaClass}`)[0].setSelectionRange(start + tag.length, end + tag.length)
+		}
+		else {
+			$(`textarea.${textareaClass}`)[0].setSelectionRange(start + tag.length, start + tag.length)
 		}
 	}
 

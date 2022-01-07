@@ -1,3 +1,9 @@
+RPH Tools (4.3.15)
+---------------
+##### Feature Updates
+* When inserting a formatting tag via the buttons, the cursor will move to the center of the tag if no text highlighting was done. 
+* Made the sizing of the formatting buttons uniform.
+
 RPH Tools (4.3.14)
 ---------------
 ##### Feature Updates
