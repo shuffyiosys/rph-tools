@@ -275,7 +275,7 @@ let pmModule = (function () {
 
 		if(pmSettings.sideTabs === true) {
 			let pmTabs = $('div.ul-rows').detach();
-			$('head').append(`<style>li.tab{display: block; width: auto;}</style>`)
+			$('head').append(`<style>ul.pm-tabs li.tab{display: block; width: auto;}</style>`)
 			$('#pm-dialog').css('display', 'flex');
 			$('#pm-dialog > div')[0].id = "pm-content";
 			$('#pm-content').css('width', '75%');
