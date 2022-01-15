@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name       RPH Tools
 // @namespace  https://openuserjs.org/scripts/shuffyiosys/RPH_Tools
-// @version    4.3.15
+// @version    4.3.16
 // @description Adds extended settings to RPH
 // @match      https://chat.rphaven.com/
 // @copyright  (c)2014 shuffyiosys@github
@@ -10,7 +10,7 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.3.15'
+const VERSION_STRING = '4.3.16a'
 
 const SETTINGS_NAME = "rph_tools_settings"
 /**
@@ -1567,10 +1567,15 @@ let pmModule = (function () {
 			'<h3>PM Settings</h3><br>' +
 			'<h4>Appearance</h4>' +
 			'<div class="rpht-option-block">' +
-			'	<div class="rpht-option-section option-section-bottom">' +
+			'	<div class="rpht-option-section">' +
 			'		<label class="rpht-label checkbox-label" for="pmColorEnable">Use user text colors</label>' +
 			'		<label class="switch"><input type="checkbox" id="pmColorEnable"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Use the user\'s color to stylize their text</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<label class="rpht-label checkbox-label" for="pmSideTabsEnable">Tabs on side</label>' +
+			'		<label class="switch"><input type="checkbox" id="pmSideTabsEnable"><span class="rpht-slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Puts the PM tabs on the side, listing them vertically. Requires page refresh for changes to take effect</label>' +
 			'	</div>' +
 			'</div>' +
 			'<h4>Notifications</h4>' +
@@ -1590,7 +1595,7 @@ let pmModule = (function () {
 			'		<label class="rpht-label descript-label">How long the notification will stay up</label>' +
 			'	</div>' +
 			'	<div class="rpht-option-section option-section-bottom">' +
-			'		<label class="rpht-label split-input-label">PM sound URL </label>' +
+			'		<label class="rpht-label split-input-label">PM sound URL</label>' +
 			'		<input class="split-input-label" type="text" id="pmPingURL" name="pmPingURL" style="margin-bottom: 12px;">' +
 			'	</div>' +
 			'</div>' +
@@ -1611,6 +1616,11 @@ let pmModule = (function () {
 
 	function init() {
 		loadSettings()
+
+		$('#pmSideTabsEnable').change(() => {
+			pmSettings.sideTabs = $('#pmSideTabsEnable').is(':checked')
+			settingsModule.saveSettings(localStorageName, pmSettings)
+		})
 
 		$('#pmColorEnable').change(() => {
 			pmSettings.colorText = $('#pmColorEnable').is(':checked')
@@ -1802,7 +1812,8 @@ let pmModule = (function () {
 			'colorText': false,
 			'notify': false,
 			'notifyTime': 6000,
-			'audioUrl': 'https://www.rphaven.com/sounds/imsound.mp3'
+			'audioUrl': 'https://www.rphaven.com/sounds/imsound.mp3',
+			'sideTabs': false,
 		}
 
 		if (storedSettings) {
@@ -1810,10 +1821,21 @@ let pmModule = (function () {
 		} 
 
 		$('#pmColorEnable').prop("checked", pmSettings.colorText)
+		$('#pmSideTabsEnable').prop("checked", pmSettings.sideTabs)
 		$('#pmNotify').prop("checked", pmSettings.notify)
 		$('#pmNotifyTimeoutSelect').val(pmSettings.notifyTime.toString())
 		$('#pmPingURL').val(pmSettings.audioUrl)
 		rph.sounds.im = new Audio(pmSettings.audioUrl)
+
+		if(pmSettings.sideTabs === true) {
+			let pmTabs = $('div.ul-rows').detach();
+			$('head').append(`<style>li.tab{display: block; width: auto;}</style>`)
+			$('#pm-dialog').css('display', 'flex');
+			$('#pm-dialog > div')[0].id = "pm-content";
+			$('#pm-content').css('width', '75%');
+			$('#pm-dialog').append(`<div id="pm-tabs" style="width: 25%; background: #303235; overflow: auto"></div>`);
+			$('#pm-tabs').append(pmTabs);
+		}
 	}
 
 	function getHtml() {
