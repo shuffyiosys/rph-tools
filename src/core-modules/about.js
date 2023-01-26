@@ -17,15 +17,15 @@ let aboutModule = (function () {
 	}
 
 	function init() {
-		return
+		return;
 	}
 
 	function getHtml() {
-		return html
+		return html;
 	}
 
 	function toString() {
-		return 'About Module'
+		return 'About Module';
 	}
 
 	return {

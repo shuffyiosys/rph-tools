@@ -2,33 +2,13 @@
  * This module handles the chat functions of the script.
  ****/
 let chatModule = (function () {
-	let chatSettings = {}
-
-	let chatRoomLogs = null
-
-	let localStorageName = "chatSettings"
-
-	const chatLogsStorageName = "chatLogs"
-
-	let isRoomMod = {}
-
-	let autoDismissTimer = null
-
-	let autoJoinTimer = null
-
-	let pingHighlightText = ''
-
+	const chatLogsStorageName = "chatLogs";
 	const AUTOJOIN_TIMEOUT_SEC = 5 * 1000
-
 	const MAX_ROOMS = 30
-
 	const AUTOJOIN_INTERVAL = 2 * 1000
-
 	const RNG_TIMEOUT = 30 * 1000
-
 	const ALERT_HIGHLIGHT = `background: #F00; color: #FFF; font-weight: bold;`
-
-	let html = {
+	const html = {
 		'tabId': 'chat-module',
 		'tabName': 'Chat',
 		'tabContents': '<h3>Chat Options</h3><br/>' +
@@ -62,10 +42,16 @@ let chatModule = (function () {
 			'		<label class="switch"><input type="checkbox" id="chatmsgPaddingEnable"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Adds some padding at the end of each message for readibility</label>' +
 			'	</div>' +
-			'	<div class="rpht-option-section option-section-bottom">' +
+			'	<div class="rpht-option-section">' +
 			'		<label class="rpht-label checkbox-label" for="hideCommandWindowEnable">Hide command window</label>' +
 			'		<label class="switch"><input type="checkbox" id="hideCommandWindowEnable"><span class="rpht-slider round"></span></label>' +
 			'		<label class="rpht-label descript-label">Hides the command window when typing a command.</label>' +
+			'	</div>' +
+			'	<div class="rpht-option-section option-section-bottom">' +
+			'		<label class="rpht-label checkbox-label" for="enableTabSwitch">Enable tab switch hotkey</label>' +
+			'		<label class="switch"><input type="checkbox" id="enableTabSwitch"><span class="rpht-slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Press Alt + Shift + Left/Right to switch between tabs. ' +
+			'		This will not work if you have auto-sorting on in the UI options</label>' +
 			'	</div>' +
 			'</div>' +
 			'<h4>Chat Pinging</h4>' +
@@ -186,6 +172,46 @@ let chatModule = (function () {
 			</button>
 		</div>`
 
+	let chatSettings = {};
+	let chatRoomLogs = null;
+	let localStorageName = "chatSettings";
+	let isRoomMod = {};
+	let autoDismissTimer = null;
+	let autoJoinTimer = null;
+	let pingHighlightText = '';
+
+	function updateSetting(settingName, selector) {
+		let element = $(selector);
+
+		if (element.length < 1) {
+			return;
+		}
+
+		let value = null;
+		if (element[0].localName === "input" && element[0].type === "checkbox") {
+			value = $(selector).is(':checked')
+		}
+		else if (element[0].localName === "option") {
+			value = parseInt($(selector).val())
+		}
+		
+		chatSettings[settingName] = value;
+		saveSettings();
+	}
+
+	function setupSnapRoomList() {
+		for (idx in rph.roomsJoined) {
+			const room = rph.roomsJoined[idx] 
+			const roomCssName = getCssRoomName(room.roomname)
+			if (chatSettings.snapRoomList === true) {
+				$(`li.${room.user}_${roomCssName}`).click(() => {scrollToRoomList(roomCssName)})
+			}
+			else {
+				$._data($(`li.${room.user}_${roomCssName}`)[0], "events").click.pop();
+			}
+		}
+	}
+
 	function init() {
 		loadSettings()
 
@@ -196,35 +222,16 @@ let chatModule = (function () {
 
 		/* General Options */
 		$('#snapRoomListEnable').change(() => {
-			chatSettings.snapRoomList = $('#snapRoomListEnable').is(':checked')
-			saveSettings()
-
-			if (chatSettings.snapRoomList === true) {
-				for (idx in rph.roomsJoined) {
-					const room = rph.roomsJoined[idx] 
-					const roomCssName = getCssRoomName(room.roomname)
-					$(`li.${room.user}_${roomCssName}`).click(() => {scrollToRoomList(roomCssName)})
-				}
-			}
-			else {
-				for (idx in rph.roomsJoined) {
-					const room = rph.roomsJoined[idx] 
-					const roomCssName = getCssRoomName(room.roomname)
-					$._data($(`li.${room.user}_${roomCssName}`)[0], "events").click.pop();
-				}
-			}
+			updateSetting('snapRoomList', '#snapRoomListEnable');
+			setupSnapRoomList();
 		})
 
 		$('#chatColorSelection').change(() => {
-			let colorSelection = $('#chatColorSelection option:selected')
-			chatSettings.colorStylizing = parseInt(colorSelection.val())
-			saveSettings()
+			updateSetting('colorStyling', '#chatColorSelection option:selected');
 		})
 
 		$('#unreadMarkerSelection').change(() => {
-			let unreadSelection = $('#unreadMarkerSelection option:selected')
-			chatSettings.unreadMarkerSelection = parseInt(unreadSelection.val())
-			saveSettings()
+			updateSetting('unreadMarkerSelection', '#unreadMarkerSelection option:selected');
 		})
 
 		$('#chatmsgPaddingEnable').change(() => {
@@ -235,6 +242,18 @@ let chatModule = (function () {
 		$('#hideCommandWindowEnable').change(() => {
 			chatSettings.hideCommandWindow = $('#hideCommandWindowEnable').is(':checked')
 			saveSettings()
+		})
+
+		$(`#enableTabSwitch`).change(() => {
+			chatSettings.enableTabSwitch =  $('#enableTabSwitch').is(':checked')
+
+			if (chatSettings.enableTabSwitch === true) {
+				$(document).on('keydown', changeTab);
+			}
+			else  {
+				$(document).off('keydown', changeTab);
+			}
+			saveSettings();
 		})
 
 		/* Pinging Options */
@@ -349,10 +368,6 @@ let chatModule = (function () {
 			settingsModule.saveSettings(localStorageName, chatSettings)
 		})
 
-		if (chatSettings.joinFavorites || chatSettings.trackSession) {
-			autoJoinTimer = setInterval(autoJoiningHandler, AUTOJOIN_INTERVAL)
-		}
-
 		/* Die roller */
 		$('#dieRollButton').click(() => {
 			const DIE_COUNT = $('#rpht_dieRollerCount').val()
@@ -373,6 +388,7 @@ let chatModule = (function () {
 		})
 		
 		$(window).unload(function () {
+			chatRoomLogs.timestamp = Date.now()
 			settingsModule.saveSettings(chatLogsStorageName, chatRoomLogs)
 		});
 
@@ -429,6 +445,11 @@ let chatModule = (function () {
 		$("#room-management-dialog > div.inner > div").css('float', 'right')
 		$('iframe.group-iframe').css('width', 'calc(100% - 640px)')
 		$('iframe.group-iframe').css('height', '100%')
+
+		/* Kick off auto joining */
+		if (chatSettings.joinFavorites || chatSettings.trackSession) {
+			autoJoinTimer = setInterval(autoJoiningHandler, AUTOJOIN_INTERVAL)
+		}
 	}
 
 	/**
@@ -621,7 +642,7 @@ let chatModule = (function () {
 				case 2:
 					break;
 				case 1: 
-					$(`li.tab.tab-${getCssRoomName(thisRoom.props.name)}`).css('border-bottom', '4px solid #ADF')
+					$(`li.tab.tab-${getCssRoomName(thisRoom.props.name)}`).css('border-bottom', '4px solid #EEE')
 					/* Falling through intentionally */
 				default:
 					for (let roomTab of thisRoom.$tabs) {
@@ -992,6 +1013,44 @@ let chatModule = (function () {
 		$(`${elementPrefix}${roomName}`)[0].scrollIntoView()
 	}
 
+	function changeTab(e) {
+		if (e.altKey && e.shiftKey === false) {
+			return;
+		}
+
+		const FOCUS_TIMEOUT_MS = 100;
+		if (e.which == 37) {
+			let prevTab = $('ul.chat-tabs>li.active').prev();
+			if (prevTab.hasClass('thumb') === true) {
+				prevTab = $('ul.chat-tabs>li.active').parent().prev();
+			
+				if (prevTab.length > 0) { 
+					$(prevTab[0].children[1]).click();
+				}
+			}
+			else {
+				prevTab.click();
+			}
+			setTimeout(() => {$('textarea.active').focus();}, FOCUS_TIMEOUT_MS);
+			return false;
+		}
+		else if (e.which == 39) {
+			let nextTab = $('ul.chat-tabs>li.active').parent().next();
+			if (nextTab.length === 0) {
+				nextTab = $('ul.chat-tabs>li.active').next();
+			
+				if (nextTab.length > 0) { 
+					nextTab.click();
+				}
+			}
+			else {
+				$(nextTab[0].children[1]).click();
+			}
+			setTimeout(() => {$('textarea.active').focus();}, FOCUS_TIMEOUT_MS);
+			return false;
+		}
+	}
+
 	/** AUTO JOINING FUNCTIONS **********************************************/
 	/**
 	 * Handler for the auto-joining mechanism.
@@ -999,7 +1058,7 @@ let chatModule = (function () {
 	function autoJoiningHandler() {
 		/* Don't run this if there's no rooms yet. */
 		if (Object.keys(rph.rooms).length === 0) {
-			return
+			return;
 		}
 		/* If RPH's sessioning kicked in, clear the timeout and return. */
 		else if ($('#chat-tabs')[0].childNodes.length > 0) {
@@ -1012,6 +1071,7 @@ let chatModule = (function () {
 			clearTimeout(autoJoinTimer)
 			return;
 		}
+		
 		$('<div id="rpht-autojoin" class="inner" style="background: #333;">' +
 			'<p>Autojoining or restoring session in about 5 seconds.</p>' +
 			'<p>Press "Cancel" to stop.</p>' +
@@ -1180,6 +1240,7 @@ let chatModule = (function () {
 			'unreadMarkerSelection': 1,
 			'msgPadding': false,
 			'hideCommandWindow': false,
+			'enableTabSwitch': false,
 
 			'enablePings': true,
 			'pingNotify': false,
@@ -1208,6 +1269,7 @@ let chatModule = (function () {
 		$(`#unreadMarkerSelection option[value='${chatSettings.unreadMarkerSelection}']`).prop('selected', true)
 		$('#chatmsgPaddingEnable').prop("checked", chatSettings.msgPadding)
 		$('#hideCommandWindowEnable').prop("checked", chatSettings.hideCommandWindow)
+		$('#enableTabSwitch').prop("checked", chatSettings.enableTabSwitch)
 
 		$('#notifyPingEnable').prop("checked", chatSettings.enablePings)
 		$('#selfPingEnable').prop("checked", chatSettings.selfPing)
@@ -1230,6 +1292,13 @@ let chatModule = (function () {
 				'<option value="' + favRoomObj._id + '">' +
 				favRoomObj.user + ": " + favRoomObj.room + '</option>'
 			)
+		}
+
+		if (chatSettings.enableTabSwitch === true) {
+			$(document).on('keydown', changeTab);
+		}
+		else  {
+			$(document).off('keydown', changeTab);
 		}
 
 		generateHighlightStyle()

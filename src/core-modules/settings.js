@@ -110,10 +110,12 @@ let settingsModule = (function () {
 	/**
 	 * Exports settings into a JSON formatted string
 	 */
-		function exportSettings() {
-			markProblem('textarea#importExportTextarea', false)
-			return localStorage.getItem(SETTINGS_NAME)
-		}
+	function exportSettings() {
+		const settings = JSON.parse(localStorage.getItem(SETTINGS_NAME));
+		delete settings.chatLogs;
+		markProblem('textarea#importExportTextarea', false);
+		return JSON.stringify(settings, '\n', 4);
+	}
 	
 
 	/** 

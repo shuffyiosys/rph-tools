@@ -26,7 +26,7 @@ let rphToolsModule = (function () {
 		'.rpht-slider:before{position:absolute;content:"";height:16px;width:16px;left:4px;bottom:4px;background-color:#fff;-webkit-transition:.4s;transition:.4s}' +
 		'input:checked+.rpht-slider{background-color:#2196f3}' +
 		'input:focus+.rpht-slider{box-shadow:0 0 1px #2196f3}' +
-		'input:checked+.rpht-slider:before{-webkit-transform:translateX(26px);-ms-transform:translateX(26px);transform:translateX(26px)}' +
+		'input:checked+.rpht-slider:before{transform:translateX(26px)}' +
 		'.rpht-slider.round{border-radius:34px}' +
 		'.rpht-slider.round:before{border-radius:50%}' +
 		'.rpht-tooltip-common{position: absolute; bottom: 120px; left: 200px; width: auto; height: auto; color: #dedbd9; background: #303235; opacity: 0.9; padding: 10px;}' +

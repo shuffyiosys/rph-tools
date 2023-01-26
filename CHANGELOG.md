@@ -1,3 +1,19 @@
+RPH Tools (4.3.17)
+---------------
+##### Feature Updates
+* Changed switch chat tab command to ALT + Shift + Left/Right due to conflicting shortcut with move cursor left/right of a word
+* Made switch chat tab a toggeable action
+* Exporting settings no longer exports the chat logs
+
+RPH Tools (4.3.16)
+---------------
+##### Feature Updates
+* Added option to make the PM tabs listed vertically (requires a page refresh for the changes to take effect)
+* Added command to switch chat tabs using CTRL + Left/Right
+
+#### Known issues
+* PM coloring breaks if a status message (such as "User is typing...") shows up. It works once a new message comes in.
+
 RPH Tools (4.3.15)
 ---------------
 ##### Feature Updates
