@@ -606,7 +606,7 @@ let chatModule = (function () {
 			$('#diceRollerPopup').hide()
 		})
 		chatTextArea.unbind('keyup')
-		chatTextArea.bind('keydown', (ev) => {
+		chatTextArea.bind('keyup', (ev) => {
 			intputChatText(ev, User, thisRoom)
 		})
 		chatTextArea.on('input', () => {
@@ -1304,19 +1304,11 @@ let chatModule = (function () {
 		generateHighlightStyle()
 		rph.sounds.notify = new Audio(chatSettings.audioUrl)
 	}
-
-	function getHtml() {
-		return html
-	}
-
-	function toString() {
-		return 'Chat Module'
-	}
-
+	
 	return {
 		init: init,
 		loadSettings: loadSettings,
-		getHtml: getHtml,
-		toString: toString
+		getHtml: html,
+		moduleName: 'chat'
 	}
 }());

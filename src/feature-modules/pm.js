@@ -208,9 +208,7 @@ let pmModule = (function () {
 		}
 	}
 
-	/**
-	 * Adds an away status to a character
-	 */
+
 	function setPmAway() {
 		let userId = $('#pmNamesDroplist option:selected').val()
 		let name = $("#pmNamesDroplist option:selected").html()
@@ -235,9 +233,6 @@ let pmModule = (function () {
 			name, 'with message', awayMessages[userId].message)
 	}
 
-	/**
-	 * Removes an away status for a character
-	 */
 	function removePmAway(userId) {
 		if (!awayMessages[userId]) {
 			return
@@ -284,18 +279,10 @@ let pmModule = (function () {
 		}
 	}
 
-	function getHtml() {
-		return html
-	}
-
-	function toString() {
-		return 'PM Module'
-	}
-
 	return {
 		init: init,
 		loadSettings: loadSettings,
-		getHtml: getHtml,
-		toString: toString
+		getHtml: html,
+		moduleName: 'pm'
 	}
 }());

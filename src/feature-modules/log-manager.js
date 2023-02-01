@@ -485,7 +485,8 @@ function makeTextFile (text) {
 
 	return {
 		init: init,
-		getHtml: () => { return html; },
-		toString: () => { return `logManager`; }
+		loadSettings: () => { return;},
+		getHtml: html,
+		moduleName: `logManager`,
 	}
 }());

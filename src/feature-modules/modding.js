@@ -259,15 +259,7 @@ let moddingModule = (function () {
 	function getAlertWords() {
 		return settings.alertWords
 	}
-
-	function getHtml() {
-		return html
-	}
-
-	function toString() {
-		return 'Modding Module'
-	}
-
+	
 	return {
 		init: init,
 		emitModAction: emitModAction,
@@ -276,7 +268,7 @@ let moddingModule = (function () {
 		playAlert: playAlert,
 		loadSettings: loadSettings,
 		getAlertWords: getAlertWords,
-		getHtml: getHtml,
-		toString: toString
+		getHtml: html,
+		moduleName: 'modding'
 	}
 }());
