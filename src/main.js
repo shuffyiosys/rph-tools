@@ -7,6 +7,7 @@ $(function () {
 		chatModule,
 		pmModule,
 		moddingModule,
+		logManagerModule,
 		settingsModule,
 		aboutModule,
 	]

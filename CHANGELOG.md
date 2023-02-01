@@ -1,3 +1,11 @@
+RPH Tools (4.4.0)
+---------------
+#### Feature Updates
+* Merged RPH Log Manager into tools
+* Removed the following features due to redundancy or little use
+  * Self pinging. This was mostly useful for testing, but this can be done in the options
+  * Selecting how long notifications last
+
 RPH Tools (4.3.17)
 ---------------
 ##### Feature Updates

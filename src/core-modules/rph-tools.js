@@ -11,6 +11,7 @@ let rphToolsModule = (function () {
 		'.option-section-bottom{border-bottom:none;margin-bottom:0;}' +
 		'.rpht-label{padding-left: 0px;text-align:justify;display:inline-block;cursor:default;}' +
 		'.checkbox-label{font-weight:700;width:542px;cursor:pointer;}' +
+		'.other-input-label{font-weight: bold; width:522px; padding: 0px;}' +
 		'.descript-label{width:480px;margin-top:8px;}' +
 		'.text-input-label{width:400px;}' +
 		'.split-input-label {width: 300px;}' +
