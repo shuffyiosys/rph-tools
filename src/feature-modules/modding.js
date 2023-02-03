@@ -33,14 +33,14 @@ const  html = {
 						<button type="button" id="unbanButton" class="rpht-mod-button" style="background: #F00;" dataAction="unban">Unban</button>
 					</div>
 					<div>
-						<button type="button" id="addModButton" class="rpht-mod-button" dataAction="addMod">Add Mod</button><br>
-						<button type="button" id="removeModButton" class="rpht-mod-button" dataAction="removeMode">Remove Mod</button>
+						<button type="button" id="addModButton" class="rpht-mod-button" dataAction="add-mod">Add Mod</button><br>
+						<button type="button" id="removeModButton" class="rpht-mod-button" dataAction="remove-mod">Remove Mod</button>
 						<br>
 						<button type="button" id="resetPwButton" class="rpht-mod-button">Reset PW</button>
 					</div>
 					<div>
-						<button type="button" id="addOwnerButton" class="rpht-mod-button" dataAction="addOwner">Add Owner</button><br>
-						<button type="button" id="removeOwnerButton" class="rpht-mod-button" dataAction="removeOwner">Remove Owner</button>
+						<button type="button" id="addOwnerButton" class="rpht-mod-button" dataAction="add-owner">Add Owner</button><br>
+						<button type="button" id="removeOwnerButton" class="rpht-mod-button" dataAction="remove-owner">Remove Owner</button>
 					</div>
 				</div>
 
@@ -79,22 +79,20 @@ function init() {
 		}
 	})
 
-	$('#resetPwButton').click(() => {
-		let room = $('input#modRoomTextInput').val()
-
-		getUserByName($('input#modFromTextInput').val(), (user) => {
-			socket.emit('modify', {
-				room: room,
-				userid: user.props.id,
-				props: { pw: false }
-			})
-		})
+	$('#resetPwButton').click(async function () {
+		const room = $('input#modRoomTextInput').val();
+		const user = await getUserByName($('input#modFromTextInput').val());
+		socket.emit('modify-room', {
+		    room: room,
+		    userid: user.props.id,
+		    props: { pw: false }
+		});
 	})
 
 	$('#kickButton').click(modAction);
 	$('#banButton').click(modAction);
 	$('#unbanButton').click(modAction);
-	$('#modButton').click(modAction);
+	$('#addModButton').click(modAction);
 	$('#removeModButton').click(modAction);
 	$('#addOwnerButton').click(modAction);
 	$('#removeOwnerButton').click(modAction);
@@ -111,7 +109,7 @@ function init() {
 }
 
 function modAction(ev) {
-	const action = $(ev.target).attr('dataName');
+	const action = $(ev.target).attr('dataAction');
 	const vanityMap = getVanityNamesToIds();
 	let targets = $('#modTargetTextInput').val().replace(/\r?\n|\r/, '')
 	targets = targets.split(',')
@@ -127,8 +125,8 @@ function modAction(ev) {
 }
 
 async function emitModAction(action, targetName, modName, roomName, reasonMsg) {
-	const targetUser = getUserByName(targetName);
-	const modUser = getUserByName(modName);
+	const targetUser = await getUserByName(targetName);
+	const modUser = await getUserByName(modName);
 
 	let modMessage = ''
 	if (action === 'kick' || action === 'ban' || action === 'unban') {
@@ -148,7 +146,7 @@ function findUserAsMod(userObj) {
 		if (roomProps.mods.indexOf(userObj.props.id) > -1 ||
 		    roomProps.owners.indexOf(userObj.props.id) > -1)
 		{
-			addModRoomPair(userObj.props, roomname)
+			addModRoomPair(userObj.props, roomname);
 		}
 	})
 }

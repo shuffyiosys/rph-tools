@@ -484,7 +484,7 @@ let chatModule = (function () {
 
 		getUserById(room.userid, (User) => {
 			const roomCss = getCssRoomName(thisRoom.props.name)
-			const moddingModule = rphToolsModule.getModule('Modding Module')
+			const moddingModule = rphToolsModule.getModule('modding')
 			if (moddingModule !== null && isRoomMod[room.room]) {
 				moddingModule.addModRoomPair(User.props, thisRoom.props.name)
 			}

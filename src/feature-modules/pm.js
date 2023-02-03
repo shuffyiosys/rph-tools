@@ -97,26 +97,24 @@ function handlePm(data) {
 	if (account.ignores.indexOf(data.to) > -1) {
 		return;
 	}
-	rph.getPm({'from':data.from, 'to':data.to}, (pm) => {
-		getUserByName(pm.to.props.name, (user) => {
-			processPmMsg(user, data, pm)
-		})
-
+	rph.getPm({'from':data.from, 'to':data.to}, async function(pm) {
+		const user = await getUserByName(pm.to.props.name);
+		processPmMsg(user, data, pm);
 		if (pmSettings.notify) {
 			const PM_NOTIFY_TIME_MS = 5000;
 			displayNotification(
-				`${pm.to.props.name} sent a PM to you for ${pm.from.props.name}`,
-				PM_NOTIFY_TIME_MS
+			    `${pm.to.props.name} sent a PM to you for ${pm.from.props.name}`,
+			    PM_NOTIFY_TIME_MS
 			)
 		}
 
 		if (awayMessages[data.from] && awayMessages[data.from].enabled) {
 			awayMessages[data.from].usedPmAwayMsg = true;
 			socket.emit('pm', {
-				'from': data.from,
-				'to': data.to,
-				'msg': awayMessages[data.from].message,
-				'target': 'all'
+			    'from': data.from,
+			    'to': data.to,
+			    'msg': awayMessages[data.from].message,
+			    'target': 'all'
 			});
 		}
 	})
@@ -124,22 +122,18 @@ function handlePm(data) {
 
 function handlePmConfirmation(data) {
 	rph.getPm({'from':data.to, 'to':data.from}, async function(pm){
-		getUserByName(pm.from.props.name, processPmConfirmation);
-	})
-}
+		const user = await getUserByName(pm.from.props.name);
+		processPmMsg(user, data, pm);
 
-async function processPmConfirmation(user) {
-	processPmMsg(user, data, pm);
-
-	if (awayMessages[data.to] && awayMessages[data.to].enabled) {
-		$('#pmNamesDroplist option').filter(function () {
-			return this.value == data.to
-			})
-			.css("background-color", "")
-			.html(user.props.name)
-			awayMessages[data.to].enabled = false
-	}
-	return Promise.resolve(true)
+		if (awayMessages[data.to] && awayMessages[data.to].enabled) {
+			$('#pmNamesDroplist option')
+			    .filter(() => { return this.value == data.to})
+			    .css("background-color", "")
+			    .html(user.props.name)
+			awayMessages[data.to].enabled = false;
+		}
+		return Promise.resolve(true);
+	});
 }
 
 function handleAccountUsers() {
