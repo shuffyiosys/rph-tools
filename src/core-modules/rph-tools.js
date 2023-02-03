@@ -35,6 +35,7 @@ let rpht_css =
 		.rpht-close-btn{margin-left: 40px; width: 24px; cursor: pointer;}
 		.rpht-close-btn:hover{background: #CA7169;}
 		#diceRollerPopup button{width: 146px;}
+		.rpht-mod-button{width: 110px; margin-bottom: 0.5em;}
 	</style>`;
 
 function init (addonModules) {

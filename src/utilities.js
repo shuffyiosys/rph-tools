@@ -1,8 +1,3 @@
-/**
- * Marks an HTML element with red or white if there's a problem
- * @param {string} element Full selector of the HTML element to mark
- * @param {boolean} mark If the mark is for good or bad
- */
 function markProblem(element, mark) {
 	if (mark === true) {
 		$(element).css('background', '#FF7F7F')
@@ -11,58 +6,24 @@ function markProblem(element, mark) {
 	}
 }
 
-/**
- * Checks to see if an input is valid or not and marks it accordingly
- * @param {string} settingId Full selector of the HTML element to check
- * @param {string} setting What kind of setting is being checked
- * @return If the input is valid or not
- */
-function validateSetting(settingId, setting) {
-	let validInput = false
-	let input = $(settingId).val()
-
-	if (setting === "url") {
-		validInput = validateUrl(input)
-	}
-	else if (setting === 'color') {
-		input = input.replace('#', '')
-		validInput = validateColor(input)
-	}
-	markProblem(settingId, !validInput)
-	return validInput
+function validateColor(settingId, color) {
+	const pattern = new RegExp(/([0-9A-Fa-f]{6}$)|([0-9A-Fa-f]{3}$)/i)
+	const validInput = pattern.test(color);
+	markProblem(settingId, !validInput);
 }
 
-/**
- * Makes sure the color input is a valid hex color input
- * @param {string} color Color input
- * @returns If the color input is valid
- */
-function validateColor(color) {
-	let pattern = new RegExp(/([0-9A-Fa-f]{6}$)|([0-9A-Fa-f]{3}$)/i)
-	return pattern.test(color)
-}
-
-/**
- * Makes sure the URL input is valid
- * @param {string} url URL input
- * @returns If the URL input is valid
- */
-let validateUrl = function (url) {
+let validateUrl = function (settingId, url) {
+	const validInput = false;
 	if (url === '') {
-		return true
+		validInput = true
 	}
 	else {
 		let regexp = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/
-		return (regexp.test(url) === true)
+		validInput = regexp.test(url);
 	}
+	markProblem(settingId, !validInput);
 }
 
-/**
- * Adds an option to a select element with a value and its label
- * @param {string} value Value of the option element
- * @param {string} label Label of the option element
- * @param {object} droplist Which select element to add option to
- */
 function addToDroplist(value, label, droplist) {
 	let droplist_elem = $(droplist)
 	droplist_elem.append($('<option>', {
@@ -71,15 +32,6 @@ function addToDroplist(value, label, droplist) {
 	}))
 }
 
-/**
- * In an array of objects, return the first instance where a key matches the
- * value being searched.
- * @param {array} objArray Array of objects
- * @param {*} key Key to look for
- * @param {*} value Value of the key to match
- * @return Index of the first instance where the key matches the value, -1 
- *         otherwise.
- */
 function arrayObjectIndexOf(objArray, key, value) {
 	for (let i = 0; i < objArray.length; i++) {
 		if (objArray[i][key] === value) {
@@ -89,9 +41,6 @@ function arrayObjectIndexOf(objArray, key, value) {
 	return -1
 }
 
-/**
- * Sorts the account's username list to alphabetical order
- */
 function getSortedNames() {
 	let namesToIds = {}
 	account.users.forEach(function (userObj) {
@@ -170,31 +119,18 @@ function generateRngResult (command, message, seed) {
 function parsePostCommand(message) {
 	let command = ''
 	if (message.startsWith('/roll')) {
-		command = 'rng-roll'
+		command = 'rng-roll';
 	}
 	else if (message.startsWith('/coinflip')) {
-		command = 'rng-coinflip'
+		command = 'rng-coinflip';
 	}
 	else if (message.startsWith('/rps')) {
-		command = 'rng-rps'
+		command = 'rng-rps';
 	}
 	else if (message.startsWith('/me')){
-		command = 'me'
+		command = 'me';
 	}
 	return command
-}
-
-/**
- * Gets the list of vanity names and maps them to an ID
- */
-function getVanityNamesToIds() {
-	let vanityToIds = {}
-	for(let user in messenger.users){
-		let vanityName = messenger.users[user].props.vanity
-		if(vanityName)
-		vanityToIds[vanityName] = user
-	}
-	return vanityToIds
 }
 
 function parseRoll(rollArgs){
@@ -221,12 +157,11 @@ function getCssRoomName(roomName) {
 }
 
 function displayNotification(message, timeout) {
-	if (document.hidden) {
-		let notification = new Notification(message)
-		setTimeout(() => {
-			notification.close()
-		}, timeout)
+	if (document.hidden === false) {
+		return;
 	}
+	let notification = new Notification(message);
+	setTimeout(() => {notification.close()}, timeout);
 }
 
 function createTimestamp(time) {

@@ -1,5 +1,4 @@
 const pmModule = (function () {
-const PM_NOTIFY_TIME_MS = 5000;
 const localStorageName = "pmSettings";
 const html = {
 	tabId: 'pm-module',
@@ -104,6 +103,7 @@ function handlePm(data) {
 		})
 
 		if (pmSettings.notify) {
+			const PM_NOTIFY_TIME_MS = 5000;
 			displayNotification(
 				`${pm.to.props.name} sent a PM to you for ${pm.from.props.name}`,
 				PM_NOTIFY_TIME_MS
@@ -122,33 +122,35 @@ function handlePm(data) {
 	})
 }
 
-async function handlePmConfirmation(data) {
-	rph.getPm({'from':data.to, 'to':data.from}, function(pm){
-		getUserByName(pm.from.props.name, (user) => {
-			processPmMsg(user, data, pm)
-
-			if (awayMessages[data.to] && awayMessages[data.to].enabled) {
-				$('#pmNamesDroplist option').filter(function () {
-					return this.value == data.to
-					})
-					.css("background-color", "")
-					.html(user.props.name)
-					awayMessages[data.to].enabled = false
-			}
-		})
+function handlePmConfirmation(data) {
+	rph.getPm({'from':data.to, 'to':data.from}, async function(pm){
+		getUserByName(pm.from.props.name, processPmConfirmation);
 	})
+}
 
+async function processPmConfirmation(user) {
+	processPmMsg(user, data, pm);
+
+	if (awayMessages[data.to] && awayMessages[data.to].enabled) {
+		$('#pmNamesDroplist option').filter(function () {
+			return this.value == data.to
+			})
+			.css("background-color", "")
+			.html(user.props.name)
+			awayMessages[data.to].enabled = false
+	}
 	return Promise.resolve(true)
 }
 
 function handleAccountUsers() {
+	const WAIT_TIME_MS = 3000;
 	setTimeout(() => {
-		$('#pmNamesDroplist').empty()
-		let namesToIds = getSortedNames()
+		$('#pmNamesDroplist').empty();
+		let namesToIds = getSortedNames();
 		for (let name in namesToIds) {
-			addToDroplist(namesToIds[name], name, "#pmNamesDroplist")
+			addToDroplist(namesToIds[name], name, "#pmNamesDroplist");
 		}
-	}, 3000)
+	}, WAIT_TIME_MS);
 }
 
 function processPmMsg(user, data, pm) {
@@ -158,10 +160,10 @@ function processPmMsg(user, data, pm) {
 		pmMsgQuery = pm.$msgs[0].childNodes[pm.$msgs[0].childNodes.length - 2];
 	}
 
-	let nameQuery = $(pmMsgQuery.childNodes[1].childNodes[1])
-	let msgQuery = $(pmMsgQuery.childNodes[1].childNodes[2])
-	let pmCommand = parsePostCommand(data.msg)
-	pmMsgQuery.childNodes[1].childNodes[0].innerHTML = createTimestamp(data.date)
+	let nameQuery = $(pmMsgQuery.childNodes[1].childNodes[1]);
+	let msgQuery = $(pmMsgQuery.childNodes[1].childNodes[2]);
+	let pmCommand = parsePostCommand(data.msg);
+	pmMsgQuery.childNodes[1].childNodes[0].innerHTML = createTimestamp(data.date);
 
 	if (pmCommand.includes('rng')) {
 		msgQuery[0].innerHTML = ` ${generateRngResult(pmCommand, data.msg, data.date)} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`;

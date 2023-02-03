@@ -1,19 +1,5 @@
 let logManagerModule = (function () {
 const INDEXED_DB_VERS = 20;
-
-let request
-let logDb
-let fileContent
-let logDbDump = {}
-let logEntryDump = {}
-let logEntries = {}
-let idsToNames = {}
-
-let deleteTimer = null;
-let byUsername = false;
-
-
-const labelStyle = `padding-left: 0px; text-align:justify; display:inline-block; cursor:default;`;
 const spacingStyle = `width: 240px;`;
 const logContentStyle = `border:#888 solid 1px;border-radius:10px padding-bottom:12px;margin-bottom:12px; width: 100%; height: 720px; overflow: auto;`;
 let html = {
@@ -42,7 +28,7 @@ let html = {
 				<label class="switch"><input type="checkbox" id="reverseNamesInput"><span class="rpht-slider round"></span></label>
 			</div>
 			<p style="line-height: 2em;">
-				<label style="${labelStyle} ${spacingStyle}"></label>
+				<label class="rpht-label" style="${spacingStyle}"></label>
 				<button id="getLogsButton">Get logs</button>
 			</p>
 		</div>
@@ -67,11 +53,11 @@ let html = {
 			</div>
 			<hr style="margin-top: 20px;" />
 			<p><strong>View log</strong></p><br />
-			<label id="logFirstName" style="${labelStyle} ${spacingStyle}">Others name </label><select
+			<label id="logFirstName" class="rpht-label" style="${spacingStyle}">Others name </label><select
 				style="${spacingStyle}" id="nameOneDropList"></select>
 			<a id="yourProfileLink" style="margin-left: 10px; display: none;" target="_blank">See
 				profile</a><br /><br />
-			<label id="logSecondName" style="${labelStyle} ${spacingStyle}">Your name </label><select
+			<label id="logSecondName" class="rpht-label" style="${spacingStyle}">Your name </label><select
 				style="${spacingStyle}" id="nameTwoDropList"></select>
 			<a id="otherProfileLink" style="margin-left: 10px; display: none;" target="_blank">See
 				profile</a><br /><br />
@@ -79,6 +65,16 @@ let html = {
 		</div>
 		</div>`
 }
+
+let request = null;
+let logDb = null;
+let fileContent = null;
+let logDbDump = {};
+let logEntryDump = {};
+let logEntries = {};
+let idsToNames = {};
+let deleteTimer = null;
+let byUsername = false;
 
 function init() {
 	$('#logFileInput').change(handleFileInput);
@@ -109,14 +105,12 @@ function handleFileInput() {
 	let file = $("#logFileInput")[0].files[0];
 	(async () => {
 		fileContent = await file.text();
-		loadLogFile(fileContent)
+		loadLogFile(fileContent);
 	})();
 }
 
 function handleDelete(elementId, defaultText, deleteFunction) {
-	if (typeof(deleteFunction) !== 'function') {
-		return;
-	}
+	if (typeof(deleteFunction) !== 'function') { return; }
 
 	if (deleteTimer === null) {
 		$(elementId).html('Press again to delete...');
@@ -137,14 +131,14 @@ function fillInLogContents() {
 	const otherName = $('#nameTwoDropList option:selected').val()
 	const entry = logEntries[username][otherName]
 
-	$('#log-contents').empty()
+	$('#log-contents').empty();
 	for (let timestamp in entry) {
 		$('#log-contents').append(`<p>${createTimestamp(parseInt(timestamp))} ${entry[timestamp].author}: ${entry[timestamp].msg}</p>`)
 		logEntryDump[entry[timestamp].dBkey] = logDbDump[entry[timestamp].dBkey]
 	}
 
 	$('#downloadPlainTextLink').attr('href', makeTextFile($('#log-contents').html().replace(/<p>/g, '').replace(/<\/p>/g, '\n')));
-	$('#downloadPlainTextLink').attr('download', `${username}-${otherName}-log.txt`)
+	$('#downloadPlainTextLink').attr('download', `${username}-${otherName}-log.txt`);
 
 	$('#downloadJsonLink').attr('href', makeTextFile(JSON.stringify(logEntryDump, null, 4)));
 	$('#downloadJsonLink').attr('download', `${username}-${otherName}-log.json`);
@@ -178,7 +172,7 @@ function addToDroplist(value, label, droplist) {
 	droplist_elem.append($('<option>', {
 		value: value,
 		text: label
-	}))
+	}));
 }
 
 const toggleableElements = [
