@@ -1,6 +1,6 @@
-let moddingModule = (function () {
-const  localStorageName = "modSettings";
-const  html = {
+const moddingModule = (function () {
+const localStorageName = "modSettings";
+const html = {
 	tabId: 'modding-module',
 	tabName: 'Modding',
 	tabContents:

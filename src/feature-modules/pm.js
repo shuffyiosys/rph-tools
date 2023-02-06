@@ -46,22 +46,6 @@ const html = {
 let pmSettings = {};
 let awayMessages = {};
 
-function saveSetting(ev) {
-	const targetWidget = $(ev.target);
-	const dataName = targetWidget.attr('dataName');
-
-	if(dataName.length === 0) { return; }
-
-	if (targetWidget.attr('type') === 'checkbox') {
-		pmSettings[dataName] = targetWidget.is(':checked');
-	}
-	else if (targetWidget.attr('type') === 'text') {
-		pmSettings[dataName] = targetWidget.val();
-	}
-
-	settingsModule.saveSettings(localStorageName, pmSettings);
-}
-
 function init() {
 	loadSettings()
 
@@ -207,6 +191,22 @@ function removePmAway() {
 		$("#pmNamesDroplist option:selected").css("background-color", "");
 		$('input#awayMessageTextbox').val("");
 	}
+}
+
+function saveSetting(ev) {
+	const targetWidget = $(ev.target);
+	const dataName = targetWidget.attr('dataName');
+
+	if(dataName.length === 0) { return; }
+
+	if (targetWidget.attr('type') === 'checkbox') {
+		pmSettings[dataName] = targetWidget.is(':checked');
+	}
+	else if (targetWidget.attr('type') === 'text') {
+		pmSettings[dataName] = targetWidget.val();
+	}
+
+	settingsModule.saveSettings(localStorageName, pmSettings);
 }
 
 function loadSettings() {
