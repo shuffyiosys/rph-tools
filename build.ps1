@@ -1,3 +1,4 @@
+md -Force .\output | Out-Null
  Get-Content  .\src\header.js,`
               .\src\utilities.js,`
               .\src\custom.js,`

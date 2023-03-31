@@ -182,29 +182,31 @@ let pmModule = (function () {
 	}
 	
 	function processPmMsg(user, data, pm) {
-		let pmMsgQuery = pm.$msgs[0].childNodes[pm.$msgs[0].childNodes.length - 1]
-
-		if(pmMsgQuery.childNodes[1]) {
-			let nameQuery = $(pmMsgQuery.childNodes[1].childNodes[1])
-			let msgQuery = $(pmMsgQuery.childNodes[1].childNodes[2])
-			let pmCommand = parsePostCommand(data.msg)
-			pmMsgQuery.childNodes[1].childNodes[0].innerHTML = createTimestamp(data.date)
+		let pmMsgQuery = pm.$msgs[0].childNodes[pm.$msgs[0].childNodes.length - 1];
+		const classes = $(pmMsgQuery).attr('class').split(' ');
+		if (classes[0] === 'typing-notify') {
+			pmMsgQuery = pm.$msgs[0].childNodes[pm.$msgs[0].childNodes.length - 2];
+		}
 	
-			if (pmCommand.includes('rng')) {
-				msgQuery[0].innerHTML = ` ${generateRngResult(pmCommand, data.msg, data.date)} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`
-				nameQuery[0].innerHTML = `${user.props.name}`
-			}
-			else if (pmCommand === 'me') {
-				nameQuery[0].innerHTML = `${user.props.name} `
-			}
-			else {
-				nameQuery.html(`&nbsp;${user.props.name}:&nbsp;`)
-			}
-		
-			nameQuery.attr('style', `color: #${user.props.color[0]}`)
-			if (pmSettings.colorText) {
-				msgQuery.attr('style', `color: #${user.props.color[0]}`)
-			}
+		let nameQuery = $(pmMsgQuery.childNodes[1].childNodes[1]);
+		let msgQuery = $(pmMsgQuery.childNodes[1].childNodes[2]);
+		let pmCommand = parsePostCommand(data.msg);
+		pmMsgQuery.childNodes[1].childNodes[0].innerHTML = createTimestamp(data.date);
+	
+		if (pmCommand.includes('rng')) {
+			msgQuery[0].innerHTML = ` ${generateRngResult(pmCommand, data.msg, data.date)} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`;
+			nameQuery[0].innerHTML = `${user.props.name}`;
+		}
+		else if (pmCommand === 'me') {
+			nameQuery[0].innerHTML = `${user.props.name} `;
+		}
+		else {
+			nameQuery.html(`&nbsp;${user.props.name}:&nbsp;`);
+		}
+	
+		nameQuery.attr('style', `color: #${user.props.color[0]}`);
+		if (pmSettings.colorText) {
+			msgQuery.attr('style', `color: #${user.props.color[0]}`);
 		}
 	}
 

@@ -1,3 +1,8 @@
+RPH Tools (4.3.18)
+---------------
+##### Bug Fixes
+* Fixed an issue where PM statuses (e.g. "User is typing") causes issues with PM message processing
+
 RPH Tools (4.3.17)
 ---------------
 ##### Feature Updates

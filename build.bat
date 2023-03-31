@@ -1,4 +1,5 @@
 @echo off
+if not exist ".\output" mkdir output
 copy /B src\header.js +^
     src\utilities.js +^
     src\custom.js +^
