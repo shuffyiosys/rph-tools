@@ -64,11 +64,11 @@ const html = {
 			</div>
 			<div class="rpht-option-section">
 				<p>Names to be pinged (comma separated)</p>
-				<textarea id="pingNames" rows="8" class="rpht_textarea" dataName="triggers" dataType="word-list"> </textarea>
+				<textarea id="pingNames" rows="8" class="rpht_textarea" dataName="triggers" data-type="word-list"> </textarea>
 			</div>
 			<div class="rpht-option-section">
 				<label><strong>Ping sound URL</strong></label><br>
-				<input type="text" class="rpht-long-input" id="pingURL" dataName="audioUrl" dataType="audio-url"><br><br>
+				<input type="text" class="rpht-long-input" id="pingURL" dataName="audioUrl" data-type="url"><br><br>
 				<label class="rpht-label descript-label">URL to an audio file, or leave blank for no sound</label>
 			</div>
 			<div class="rpht-option-section">
@@ -83,8 +83,8 @@ const html = {
 			</div>
 			<div class="rpht-option-section">
 				<h4>Ping styling</h4>
-				<label class="rpht-label text-input-label">Text Color</label><input type="text" class="rpht-short-input" id="pingTextColor" value="#000" dataName="color" dataType="color"><br /><br />
-				<label class="rpht-label text-input-label">Highlight</label><input type="text" class="rpht-short-input" id="pingHighlightColor" value="#FFA" dataName="highlight" dataType="color"><br><br>
+				<label class="rpht-label text-input-label">Text Color</label><input type="text" class="rpht-short-input" id="pingTextColor" value="#000" dataName="color" data-type="color"><br /><br />
+				<label class="rpht-label text-input-label">Highlight</label><input type="text" class="rpht-short-input" id="pingHighlightColor" value="#FFA" dataName="highlight" data-type="color"><br><br>
 				<label class="rpht-label checkbox-label" style="font-weight:initial;" for="pingBoldEnable">Add <strong>bold</strong></label>
 				<label class="switch"><input type="checkbox" id="pingBoldEnable"  dataName="bold"><span class="rpht-slider round"></span></label><br><br>
 				<label class="rpht-label checkbox-label" style="font-weight:initial;" for="pingItalicsEnable">Add <em>Italics</em></label>
@@ -150,22 +150,12 @@ const DICE_ROLL_POPUP_HTML = `<div id="diceRollerPopup" class="rpht-tooltip-comm
 	</div>`;
 
 let chatSettings = {};
-let chatRoomLogs = null;
+let chatRoomLogs = {};
 let localStorageName = "chatSettings";
 let isRoomMod = new Set();
 let autoDismissTimer = null;
 let autoJoinTimer = null;
 let pingHighlightText = '';
-
-function setupSnapRoomList(room) {
-	const roomCssName = getCssRoomName(room.roomname);
-	if (chatSettings.snapRoomList === true) {
-		$(`li.${room.user}_${roomCssName}`).on('click', scrollToRoom);
-	}
-	else {
-		$(`li.${room.user}_${roomCssName}`).off('click', scrollToRoom);
-	}
-}
 
 function init() {
 	loadSettings();
@@ -193,25 +183,25 @@ function init() {
 			$(document).off('keydown', changeTab);
 		}
 	})
-
+	console.log(`Doing stuff with pinging`)
 	/* Pinging Options */
 	$('#notifyPingEnable').change(saveSetting);
 	$('#notifyNotificationEnable').change(saveSetting);
 	$('#selfPingEnable').change(saveSetting);
 
-	$('#pingNames').blur(saveSetting);
-	$('#pingURL').blur(saveSetting);
-	$('#pingTextColor').blur(saveSetting);
-	$('#pingHighlightColor').blur(saveSetting);
+	$('#pingNames').on('blur', saveSetting);
+	$('#pingURL').on('blur', saveSetting);
+	$('#pingTextColor').on('blur', saveSetting);
+	$('#pingHighlightColor').on('blur', saveSetting);
 	$('#pingBoldEnable').change(saveSetting);
 	$('#pingItalicsEnable').change(saveSetting);
 	$('#pingExactMatch').change(saveSetting);
 	$('#pingCaseSense').change(saveSetting);
 
-	$('#pingPreviewInput').keyup(previewPing);
+	$('#pingPreviewInput').on('keyup', previewPing);
 
 	/* Session Options */
-	$('#trackSession').click(() => {
+	$('#trackSession').click((ev) => {
 		saveSetting(ev);
 		if (chatSettings.trackSession) {
 			chatSettings.session = rph.roomsJoined;
@@ -236,13 +226,14 @@ function init() {
 		const DIE_COUNT = $('#rpht_dieRollerCount').val()
 		const DIE_SIDES = $('#rpht_dieRollerSides').val()
 		$(`textarea.${$('li.tab.active')[0].className.split(' ')[2]}.active`).val(`/roll ${DIE_COUNT}d${DIE_SIDES}`)
-		$(`textarea.${$('li.tab.active')[0].className.split(' ')[2]}.active`).trigger({type: 'keydown', which: 13, keyCode: 13})
-		$('#diceRollerPopup').hide()
+		inputRng();
+		$('#diceRollerPopup').hide();
 	})
 
 	$('#coinFlipButton').click(() => {
 		$(`textarea.${$('li.tab.active')[0].className.split(' ')[2]}.active`).val(`/coinflip`)
 		$(`textarea.${$('li.tab.active')[0].className.split(' ')[2]}.active`).trigger({type: 'keydown', which: 13, keyCode: 13})
+		inputRng();
 		$('#diceRollerPopup').hide()
 	})
 
@@ -273,7 +264,7 @@ function init() {
 				let message = messages[idx];
 				if ($(message.children[0].children[0]).attr('data-userid') == msgData.userid) {
 					message.children[0].children[0].innerHTML = createTimestamp(msgData.time);
-					processMsg(thisRoom, msgData, message, isRoomMod[msgData.room]);
+					processMsg(thisRoom, msgData, message);
 					break;
 				}
 			}
@@ -310,10 +301,23 @@ function init() {
 		const AUTOJOIN_INTERVAL_MS = 2000;
 		autoJoinTimer = setInterval(autoJoiningHandler, AUTOJOIN_INTERVAL_MS)
 	}
+
+	setupChatButtons();
+}
+
+function setupSnapRoomList(room) {
+	const roomCssName = getCssRoomName(room.roomname);
+	if (chatSettings.snapRoomList === true) {
+		$(`li.${room.user}_${roomCssName}`).on('click', scrollToRoom);
+	}
+	else {
+		$(`li.${room.user}_${roomCssName}`).off('click', scrollToRoom);
+	}
 }
 
 function roomSetup(room) {
-	let thisRoom = getRoom(room.room)
+	const roomName = room.room;
+	let thisRoom = getRoom(room.room);
 
 	/* This is to filter out double room leaving. */
 	thisRoom.userLeave = (function () {
@@ -326,18 +330,18 @@ function roomSetup(room) {
 	}());
 
 	const NUM_USERS = account.userids.length;
-	for (let idx = 0; idx < NUM_USERS && !isRoomMod[room.room]; idx++) {
+	for (let idx = 0; idx < NUM_USERS && isRoomMod.has(roomName) === false; idx++) {
 		if (thisRoom.props.mods.indexOf(account.userids[idx]) > -1 ||
 			thisRoom.props.owners.indexOf(account.userids[idx]) > -1) {
-			isRoomMod[room.room] = true;
+			isRoomMod.add(roomName);
 			break;
 		}
 	}
 
 	getUserById(room.userid, (User) => {
-		const roomCss = getCssRoomName(thisRoom.props.name);
-		if (isRoomMod[room.room]) {
-			moddingModule.addModRoomPair(User.props, thisRoom.props.name);
+		const roomCss = getCssRoomName(roomName);
+		if (isRoomMod.has(roomName)) {
+			moddingModule.addModRoomPair(User.props, roomName);
 		}
 
 		$(`li.${User.props.id}_${roomCss}`).click(() => {
@@ -352,66 +356,65 @@ function roomSetup(room) {
 		resizeChatTabs();
 	})
 
-	if ((thisRoom.props.name in chatRoomLogs) === false) {
-		chatRoomLogs[thisRoom.props.name] = [];
+	if ((roomName in chatRoomLogs) === false) {
+		chatRoomLogs[roomName] = [];
 	}
-	chatSettings.session = rph.roomsJoined
+	chatSettings.session = rph.roomsJoined;
 	settingsModule.saveSettings(localStorageName, chatSettings);
 }
 
 function setupRoomTabs(User, roomCss) {
-	const userId = User.props.id
-	const username = User.props.name
-	const color = User.props.color[0]
-	const buttonCommonStyle = "cursor:pointer; float: right; width: 21px; height: 21px;";
+	const classSelector = `${User.props.id}_${roomCss}`;
+	const username = User.props.name;
+	const color = User.props.color[0];
 
-	$(`li.${userId}_${roomCss}`).prepend(`<p style="font-size: x-small; height:16px; margin-top: -10px;">${username}</p>`)
-	$(`textarea.${userId}_${roomCss}`).prop('placeholder', `Post as ${username}`)
-	$(`textarea${userId}_${roomCss}`).css('color', `${color}`)
-	$(`div.${userId}_${roomCss} .user-for-textarea span`).css('overflow', 'hidden')
-	$(`div.${userId}_${roomCss} .user-for-textarea div`)
-		.css('width', '234px')
-		.append(`<button class="${userId}_${roomCss} roller-button" style="cursor:pointer; float: right; width: auto; height: 21px;" title="Dice roller">🎲</button>`)
-		.append(`<button class="${userId}_${roomCss} bold-button" style="${buttonCommonStyle} font-weight: bold;" title="Bold selection">B</button>`)
-		.append(`<button class="${userId}_${roomCss} italics-button" style="${buttonCommonStyle} font-style: italic;" title="Italics selection">I</button>`)
-		.append(`<button class="${userId}_${roomCss} linethrough-button" style="${buttonCommonStyle} text-decoration: line-through;" title="Linethrough selection">S</button>`)
-		.append(`<button class="${userId}_${roomCss} spoiler-button" style="${buttonCommonStyle} font-style: italic;" title="Spoiler selection"><span class="spoiler">S</span></button>`)
-		.append(`<button class="${userId}_${roomCss} superscript-button" style="${buttonCommonStyle} font-style: italic;" title="Superscript selection"><sup>S</sup></button>`)
-		.append(`<button class="${userId}_${roomCss} subscript-button" style="${buttonCommonStyle} font-size: smaller;" title="Subscript selection"><sub>S</sub></button>`)
-	$(`button.${userId}_${roomCss}.roller-button`).click(()=> {
-		$('#diceRollerPopup').toggle()
-	})
-	$(`button.${userId}_${roomCss}.bold-button`).click(()=> {
-		styleSelection(`${userId}_${roomCss}`, 'bold');
-	})
-	$(`button.${userId}_${roomCss}.italics-button`).click(()=> {
-		styleSelection(`${userId}_${roomCss}`, 'italics');
-	})
-	$(`button.${userId}_${roomCss}.linethrough-button`).click(()=> {
-		styleSelection(`${userId}_${roomCss}`, 'linethrough');
-	})
-	$(`button.${userId}_${roomCss}.spoiler-button`).click(()=> {
-		styleSelection(`${userId}_${roomCss}`, 'spoiler');
-	})
-	$(`button.${userId}_${roomCss}.subscript-button`).click(()=> {
-		styleSelection(`${userId}_${roomCss}`, 'sub');
-	})
-	$(`button.${userId}_${roomCss}.superscript-button`).click(()=> {
-		styleSelection(`${userId}_${roomCss}`, 'super');
-	})
-
+	$(`li.${classSelector}`).prepend(`<p style="font-size: x-small; height:16px; margin-top: -10px;">${username}</p>`)
+	$(`textarea.${classSelector}`).prop('placeholder', `Post as ${username}`)
+	$(`textarea${classSelector}`).css('color', `${color}`)
+	$(`div.${classSelector} .user-for-textarea span`).css('overflow', 'hidden')
 	if (chatSettings.snapRoomList === true) {
-		$(`li.${room.user}_${roomCssName}`).on('click', scrollToRoom);
+		$(`li.${classSelector}`).on('click', scrollToRoom);
 	}
 }
 
-function styleSelection(textareaClass, styleType) {
-	const chatTextbox = $(`textarea.${textareaClass}`)[0]
+function setupChatButtons() {
+	$(`#chat-bottom`).prepend(`<div id="rpht-chat-buttons"></div>`)
+	const buttonContainer = $(`div#rpht-chat-buttons`);
+	const buttonCommonStyle = "cursor:pointer; float: right; width: 21px; height: 21px;";
+
+	buttonContainer
+	    .css(`position`, `absolute`)
+	    .css(`margin-top`, `22px`)
+	    .css(`z-index`, `1`)
+	    .append(`<button class="roller-button" style="cursor:pointer; float: right; width: auto; height: 21px;" title="Dice roller">🎲</button>`)
+	    .append(`<button style="${buttonCommonStyle} font-weight: bold;" title="Bold selection" data-type="bold">B</button>`)
+	    .append(`<button style="${buttonCommonStyle} font-style: italic;" title="Italics selection" data-type="italics">I</button>`)
+	    .append(`<button style="${buttonCommonStyle} text-decoration: line-through;" title="Linethrough selection" data-type="linethrough">S</button>`)
+	    .append(`<button style="${buttonCommonStyle} font-style: italic;" title="Spoiler selection" data-type="spoiler"><span class="spoiler">S</span></button>`)
+	    .append(`<button style="${buttonCommonStyle} font-style: italic;" title="Superscript selection" data-type="super"><sup>S</sup></button>`)
+	    .append(`<button style="${buttonCommonStyle} font-size: smaller;" title="Subscript selection" data-type="sub"><sub>S</sub></button>`)
+
+	$(`button.roller-button`).click(()=> {
+		$('#diceRollerPopup').toggle()
+	})
+
+	let styleButtons = $(`#rpht-chat-buttons`).children().toArray();
+	styleButtons.shift();
+	styleButtons.forEach(selector => {
+		$(selector).on('click', stylizeSelection);
+	})
+}
+
+function stylizeSelection(event) {
+	const activeRoomCss = $(`ul.chat-tabs > li.active`)[0].classList[2];
+	const styleType = $(event.target).attr('data-type');
+
+	const chatTextbox = $(`textarea.${activeRoomCss}`)[0]
 	const start = chatTextbox.selectionStart
 	const end = chatTextbox.selectionEnd
-	let tag = ''
+	let tag = '';
 	if( styleType == 'bold') { tag = '**' }
-	if( styleType == 'italics') { tag = '//' }
+	if( styleType == 'italics') { tag = '//' }	
 	if( styleType == 'linethrough') { tag = '--' }
 	if( styleType == 'spoiler') { tag = '[spoiler]' }
 	if( styleType == 'sub') { tag = 'vv' }
@@ -437,13 +440,15 @@ function styleSelection(textareaClass, styleType) {
 		chatTextbox.value += ' '
 	}
 
-	chatTextbox.value += original.substring(end)
-	$(`textarea.${textareaClass}`).focus()
+	chatTextbox.value += original.substring(end);
+
+	console.log(chatTextbox.value, tag);
+	$(`textarea.${activeRoomCss}`).focus();
 	if (start != end) {
-		$(`textarea.${textareaClass}`)[0].setSelectionRange(start + tag.length, end + tag.length)
+		$(`textarea.${activeRoomCss}`)[0].setSelectionRange(start + tag.length, end + tag.length)
 	}
 	else {
-		$(`textarea.${textareaClass}`)[0].setSelectionRange(start + tag.length, start + tag.length)
+		$(`textarea.${activeRoomCss}`)[0].setSelectionRange(start + tag.length, start + tag.length)
 	}
 }
 
@@ -459,16 +464,17 @@ function setupTextboxInput(User, roomCss, thisRoom) {
 		intputChatText(ev, User, thisRoom)
 	})
 	chatTextArea.on('input', () => {
-		const chatInput = chatTextArea.val().trim()
-		$('#chatCommandTooltip').hide()
-		if (chatInput[0] === '/' && chatSettings.hideCommandWindow == false) {
-			const commandTable = buildComamndTable(chatTextArea.val().trim())
-			$('#chatCommandTooltip').html(commandTable).show()
+		const chatInput = chatTextArea.val().trim();
+		$('#chatCommandTooltip').hide();
+		if (chatSettings.hideCommandWindow === true && chatInput[0] === '/') {
+			const commandTable = buildComamndTable(chatInput);
+			$('#chatCommandTooltip').html(commandTable).show();
 		}
 	})
 }
 
-async function processMsg(thisRoom, msgData, msgHtml, isMod) {
+async function processMsg(thisRoom, msgData, msgHtml) {
+	const roomName = thisRoom.props.name;
 	let contentQuery = $(msgHtml.children[1].children[0]);
 	/* If the message was an action, switch the query to where it really is */
 	if (msgHtml.className.includes('action')) {
@@ -485,10 +491,10 @@ async function processMsg(thisRoom, msgData, msgHtml, isMod) {
 		contentQuery.removeAttr('style');
 	}
 
-	if (!thisRoom.active && msgData.room === thisRoom.props.name) {
+	if (!thisRoom.active && msgData.room === roomName) {
 		switch(chatSettings.unreadMarkerSelection) {
 			case 1: 
-				$(`li.tab.tab-${getCssRoomName(thisRoom.props.name)}`).css('border-bottom', '4px solid #EEE')
+				$(`li.tab.tab-${getCssRoomName(roomName)}`).css('border-bottom', '4px solid #EEE')
 				/* Falling through intentionally */
 			case 0:
 				for (let roomTab of thisRoom.$tabs) {
@@ -500,14 +506,13 @@ async function processMsg(thisRoom, msgData, msgHtml, isMod) {
 		}
 	}
 
-	const user = await getUserById(msgData.userid);
 	let newMsgLines = contentLines.slice(contentLines.length - msgLineCount)
 
 	for (let msgIdx = 0; msgIdx < newMsgLines.length; msgIdx++) {
 		if (newMsgLines[msgIdx].indexOf('\u200b') === -1) {
 			continue
 		}
-		newMsgLines[msgIdx] = processRNG(newMsgLines[msgIdx]);
+		newMsgLines[msgIdx] = processRNG(newMsgLines[msgIdx], msgData.time);
 	}
 
 	let newMsg = ``
@@ -517,15 +522,15 @@ async function processMsg(thisRoom, msgData, msgHtml, isMod) {
 	newMsg += `${newMsgLines.join('<br>')}`;
 
 	if (!msgData.buffer) {
-		newMsg = processPings(msgData, newMsg);
+		newMsg = processPings(msgData, newMsg, isRoomMod.has(roomName));
 	}
 
 	contentQuery.html(`${prevMsgs.join('<br>')} ${newMsg}`);
-	applyColoring(contentQuery);
-	updateChatLog(thisRoom.props.name, msgHtml.innerHTML);
+	applyColoring(contentQuery, msgData.userid);
+	updateChatLog(roomName, msgHtml.innerHTML);
 }
 
-function processRNG(msgLine) {
+function processRNG(msgLine, timestamp) {
 	const RNG_TIMEOUT_MS = 30000;
 	const SEED = msgLine.split('\u200b')[1]
 	const MSG_CHUNKS = msgLine.split(/ /g)
@@ -549,7 +554,7 @@ function processRNG(msgLine) {
 	if (validResult === false) {
 		msgLine += ` <span style="background:#F44; color: #FFF;" title="Do not use this result">&#9746;</span>`
 	}
-	else if (msgData.time - SEED > (RNG_TIMEOUT_MS)) {
+	else if (timestamp - SEED > (RNG_TIMEOUT_MS)) {
 		msgLine += ` <span style="background:#FFD800; color: #000;" title="This result is outdated">&#9072;</span>`
 	}
 	else {
@@ -558,13 +563,11 @@ function processRNG(msgLine) {
 	return msgLine;
 }
 
-function processPings(msgData, message) {
+function processPings(msgData, message, isMod) {
 	const selfMsg = account.userids.includes(msgData.userid);
-	if (selfMsg === true) {
-		return message;
-	}
+	if (selfMsg === true) {	return message;	}
 
-	let notificationTrigger = 0
+	let notificationTrigger = 0;
 	if (isMod) {
 		let alertWords = moddingModule.getAlertWords();
 		let alertRegex = matchPing(message, alertWords, false, true);
@@ -589,6 +592,7 @@ function processPings(msgData, message) {
 		}
 	}
 
+	let thisRoom = getRoom(msgData.room);
 	if (thisRoom.active === false && notificationTrigger > 0) {
 		let background = (notificationTrigger === 2) ? '#F00' : chatSettings.highlight;
 		let textColor = (notificationTrigger === 2) ? '#FFF' : chatSettings.color;
@@ -602,7 +606,8 @@ function processPings(msgData, message) {
 	return message;
 }
 
-function applyColoring(contentQuery) {
+async function applyColoring(contentQuery, userId) {
+	const user = await getUserById(userId);
 	if (chatSettings.colorStylizing == 0) {
 		const CHILD_NODE_COUNT = contentQuery[0].childNodes.length;
 		for(let i = 0; i < CHILD_NODE_COUNT; i++) {
@@ -620,6 +625,8 @@ function applyColoring(contentQuery) {
 		contentQuery[0].className = classString.trim();
 		contentQuery.attr('style', styleString);
 	}
+
+	return Promise.resolve(true);
 }
 
 function updateChatLog(roomName, message) {
@@ -631,15 +638,15 @@ function updateChatLog(roomName, message) {
 }
 
 
-function previewPing(ev) {
-	let msg = $('#pingPreviewInput').val()
-	let testRegex = matchPing(msg)
+function previewPing() {
+	let msg = $('#pingPreviewInput').val();
+	let testRegex = matchPing(msg);
 	if (testRegex !== null) {
 		msg = msg.replace(testRegex, `<span style="${pingHighlightText}">${msg.match(testRegex)}</span>`)
 		rph.sounds.notify.play()
-		$(ev.target).html(` &nbsp;${msg}`);
+		$('#pingPreviewText').html(` &nbsp;${msg}`)
 	} else {
-		$(ev.target).html(` No match`);
+		$('#pingPreviewText').html(` No match`)
 	}
 }
 
@@ -831,6 +838,21 @@ function parseSlashCommand(inputTextBox, Room, User) {
 	}
 }
 
+function inputRng() {
+	const activeRoomCss = $('li.tab.active')[0].className.split(' ')[2].split('_');
+	let roomName = $(`div.room-header-${activeRoomCss[1]}`).children()[0].children[1].innerText;
+
+	if( $(`div.room-header-${activeRoomCss[1]}`).children()[0].children[1].children[0].innerText === "true") {
+		roomName = roomName.substr(4);
+	}
+
+	getUserById(activeRoomCss[0], (User) => {
+		const event = {keyCode: 13};
+		const Room = getRoom(roomName);
+		intputChatText(event, User, Room);
+	});
+}
+
 function resizeChatTabs() {
 	/* Window is smaller than the tabs width */
 	if ($('#chat-tabs')[0].clientWidth < $('#chat-tabs')[0].scrollWidth ||
@@ -861,7 +883,7 @@ function scrollToRoom(ev) {
 }
 
 function changeTab(e) {
-	if (e.altKey && e.shiftKey === false) {
+	if (e.altKey === false || e.shiftKey === false) {
 		return;
 	}
 
@@ -944,6 +966,7 @@ function autoJoiningHandler() {
 function populateChatLog(roomName) {
 	const thisRoom = getRoom(roomName)
 	if (roomName in chatRoomLogs) {
+		console.log(chatRoomLogs[roomName])
 		chatRoomLogs[roomName].forEach((logEntry) => {
 			thisRoom.appendMessage(logEntry)
 		})
@@ -1021,15 +1044,12 @@ function parseFavoriteRoom(roomname) {
 
 function addFavoriteRoom(favRoomObj) {
 	if (arrayObjectIndexOf(chatSettings.favRooms, "_id", favRoomObj._id) === -1) {
-		$('#favRoomsList').append(
-			'<option value="' + favRoomObj._id + '">' +
-			favRoomObj.user + ": " + favRoomObj.room + '</option>'
-		)
-		chatSettings.favRooms.push(favRoomObj)
+		$('#favRoomsList').append(`<option value="${favRoomObj._id}">${favRoomObj.user}: ${favRoomObj.room}</option>`);
+		chatSettings.favRooms.push(favRoomObj);
 	}
 	if (chatSettings.favRooms.length >= MAX_ROOMS) {
-		$('#favAdd').text("Favorites Full")
-		$('#favAdd')[0].disabled = true
+		$('#favAdd').text("Favorites Full");
+		$('#favAdd')[0].disabled = true;
 	}
 }
 
@@ -1054,29 +1074,25 @@ function saveSetting(ev) {
 	const dataName = targetWidget.attr('dataName');
 
 	if(dataName.length === 0) { return; }
-
+	
 	if (targetWidget.attr('type') === 'checkbox') {
 		chatSettings[dataName] = targetWidget.is(':checked');
 		generateHighlightStyle();
 	}
 	else if (targetWidget.attr('type') === 'text') {
-		if (targetWidget.attr('dataType') === 'audio-url') {
+		if (targetWidget.attr('data-type') === 'url') {
 			const urlInput = targetWidget.val();
 			if (validateUrl(urlInput) === true) {
 				chatSettings[dataName] = urlInput;
 				rph.sounds.notify = new Audio(chatSettings.audioUrl);
 			}
 		}
-		else if (targetWidget.attr('dataType') === 'color') {
+		else if (targetWidget.attr('data-type') === 'color') {
 			const colorInput = targetWidget.val();
 			if (validateColor(colorInput) === true) {
 				chatSettings[dataName] = colorInput;
 				generateHighlightStyle();
 			} 
-		}
-		else if (targetWidget.attr('dataType') === 'word-list') {
-			const words = targetWidget.val().replace('\n', '').replace('\r', '')
-			chatSettings[dataName] = words;
 		}
 		else {
 			chatSettings[dataName] = targetWidget.val();
@@ -1084,6 +1100,9 @@ function saveSetting(ev) {
 	}
 	else if (targetWidget[0].localName === 'select') {
 		chatSettings[dataName] = targetWidget.find(":selected").val();
+	}
+	else if (targetWidget[0].localName === 'textarea') {
+		chatSettings[dataName] = $(targetWidget).val()
 	}
 
 	console.log(`${dataName} updated to ${chatSettings[dataName]}`);

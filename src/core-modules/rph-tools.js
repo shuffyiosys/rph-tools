@@ -51,6 +51,7 @@ function init (addonModules) {
 
 	$('head').append(rpht_css);
 	$('#settings-dialog .inner ul.tabs').append('<h3>RPH Tools</h3>');
+	$('div#settings-dialog').css('z-index', '2');
 	modules.forEach(function (module) {
 		if ('getHtml' in module === false || !module.getHtml) {
 			return;
@@ -64,8 +65,14 @@ function init (addonModules) {
 			ev.preventDefault();
 		});
 
-		module.init();
-	})
+		console.log(`Initializing ${module.moduleName}`);
+		try {
+			module.init();
+		}
+		catch (error) {
+			console.log(`There was an issue initializing ${module.moduleName}: `, error);
+		}
+	});
 }
 
 let getModule = function (name) {

@@ -225,7 +225,6 @@ function loadSettings() {
 	$('#pmColorEnable').prop("checked", pmSettings.colorText)
 	$('#pmSideTabsEnable').prop("checked", pmSettings.sideTabs)
 	$('#pmNotify').prop("checked", pmSettings.notify)
-	$('#pmNotifyTimeoutSelect').val(pmSettings.notifyTime.toString())
 	$('#pmPingURL').val(pmSettings.audioUrl)
 	rph.sounds.im = new Audio(pmSettings.audioUrl)
 

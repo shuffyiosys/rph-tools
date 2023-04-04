@@ -162,8 +162,7 @@ function updateDropdownLists() {
 
 function refreshNameDropLists() {
 	$('#nameOneDropList').empty();
-	const names = Object.keys(logEntries).sort();
-	names.forEach(name => {addToDroplist(name, name, '#nameOneDropList')});
+	Object.keys(logEntries).sort().forEach(name => {addToDroplist(name, name, '#nameOneDropList')});
 	updateDropdownLists();
 }
 
@@ -202,13 +201,10 @@ function enableControls() {
 
 /* Functions related to database manipulation ********************************/
 function createLogDatabase() {
-	// If this database was not created, create it.
 	request = indexedDB.open(`${account.props.accid}`, INDEXED_DB_VERS)
 	request.onupgradeneeded = function(event) {
 		logDb = event.target.result
-		logDb.onerror = function(event) {
-			console.log(event)
-		};
+		logDb.onerror = function(event) {console.log(event)};
 		let newObjectStore = logDb.createObjectStore("msgs", { keyPath: [
 			["date", "fromid", "userid"],
 			"userid",
@@ -455,13 +451,6 @@ async function deleteLogsByName() {
 }
 
 /** Utility functions ********************************************************/
-function createTimestamp(time) {
-	const timestamp = new Date(time);
-	const dateString = timestamp.toLocaleDateString(navigator.language);
-	const timeString = timestamp.toTimeString().substring(0,5);
-	return `${dateString} ${timeString}`;
-}
-
 function makeTextFile (text) {
 	let textFile = null;
 	let data = new Blob([text], {type: 'text/plain'});

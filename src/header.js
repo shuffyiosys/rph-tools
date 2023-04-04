@@ -10,6 +10,6 @@
 // @license    MIT
 // ==/UserScript==
 
-const VERSION_STRING = '4.4.0a'
+const VERSION_STRING = '4.4.0a';
+const SETTINGS_NAME = "rph_tools_settings";
 
-const SETTINGS_NAME = "rph_tools_settings"

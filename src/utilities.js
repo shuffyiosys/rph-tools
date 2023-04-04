@@ -1,9 +1,6 @@
 function markProblem(element, mark) {
-	if (mark === true) {
-		$(element).css('background', '#FF7F7F')
-	} else {
-		$(element).css('background', '#FFF')
-	}
+	const color = (mark === true) ? '#FF7F7F' : '#FFF'
+	$(element).css('background', color);
 }
 
 function validateColor(settingId, color) {
@@ -13,15 +10,9 @@ function validateColor(settingId, color) {
 }
 
 let validateUrl = function (settingId, url) {
-	const validInput = false;
-	if (url === '') {
-		validInput = true
-	}
-	else {
-		let regexp = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/
-		validInput = regexp.test(url);
-	}
-	markProblem(settingId, !validInput);
+	let regexp = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/;
+	let validInput = (url === '') ? true : regexp.test(url);
+	markProblem(settingId, validInput === true);
 }
 
 function addToDroplist(value, label, droplist) {
@@ -35,44 +26,40 @@ function addToDroplist(value, label, droplist) {
 function arrayObjectIndexOf(objArray, key, value) {
 	for (let i = 0; i < objArray.length; i++) {
 		if (objArray[i][key] === value) {
-			return i
+			return i;
 		}
 	}
 	return -1
 }
 
 function getSortedNames() {
-	let namesToIds = {}
+	let namesToIds = {};
 	account.users.forEach(function (userObj) {
-		namesToIds[userObj.props.name] = userObj.props.id
+		namesToIds[userObj.props.name] = userObj.props.id;
 	})
 
-	let sorted = []
+	let sorted = [];
 	for (let key in namesToIds) {
-		sorted[sorted.length] = key
+		sorted[sorted.length] = key;
 	}
-	sorted.sort()
+	sorted.sort();
 
-	let tempDict = {}
+	let tempDict = {};
 	for (let i = 0; i < sorted.length; i++) {
-		tempDict[sorted[i]] = namesToIds[sorted[i]]
+		tempDict[sorted[i]] = namesToIds[sorted[i]];
 	}
-	namesToIds = tempDict
-	return namesToIds
+	namesToIds = tempDict;
+	return namesToIds;
 }
 
-/** 
- * Generates a randum number using the Linear congruential generator algorithm
- * @param {*} seed - RNG seed value
- */
 function LcgRng (seed, init=true) {
 	if (init) {
-		seed = (seed % 2147483647)
+		seed = (seed % 2147483647);
 		if (seed <= 0) {
-			seed += 2147483646
+			seed += 2147483646;
 		}
 	}
-	return seed * 16807 % 2147483647
+	return seed * 16807 % 2147483647;
 }
 
 function calculateDiceRolls(dieNum, dieSides, seed) {
@@ -150,28 +137,26 @@ function parseRoll(rollArgs){
 function getCssRoomName(roomName) {
 	return roomName.replace(/[^a-z0-9]/g, function(s) {
 		var c = s.charCodeAt(0);
-		if (c === 32) return '-';
+		if (c === 32) {return '-'};
 		if (c >= 65 && c <= 90) return '' + s.toLowerCase();
 		return ('000' + c.toString(16)).slice(-4);
 	});
 }
 
 function displayNotification(message, timeout) {
-	if (document.hidden === false) {
-		return;
-	}
+	if (document.hidden === false) { return; }
 	let notification = new Notification(message);
 	setTimeout(() => {notification.close()}, timeout);
 }
 
 function createTimestamp(time) {
-	const timestamp = new Date(time)
+	const timestamp = new Date(time);
 	const dateString = timestamp.toLocaleDateString(navigator.language, {
 		year: "numeric",
 		month: "2-digit",
 		day: "2-digit",
-	})
-	const delim = dateString.indexOf('/', 3)
-	const timeString = timestamp.toTimeString().substring(0,5)
-	return `${dateString.substring(0, delim)} ${timeString}`
+	});
+	const delim = dateString.indexOf('/', 3);
+	const timeString = timestamp.toTimeString().substring(0,5);
+	return `${dateString.substring(0, delim)} ${timeString}`;
 }
