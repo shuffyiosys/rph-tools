@@ -44,9 +44,14 @@ let chatModule = (function () {
 			'		<label class="rpht-label descript-label">Adds some padding at the end of each message for readibility</label>' +
 			"	</div>" +
 			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="hideCommandWindowEnable">Hide command window</label>' +
-			'		<label class="switch"><input type="checkbox" id="hideCommandWindowEnable"><span class="rpht-slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">Hides the command window when typing a command.</label>' +
+			'		<label class="rpht-label checkbox-label" for="showCommandWindowEnable">Show command window</label>' +
+			'		<label class="switch"><input type="checkbox" id="showCommandWindowEnable"><span class="rpht-slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Shows the command window when typing a command.</label>' +
+			"	</div>" +
+			'	<div class="rpht-option-section">' +
+			'		<label class="rpht-label checkbox-label" for="removeHighlightingEnable">Remove message highlighting</label>' +
+			'		<label class="switch"><input type="checkbox" id="removeHighlightingEnable"><span class="rpht-slider round"></span></label>' +
+			'		<label class="rpht-label descript-label">Removes the subtle highlighting from certain chat messages</label>' +
 			"	</div>" +
 			'	<div class="rpht-option-section option-section-bottom">' +
 			'		<label class="rpht-label checkbox-label" for="enableTabSwitch">Enable tab switch hotkey</label>' +
@@ -167,19 +172,19 @@ let chatModule = (function () {
 	const CHAT_COMMAND_HTML = `<div id="chatCommandTooltip" class="rpht-tooltip-common rpht-cmd-tooltip"></div>`;
 
 	const DICE_ROLL_POPUP_HTML = `<div id="diceRollerPopup" class="rpht-tooltip-common">
-	<p style="margin-bottom:10px;">Dice Roller <span id="diceRollerClose" class="rpht-close-btn">&nbsp;X&nbsp;</span></p>
-	<label class="rpht-die-label"># of die</label> <input id="rpht_dieRollerCount" class="rpht-die-updown" type="number" max="100" min="1" value="1">
-	<br>
-	<label class="rpht-die-label"># of sides</label> <input id="rpht_dieRollerSides" class="rpht-die-updown" type="number"max="1000" min="2" value="20">
-	<br><br>
-	<button id="dieRollButton">
-		Let's roll!
-	</button>
-	<hr style="margin-top: 6px; margin-bottom: 6px; ">
-	<button id="coinFlipButton">
-		Flip a coin!
-	</button>
-</div>`;
+		<p style="margin-bottom:10px;">Dice Roller <span id="diceRollerClose" class="rpht-close-btn">&nbsp;X&nbsp;</span></p>
+		<label class="rpht-die-label"># of die</label> <input id="rpht_dieRollerCount" class="rpht-die-updown" type="number" max="100" min="1" value="1">
+		<br>
+		<label class="rpht-die-label"># of sides</label> <input id="rpht_dieRollerSides" class="rpht-die-updown" type="number"max="1000" min="2" value="20">
+		<br><br>
+		<button id="dieRollButton">
+			Let's roll!
+		</button>
+		<hr style="margin-top: 6px; margin-bottom: 6px; ">
+		<button id="coinFlipButton">
+			Flip a coin!
+		</button>
+	</div>`;
 
 	let chatSettings = {};
 	let chatRoomLogs = null;
@@ -248,8 +253,13 @@ let chatModule = (function () {
 			saveSettings();
 		});
 
-		$("#hideCommandWindowEnable").change(() => {
-			chatSettings.hideCommandWindow = $("#hideCommandWindowEnable").is(":checked");
+		$("#showCommandWindowEnable").change(() => {
+			chatSettings.showCommandWindow = $("#showCommandWindowEnable").is(":checked");
+			saveSettings();
+		});
+
+		$("#removeHighlightingEnable").change(() => {
+			chatSettings.removeHighlighting = $("#removeHighlightingEnable").is(":checked");
 			saveSettings();
 		});
 
@@ -379,9 +389,7 @@ let chatModule = (function () {
 		$("#dieRollButton").click(() => {
 			const DIE_COUNT = $("#rpht_dieRollerCount").val();
 			const DIE_SIDES = $("#rpht_dieRollerSides").val();
-			$(`textarea.${$("li.tab.active")[0].className.split(" ")[2]}.active`).val(
-				`/roll ${DIE_COUNT}d${DIE_SIDES}`
-			);
+			$(`textarea.${$("li.tab.active")[0].className.split(" ")[2]}.active`).val(`/roll ${DIE_COUNT}d${DIE_SIDES}`);
 			$(`textarea.${$("li.tab.active")[0].className.split(" ")[2]}.active`).trigger({
 				type: "keydown",
 				which: 13,
@@ -507,10 +515,7 @@ let chatModule = (function () {
 
 		const NUM_USERS = account.userids.length;
 		for (let idx = 0; idx < NUM_USERS && !isRoomMod[room.room]; idx++) {
-			if (
-				thisRoom.props.mods.indexOf(account.userids[idx]) > -1 ||
-				thisRoom.props.owners.indexOf(account.userids[idx]) > -1
-			) {
+			if (thisRoom.props.mods.indexOf(account.userids[idx]) > -1 || thisRoom.props.owners.indexOf(account.userids[idx]) > -1) {
 				isRoomMod[room.room] = true;
 				break;
 			}
@@ -550,9 +555,14 @@ let chatModule = (function () {
 		const color = User.props.color[0];
 		const buttonCommonStyle = "cursor:pointer; float: right; width: 21px; height: 21px;";
 
-		$(`li.${userId}_${roomCss}`).prepend(
-			`<p style="font-size: x-small; height:16px; margin-top: -10px;">${username}</p>`
-		);
+		$(`li.${userId}_${roomCss}`).prepend(`<p style="font-size: x-small; height:16px; margin-top: -10px;">${username}</p>`);
+		$(`li.${userId}_${roomCss} > a.close`).on("click", () => {
+			if (chatSettings.trackSession) {
+				chatSettings.session = rph.roomsJoined;
+				saveSettings();
+			}
+		});
+
 		$(`textarea.${userId}_${roomCss}`).prop("placeholder", `Post as ${username}`);
 		$(`textarea${userId}_${roomCss}`).css("color", `${color}`);
 		$(`div.${userId}_${roomCss} .user-for-textarea span`).css("overflow", "hidden");
@@ -561,11 +571,10 @@ let chatModule = (function () {
 			.append(
 				`<button class="${userId}_${roomCss} roller-button" style="cursor:pointer; float: right; width: auto; height: 21px;" title="Dice roller">🎲</button>`
 			)
+			.append(`<button class="${userId}_${roomCss} bold-button" style="${buttonCommonStyle} font-weight: bold;" title="Bold selection">B</button>`)
+			.append(`<button class="${userId}_${roomCss} italics-button" style="${buttonCommonStyle} font-style: italic;" title="Italics selection">I</button>`)
 			.append(
-				`<button class="${userId}_${roomCss} bold-button" style="${buttonCommonStyle} font-weight: bold;" title="Bold selection">B</button>`
-			)
-			.append(
-				`<button class="${userId}_${roomCss} italics-button" style="${buttonCommonStyle} font-style: italic;" title="Italics selection">I</button>`
+				`<button class="${userId}_${roomCss} underline-button" style="${buttonCommonStyle} text-decoration: underline;" title="Underline selection">U</button>`
 			)
 			.append(
 				`<button class="${userId}_${roomCss} linethrough-button" style="${buttonCommonStyle} text-decoration: line-through;" title="Linethrough selection">S</button>`
@@ -587,6 +596,9 @@ let chatModule = (function () {
 		});
 		$(`button.${userId}_${roomCss}.italics-button`).click(() => {
 			styleSelection(`${userId}_${roomCss}`, "italics");
+		});
+		$(`button.${userId}_${roomCss}.underline-button`).click(() => {
+			styleSelection(`${userId}_${roomCss}`, "underline");
 		});
 		$(`button.${userId}_${roomCss}.linethrough-button`).click(() => {
 			styleSelection(`${userId}_${roomCss}`, "linethrough");
@@ -615,20 +627,17 @@ let chatModule = (function () {
 		let tag = "";
 		if (styleType == "bold") {
 			tag = "**";
-		}
-		if (styleType == "italics") {
+		} else if (styleType == "italics") {
 			tag = "//";
-		}
-		if (styleType == "linethrough") {
+		} else if (styleType == "underline") {
+			tag = "__";
+		} else if (styleType == "linethrough") {
 			tag = "--";
-		}
-		if (styleType == "spoiler") {
+		} else if (styleType == "spoiler") {
 			tag = "[spoiler]";
-		}
-		if (styleType == "sub") {
+		} else if (styleType == "sub") {
 			tag = "vv";
-		}
-		if (styleType == "super") {
+		} else if (styleType == "super") {
 			tag = "^^";
 		}
 
@@ -674,7 +683,7 @@ let chatModule = (function () {
 		chatTextArea.on("input", () => {
 			const chatInput = chatTextArea.val().trim();
 			$("#chatCommandTooltip").hide();
-			if (chatInput[0] === "/" && chatSettings.hideCommandWindow == false) {
+			if (chatInput[0] === "/" && chatSettings.showCommandWindow) {
 				const commandTable = buildComamndTable(chatTextArea.val().trim());
 				$("#chatCommandTooltip").html(commandTable).show();
 			}
@@ -741,17 +750,11 @@ let chatModule = (function () {
 				}
 
 				if (validResult === false) {
-					newMsgLines[
-						msgIdx
-					] += ` <span style="background:#F44; color: #FFF;" title="Do not use this result">&#9746;</span>`;
+					newMsgLines[msgIdx] += ` <span style="background:#F44; color: #FFF;" title="Do not use this result">&#9746;</span>`;
 				} else if (msgData.time - SEED > RNG_TIMEOUT) {
-					newMsgLines[
-						msgIdx
-					] += ` <span style="background:#FFD800; color: #000;" title="This result is outdated">&#9072;</span>`;
+					newMsgLines[msgIdx] += ` <span style="background:#FFD800; color: #000;" title="This result is outdated">&#9072;</span>`;
 				} else {
-					newMsgLines[
-						msgIdx
-					] += ` <span style="background:#4A4; color: #FFF;" title="This result is good">&#9745;</span>`;
+					newMsgLines[msgIdx] += ` <span style="background:#4A4; color: #FFF;" title="This result is good">&#9745;</span>`;
 				}
 			}
 
@@ -767,18 +770,12 @@ let chatModule = (function () {
 				if (chatSettings.enablePings && ((chatSettings.selfPing && selfMsg === true) || selfMsg === false)) {
 					let testRegex = matchPing(newMsg);
 					if (testRegex) {
-						newMsg = newMsg.replace(
-							testRegex,
-							`<span style="${pingHighlightText}">${newMsg.match(testRegex)}</span>`
-						);
+						newMsg = newMsg.replace(testRegex, `<span style="${pingHighlightText}">${newMsg.match(testRegex)}</span>`);
 						rph.sounds.notify.play();
 						notificationTrigger = 1;
 
 						if (chatSettings.pingNotify && thisRoom.active === false) {
-							displayNotification(
-								`${user.props.name} pinged you in ${thisRoom.props.name}`,
-								chatSettings.notifyTime
-							);
+							displayNotification(`${user.props.name} pinged you in ${thisRoom.props.name}`, chatSettings.notifyTime);
 						}
 					}
 				}
@@ -790,10 +787,7 @@ let chatModule = (function () {
 					alertRegex = matchPing(newMsg, alertWords, false, true);
 					// Process alert
 					if (alertRegex) {
-						newMsg = newMsg.replace(
-							alertRegex,
-							`<span style="${ALERT_HIGHLIGHT}">${newMsg.match(alertRegex)}</span>`
-						);
+						newMsg = newMsg.replace(alertRegex, `<span style="${ALERT_HIGHLIGHT}">${newMsg.match(alertRegex)}</span>`);
 						moddingModule.playAlert();
 						notificationTrigger = 2;
 					}
@@ -827,6 +821,14 @@ let chatModule = (function () {
 				classString += ` ${colorClasses[user.props.color.length - 1]}`;
 				contentQuery[0].className = classString.trim();
 				contentQuery.attr("style", styleString);
+			}
+
+			if (chatSettings.removeHighlighting) {
+				$(msgHtml).removeClass("action");
+				$(msgHtml).removeClass("group-member");
+				$(msgHtml).removeClass("self");
+				$(msgHtml).removeClass("mod");
+				$(msgHtml).removeClass("friend");
 			}
 
 			if (thisRoom.props.name in chatRoomLogs === false) {
@@ -904,9 +906,7 @@ let chatModule = (function () {
 				{
 					const outcomes = ["heads", "tails"];
 					const seed = new Date().getTime();
-					let resultMsg = `/me flips a coin. It lands on... **${
-						outcomes[LcgRng(seed) % 2]
-					}**! @&#8203;${seed}`;
+					let resultMsg = `/me flips a coin. It lands on... **${outcomes[LcgRng(seed) % 2]}**! @&#8203;${seed}`;
 					Room.sendMessage(resultMsg, User.props.id);
 				}
 				break;
@@ -928,18 +928,14 @@ let chatModule = (function () {
 						results.push((result % diceArgs[1]) + 1);
 					}
 					total = results.reduce((a, b) => a + b, 0);
-					resultMsg += `rolled ${diceArgs[0]}d${diceArgs[1]}: ${results.join(
-						" "
-					)} (total: ${total}) @&#8203;${seed}`;
+					resultMsg += `rolled ${diceArgs[0]}d${diceArgs[1]}: ${results.join(" ")} (total: ${total}) @&#8203;${seed}`;
 					Room.sendMessage(resultMsg, User.props.id);
 				}
 				break;
 			case "/rps":
 				{
 					const results = ["Rock!", "Paper!", "Scissors!"];
-					newMessage = `/me plays Rock, Paper, Scissors and chooses... ${results[
-						Math.ceil(Math.random() * 3) % 3
-					].toString()}`;
+					newMessage = `/me plays Rock, Paper, Scissors and chooses... ${results[Math.ceil(Math.random() * 3) % 3].toString()}`;
 					Room.sendMessage(newMessage, User.props.id);
 				}
 				break;
@@ -978,9 +974,7 @@ let chatModule = (function () {
 		}
 
 		if (error) {
-			Room.appendMessage('<span class="first">&nbsp;</span><span title=>Error in command input</span>').addClass(
-				"sys"
-			);
+			Room.appendMessage('<span class="first">&nbsp;</span><span title=>Error in command input</span>').addClass("sys");
 		}
 	}
 
@@ -995,9 +989,7 @@ let chatModule = (function () {
 		let message = inputTextarea.val().trim();
 
 		if (message.length > 4000) {
-			Room.appendMessage(`<span class="first">&nbsp;</span><span title="">Message too long</span>`).addClass(
-				"sys"
-			);
+			Room.appendMessage(`<span class="first">&nbsp;</span><span title="">Message too long</span>`).addClass("sys");
 			return;
 		} else if (message.length === 0) {
 			return;
@@ -1008,14 +1000,12 @@ let chatModule = (function () {
 		}
 
 		$("#chatCommandTooltip").hide();
-		if (!floodTracker(User, Room, message)) {
-			if (message[0] === "/" && message.substring(0, 2) !== "//" && chatModule) {
-				parseSlashCommand(inputTextarea, Room, User);
-			} else {
-				Room.sendMessage(message, User.props.id);
-			}
-			inputTextarea.val("");
+		if (message[0] === "/" && message.substring(0, 2) !== "//" && chatModule) {
+			parseSlashCommand(inputTextarea, Room, User);
+		} else {
+			Room.sendMessage(message, User.props.id);
 		}
+		inputTextarea.val("");
 	}
 
 	/**
@@ -1023,12 +1013,7 @@ let chatModule = (function () {
 	 * @param {string} msg - The message for the chat
 	 * @returns Returns the match or null
 	 */
-	function matchPing(
-		msg,
-		triggers = chatSettings.triggers,
-		caseSensitive = chatSettings.case,
-		exactMatch = chatSettings.exact
-	) {
+	function matchPing(msg, triggers = chatSettings.triggers, caseSensitive = chatSettings.case, exactMatch = chatSettings.exact) {
 		if (triggers.length === 0) {
 			return;
 		}
@@ -1057,10 +1042,7 @@ let chatModule = (function () {
 	 */
 	function resizeChatTabs() {
 		/* Window is smaller than the tabs width */
-		if (
-			$("#chat-tabs")[0].clientWidth < $("#chat-tabs")[0].scrollWidth ||
-			$("#chat-tabs")[0].clientWidth > $("#chat-bottom")[0].clientWidth
-		) {
+		if ($("#chat-tabs")[0].clientWidth < $("#chat-tabs")[0].scrollWidth || $("#chat-tabs")[0].clientWidth > $("#chat-bottom")[0].clientWidth) {
 			$("#chat-top").css("padding-bottom", "136px");
 			$("#chat-bottom").css("margin-top", "-138px");
 		} else {
@@ -1093,7 +1075,7 @@ let chatModule = (function () {
 	}
 
 	function changeTab(e) {
-		if (e.altKey && e.shiftKey === false) {
+		if (e.altKey === false || e.shiftKey === false) {
 			return;
 		}
 
@@ -1268,9 +1250,7 @@ let chatModule = (function () {
 	 */
 	function addFavoriteRoom(favRoomObj) {
 		if (arrayObjectIndexOf(chatSettings.favRooms, "_id", favRoomObj._id) === -1) {
-			$("#favRoomsList").append(
-				'<option value="' + favRoomObj._id + '">' + favRoomObj.user + ": " + favRoomObj.room + "</option>"
-			);
+			$("#favRoomsList").append('<option value="' + favRoomObj._id + '">' + favRoomObj.user + ": " + favRoomObj.room + "</option>");
 			chatSettings.favRooms.push(favRoomObj);
 		}
 		if (chatSettings.favRooms.length >= MAX_ROOMS) {
@@ -1319,8 +1299,9 @@ let chatModule = (function () {
 			colorStylizing: 1,
 			unreadMarkerSelection: 1,
 			msgPadding: false,
-			hideCommandWindow: false,
+			showCommandWindow: false,
 			enableTabSwitch: false,
+			removeHighlighting: false,
 
 			enablePings: true,
 			pingNotify: false,
@@ -1348,7 +1329,8 @@ let chatModule = (function () {
 		$(`#chatColorSelection option[value='${chatSettings.colorStylizing}']`).prop("selected", true);
 		$(`#unreadMarkerSelection option[value='${chatSettings.unreadMarkerSelection}']`).prop("selected", true);
 		$("#chatmsgPaddingEnable").prop("checked", chatSettings.msgPadding);
-		$("#hideCommandWindowEnable").prop("checked", chatSettings.hideCommandWindow);
+		$("#showCommandWindowEnable").prop("checked", chatSettings.showCommandWindow);
+		$("#removeHighlightingEnable").prop("checked", chatSettings.removeHighlighting);
 		$("#enableTabSwitch").prop("checked", chatSettings.enableTabSwitch);
 
 		$("#notifyPingEnable").prop("checked", chatSettings.enablePings);
@@ -1368,9 +1350,7 @@ let chatModule = (function () {
 		$("#joinFavEnable").prop("checked", chatSettings.joinFavorites);
 		for (let i = 0; i < chatSettings.favRooms.length; i++) {
 			let favRoomObj = chatSettings.favRooms[i];
-			$("#favRoomsList").append(
-				'<option value="' + favRoomObj._id + '">' + favRoomObj.user + ": " + favRoomObj.room + "</option>"
-			);
+			$("#favRoomsList").append('<option value="' + favRoomObj._id + '">' + favRoomObj.user + ": " + favRoomObj.room + "</option>");
 		}
 
 		if (chatSettings.enableTabSwitch === true) {

@@ -1,3 +1,12 @@
+## RPH Tools (4.4.1)
+
+##### Feature Updates
+
+-   Added an option to remove the subtle highlights on messages (the highlights causes issues with HDR displays)
+-   Reversed "Hide command window" to "Show command window" to avoid negatives. Defaults to off
+-   Attached a handler to when a chat tab is closed, the chat session gets updated so it can act immediately
+-   Removed the flood detector since it's no longer needed
+
 ## RPH Tools (4.4.0)
 
 ##### Feature Updates
