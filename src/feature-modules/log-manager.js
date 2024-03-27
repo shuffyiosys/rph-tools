@@ -472,7 +472,7 @@ let logManagerModule = (function () {
 				$("#deleteButton").html("Delete this log");
 
 				if (primaryKey in logEntries) {
-					$(`#nameOneDropList option[value=${primaryKey}]`).prop("selected", true);
+					$(`#nameOneDropList`).val(primaryKey);
 					updateDropdownLists();
 				}
 				return;

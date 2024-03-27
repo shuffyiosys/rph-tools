@@ -9,53 +9,47 @@ let pmModule = (function () {
 	let html = {
 		tabId: "pm-module",
 		tabName: "PMs",
-		tabContents:
-			"<h3>PM Settings</h3><br>" +
-			"<h4>Appearance</h4>" +
-			'<div class="rpht-option-block">' +
-			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="pmColorEnable">Use user text colors</label>' +
-			'		<label class="switch"><input type="checkbox" id="pmColorEnable"><span class="rpht-slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">Use the user\'s color to stylize their text</label>' +
-			"	</div>" +
-			'	<div class="rpht-option-section option-section-bottom">' +
-			'		<label class="rpht-label checkbox-label" for="pmSideTabsEnable">Tabs on side</label>' +
-			'		<label class="switch"><input type="checkbox" id="pmSideTabsEnable"><span class="rpht-slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">Puts the PM tabs on the side, listing them vertically. Requires page refresh for changes to take effect</label>' +
-			"	</div>" +
-			"</div>" +
-			"<h4>Notifications</h4>" +
-			'<div class="rpht-option-block">' +
-			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="pmNotify">Desktop notifications</label>' +
-			'		<label class="switch"><input type="checkbox" id="pmNotify"><span class="rpht-slider round"></span></label>' +
-			"		<p>Pops a desktop notification when you get a PM</p>" +
-			"	</div>" +
-			'	<div class="rpht-option-section">' +
-			'		<label style="font-weight: bold; width:522px; padding: 0px;">Desktop notification duration</label>' +
-			'		<select style="width: 80px; float: right;" id="pmNotifyTimeoutSelect">' +
-			'			<option value="3000">Short</option>' +
-			'			<option value="6000" selected>Normal</option>' +
-			'			<option value="10000">Long</option>' +
-			"		</select>" +
-			'		<label class="rpht-label descript-label">How long the notification will stay up</label>' +
-			"	</div>" +
-			'	<div class="rpht-option-section option-section-bottom">' +
-			'		<label class="rpht-label split-input-label">PM sound URL</label>' +
-			'		<input class="split-input-label" type="text" id="pmPingURL" name="pmPingURL" style="margin-bottom: 12px;">' +
-			"	</div>" +
-			"</div>" +
-			"<h4>Away message</h4>" +
-			'<div class="rpht-option-block">' +
-			'	<div class="rpht-option-section option-section-bottom">' +
-			"		<p>Usernames</p>" +
-			'		<select style="width: 100%;" id="pmNamesDroplist" size="10"></select><br><br>' +
-			'		<label><strong>Away Message </strong></label><input type="text" class="rpht-long-input" id="awayMessageTextbox" maxlength="300" placeholder="Away message...">' +
-			"		<br><br>" +
-			'		<button type="button" style="float:right; width:60px" id="setAwayButton">Enable</button>' +
-			'		<button type="button" style="float:right; margin-right: 20px; width:60px" id="removeAwayButton">Disable</button>' +
-			"	</div>" +
-			"</div>",
+		tabContents: `<h3>PM Settings</h3><br>
+			<h4>Appearance</h4>
+			<div class="rpht-option-block">
+				<div class="rpht-option-section"> 
+					<label class="rpht-label checkbox-label" for="pmColorEnable">Use user text colors</label>
+					<label class="switch"><input type="checkbox" id="pmColorEnable"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">Use the user\'s color to stylize their text</label> </div>
+				<div class="rpht-option-section">
+					<label class="rpht-label checkbox-label" for="pmSideTabsEnable">Tabs on side</label> 
+					<label class="switch"><input type="checkbox" id="pmSideTabsEnable"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">Puts the PM tabs on the side, listing them vertically. Requires page refresh for changes to take effect</label>
+				</div>
+				<div class="rpht-option-section option-section-bottom">
+					<label class="rpht-label checkbox-label" for="keepInBgEnable">Keep window in the background</label> 
+					<label class="switch"><input type="checkbox" id="keepInBgEnable"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">Upon receiving a PM, keeps the window from showing if it's already closed.</label>
+				</div>
+			</div>
+			<h4>Notifications</h4>
+			<div class="rpht-option-block">
+				<div class="rpht-option-section">
+					<label class="rpht-label checkbox-label" for="pmNotify">Desktop notifications</label>
+					<label class="switch"><input type="checkbox" id="pmNotify"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">Pushes a desktop notification when you get a PM</label>
+					<p>Pops a desktop notification when you get a PM</p>
+				</div>
+				<div class="rpht-option-section option-section-bottom">
+					<label class="rpht-label split-input-label">PM sound URL</label>
+					<input class="split-input-label" type="text" id="pmPingURL" name="pmPingURL" style="margin-bottom: 12px;">
+				</div>
+			</div>
+			<h4>Away message</h4>
+			<div class="rpht-option-block">
+				<div class="rpht-option-section option-section-bottom">
+					<p>Usernames</p> <select style="width: 100%;" id="pmNamesDroplist" size="10"></select><br><br>
+					<label><strong>Away Message </strong></label><input type="text" class="rpht-long-input" id="awayMessageTextbox"
+						maxlength="300" placeholder="Away message..."> <br><br> <button type="button"
+						style="float:right; width:60px" id="setAwayButton">Enable</button> <button type="button"
+						style="float:right; margin-right: 20px; width:60px" id="removeAwayButton">Disable</button>
+				</div>
+			</div>`,
 	};
 
 	let awayMessages = {};
@@ -75,12 +69,6 @@ let pmModule = (function () {
 
 		$("#pmNotify").change(() => {
 			pmSettings.notify = $("#pmNotify").is(":checked");
-			settingsModule.saveSettings(localStorageName, pmSettings);
-		});
-
-		$("#pmNotifyTimeoutSelect").change(() => {
-			let timeoutHtml = $("#pmNotifyTimeoutSelect option:selected");
-			pmSettings.notifyTime = parseInt(timeoutHtml.val());
 			settingsModule.saveSettings(localStorageName, pmSettings);
 		});
 
@@ -127,13 +115,14 @@ let pmModule = (function () {
 		if (account.ignores.indexOf(data.to) > -1) {
 			return;
 		}
-		rph.getPm({from: data.from, to: data.to}, (pm) => {
+
+		rph.getPm({ from: data.from, to: data.to }, (pm) => {
 			getUserByName(pm.to.props.name, (user) => {
 				processPmMsg(user, data, pm);
 			});
 
 			if (pmSettings.notify) {
-				displayNotification(`${pm.to.props.name} sent a PM to you for ${pm.from.props.name}`, pmSettings.notifyTime);
+				displayNotification(`${pm.to.props.name} sent a PM to you for ${pm.from.props.name}`, 5000);
 			}
 
 			if (awayMessages[data.from] && awayMessages[data.from].enabled) {
@@ -145,11 +134,15 @@ let pmModule = (function () {
 					target: "all",
 				});
 			}
+
+			if (pmSettings.keepInBackground && !$("#pm-dialog").parent().is(":visible")) {
+				$("#pm-header").siblings("button").click();
+			}
 		});
 	}
 
 	async function handlePmConfirmation(data) {
-		rph.getPm({from: data.to, to: data.from}, function (pm) {
+		rph.getPm({ from: data.to, to: data.from }, function (pm) {
 			getUserByName(pm.from.props.name, (user) => {
 				processPmMsg(user, data, pm);
 
@@ -191,7 +184,11 @@ let pmModule = (function () {
 		pmMsgQuery.childNodes[1].childNodes[0].innerHTML = createTimestamp(data.date);
 
 		if (pmCommand.includes("rng")) {
-			msgQuery[0].innerHTML = ` ${generateRngResult(pmCommand, data.msg, data.date)} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`;
+			msgQuery[0].innerHTML = ` ${generateRngResult(
+				pmCommand,
+				data.msg,
+				data.date
+			)} <span style="background:#4A4; color: #FFF;"> &#9745; </span>`;
 			nameQuery[0].innerHTML = `${user.props.name}`;
 		} else if (pmCommand === "me") {
 			nameQuery[0].innerHTML = `${user.props.name} `;
@@ -229,7 +226,12 @@ let pmModule = (function () {
 		$("#pmNamesDroplist option:selected").css("background-color", "#FFD800");
 		$("#pmNamesDroplist option:selected").prop("selected", false);
 
-		console.log("RPH Tools[setPmAway]: Setting away message for", name, "with message", awayMessages[userId].message);
+		console.log(
+			"RPH Tools[setPmAway]: Setting away message for",
+			name,
+			"with message",
+			awayMessages[userId].message
+		);
 	}
 
 	/**
@@ -253,8 +255,8 @@ let pmModule = (function () {
 		let storedSettings = settingsModule.getSettings(localStorageName);
 		pmSettings = {
 			colorText: false,
+			keepInBackground: true,
 			notify: false,
-			notifyTime: 6000,
 			audioUrl: "https://www.rphaven.com/sounds/imsound.mp3",
 			sideTabs: false,
 		};
@@ -264,9 +266,10 @@ let pmModule = (function () {
 		}
 
 		$("#pmColorEnable").prop("checked", pmSettings.colorText);
+
 		$("#pmSideTabsEnable").prop("checked", pmSettings.sideTabs);
+		$("#pmSideTabsEnable").prop("checked", pmSettings.keepInBgEnable);
 		$("#pmNotify").prop("checked", pmSettings.notify);
-		$("#pmNotifyTimeoutSelect").val(pmSettings.notifyTime.toString());
 		$("#pmPingURL").val(pmSettings.audioUrl);
 		rph.sounds.im = new Audio(pmSettings.audioUrl);
 

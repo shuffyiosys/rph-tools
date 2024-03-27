@@ -1,3 +1,11 @@
+## RPH Tools (4.4.2)
+
+##### Feature Updates
+
+-   Added keeping the PM window from showing up when receiving a PM and it's closed
+-   When deleting an individual log, it will now remember what the first name you selected was instead of resetting to the first name
+
+
 ## RPH Tools (4.4.1)
 
 ##### Feature Updates
