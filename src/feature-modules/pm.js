@@ -62,6 +62,11 @@ let pmModule = (function () {
 			settingsModule.saveSettings(localStorageName, pmSettings);
 		});
 
+		$("#keepInBgEnable").change(() => {
+			pmSettings.keepInBgEnable = $("#keepInBgEnable").is(":checked");
+			settingsModule.saveSettings(localStorageName, pmSettings);
+		});
+
 		$("#pmColorEnable").change(() => {
 			pmSettings.colorText = $("#pmColorEnable").is(":checked");
 			settingsModule.saveSettings(localStorageName, pmSettings);
@@ -268,7 +273,7 @@ let pmModule = (function () {
 		$("#pmColorEnable").prop("checked", pmSettings.colorText);
 
 		$("#pmSideTabsEnable").prop("checked", pmSettings.sideTabs);
-		$("#pmSideTabsEnable").prop("checked", pmSettings.keepInBgEnable);
+		$("#keepInBgEnable").prop("checked", pmSettings.keepInBgEnable);
 		$("#pmNotify").prop("checked", pmSettings.notify);
 		$("#pmPingURL").val(pmSettings.audioUrl);
 		rph.sounds.im = new Audio(pmSettings.audioUrl);
