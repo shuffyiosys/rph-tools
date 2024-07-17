@@ -215,12 +215,12 @@ function getCssRoomName(roomName) {
 	});
 }
 
-function displayNotification(message, timeout) {
+function displayNotification(message) {
 	if (document.hidden) {
 		let notification = new Notification(message);
 		setTimeout(() => {
 			notification.close();
-		}, timeout);
+		}, 6000);
 	}
 }
 

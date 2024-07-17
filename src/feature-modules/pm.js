@@ -21,10 +21,15 @@ let pmModule = (function () {
 					<label class="switch"><input type="checkbox" id="pmSideTabsEnable"><span class="rpht-slider round"></span></label>
 					<label class="rpht-label descript-label">Puts the PM tabs on the side, listing them vertically. Requires page refresh for changes to take effect</label>
 				</div>
-				<div class="rpht-option-section option-section-bottom">
+				<div class="rpht-option-section">
 					<label class="rpht-label checkbox-label" for="keepInBgEnable">Keep window in the background</label> 
 					<label class="switch"><input type="checkbox" id="keepInBgEnable"><span class="rpht-slider round"></span></label>
 					<label class="rpht-label descript-label">Upon receiving a PM, keeps the window from showing if it's already closed.</label>
+				</div>
+				<div class="rpht-option-section option-section-bottom">
+					<label class="rpht-label checkbox-label" for="pmEnableImagePreview">Enable image previews</label> 
+					<label class="switch"><input type="checkbox" id="pmEnableImagePreview"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">Links to images show up in chat. This may not work for some links.</label>
 				</div>
 			</div>
 			<h4>Notifications</h4>
@@ -64,6 +69,11 @@ let pmModule = (function () {
 
 		$("#keepInBgEnable").change(() => {
 			pmSettings.keepInBgEnable = $("#keepInBgEnable").is(":checked");
+			settingsModule.saveSettings(localStorageName, pmSettings);
+		});
+
+		$("#pmEnableImagePreview").change(() => {
+			pmSettings.pmEnableImagePreview = $("#pmEnableImagePreview").is(":checked");
 			settingsModule.saveSettings(localStorageName, pmSettings);
 		});
 
@@ -127,7 +137,7 @@ let pmModule = (function () {
 			});
 
 			if (pmSettings.notify) {
-				displayNotification(`${pm.to.props.name} sent a PM to you for ${pm.from.props.name}`, 5000);
+				displayNotification(`${pm.to.props.name} sent a PM to you for ${pm.from.props.name}`);
 			}
 
 			if (awayMessages[data.from] && awayMessages[data.from].enabled) {
@@ -206,6 +216,27 @@ let pmModule = (function () {
 		if (pmSettings.colorText) {
 			msgQuery.attr("style", `color: #${user.props.color[0]}`);
 		}
+
+		if (pmSettings.pmEnableImagePreview) {
+			let contentsChildren = msgQuery[0].children;
+			let images = [];
+			for (let i = 0; i < contentsChildren.length; i++) {
+				const child = contentsChildren[i];
+				if (child.tagName == "A") {
+					const url = child.attributes["href"].nodeValue;
+					if (url.search(`\.png|\.jpe?g|\.gif|\.webm`) > -1) {
+						images.push(url);
+					}
+				}
+			}
+			msgQuery.find("div.rpht-images").remove();
+			let imageArea = `<div class="rpht-images">`;
+			images.forEach((url) => {
+				imageArea += `<img src="${url}" width="320px" alt="${url}">&nbsp;`;
+			});
+			imageArea += `</div>`;
+			msgQuery.append(imageArea);
+		}
 	}
 
 	/**
@@ -264,6 +295,7 @@ let pmModule = (function () {
 			notify: false,
 			audioUrl: "https://www.rphaven.com/sounds/imsound.mp3",
 			sideTabs: false,
+			pmEnableImagePreview: false,
 		};
 
 		if (storedSettings) {
@@ -271,9 +303,9 @@ let pmModule = (function () {
 		}
 
 		$("#pmColorEnable").prop("checked", pmSettings.colorText);
-
 		$("#pmSideTabsEnable").prop("checked", pmSettings.sideTabs);
 		$("#keepInBgEnable").prop("checked", pmSettings.keepInBgEnable);
+		$("#pmEnableImagePreview").prop("checked", pmSettings.pmEnableImagePreview);
 		$("#pmNotify").prop("checked", pmSettings.notify);
 		$("#pmPingURL").val(pmSettings.audioUrl);
 		rph.sounds.im = new Audio(pmSettings.audioUrl);

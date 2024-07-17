@@ -1,10 +1,16 @@
+## RPH Tools (4.4.3)
+
+##### Feature Updates
+
+-   Added an image previewer for PMs and chat if someone posts a link to one. This may not work for some links.
+-   Removed option to select how long desktop notifications go on for
+
 ## RPH Tools (4.4.2)
 
 ##### Feature Updates
 
 -   Added keeping the PM window from showing up when receiving a PM and it's closed
 -   When deleting an individual log, it will now remember what the first name you selected was instead of resetting to the first name
-
 
 ## RPH Tools (4.4.1)
 

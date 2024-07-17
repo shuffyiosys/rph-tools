@@ -11,137 +11,133 @@ let chatModule = (function () {
 	const html = {
 		tabId: "chat-module",
 		tabName: "Chat",
-		tabContents:
-			"<h3>Chat Options</h3><br/>" +
-			"<h4>Appearance & Behavior</h4>" +
-			'<div class="rpht-option-block">' +
-			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="snapRoomListEnable">Snap to room list to room</label>' +
-			'		<label class="switch"><input type="checkbox" id="snapRoomListEnable"><span class="rpht-slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">When you select a chat tab, snap the room list to the room and expand it if it\'s collapsed</label>' +
-			"	</div>" +
-			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="chatColorSelection">Stylize user\'s messages</label>' +
-			'		<select style="float: right; width: 110px;" id="chatColorSelection">' +
-			'			<option value="0">None</option>' +
-			'			<option value="1" selected>Speech</option>' +
-			'			<option value="2">Everything</option>' +
-			"		</select>" +
-			'		<label class="rpht-label descript-label">Changes the color of user\'s messages to no additional color, highlighting speech, or the entire message</label>' +
-			"	</div>" +
-			'	<div class="rpht-option-section">' +
-			'		<label style="font-weight: bold; width:522px; padding: 0px;" for="unreadMarkerSelection">Mark rooms with unread messages</label>' +
-			'		<select style="float: right; width: 110px;" id="unreadMarkerSelection">' +
-			'			<option value="0">No marker</option>' +
-			'			<option value="1" selected>Simple</option>' +
-			'			<option value="2"># unread</option>' +
-			"		</select>" +
-			"		<label class=\"rpht-label descript-label\">Adds a marker on a room's tab if there's an unread message</label>" +
-			"	</div>" +
-			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="chatmsgPaddingEnable">Add padding between messages</label>' +
-			'		<label class="switch"><input type="checkbox" id="chatmsgPaddingEnable"><span class="rpht-slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">Adds some padding at the end of each message for readibility</label>' +
-			"	</div>" +
-			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="showCommandWindowEnable">Show command window</label>' +
-			'		<label class="switch"><input type="checkbox" id="showCommandWindowEnable"><span class="rpht-slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">Shows the command window when typing a command.</label>' +
-			"	</div>" +
-			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="removeHighlightingEnable">Remove message highlighting</label>' +
-			'		<label class="switch"><input type="checkbox" id="removeHighlightingEnable"><span class="rpht-slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">Removes the subtle highlighting from certain chat messages</label>' +
-			"	</div>" +
-			'	<div class="rpht-option-section option-section-bottom">' +
-			'		<label class="rpht-label checkbox-label" for="enableTabSwitch">Enable tab switch hotkey</label>' +
-			'		<label class="switch"><input type="checkbox" id="enableTabSwitch"><span class="rpht-slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">Press Alt + Shift + Left/Right to switch between tabs. ' +
-			"		This will not work if you have auto-sorting on in the UI options</label>" +
-			"	</div>" +
-			"</div>" +
-			"<h4>Chat Pinging</h4>" +
-			'<div class="rpht-option-block">' +
-			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="notifyPingEnable">Enable pings</label>' +
-			'		<label class="switch"><input type="checkbox" id="notifyPingEnable"><span class="rpht-slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">	Turns on ping notifications in chat</label>' +
-			"	</div>" +
-			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="selfPingEnable">Can ping yourself</label>' +
-			'		<label class="switch"><input type="checkbox" id="selfPingEnable"><span class="rpht-slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">Pings will trigger on your own messages</label>' +
-			"	</div>" +
-			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="notifyNotificationEnable">Enable desktop notifications</label>' +
-			'		<label class="switch"><input type="checkbox" id="notifyNotificationEnable"><span class="rpht-slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">Pops up a notification when you get pinged</label>' +
-			"	</div>" +
-			'	<div class="rpht-option-section">' +
-			'		<label style="font-weight: bold; width:522px; padding: 0px;">Desktop notification duration</label>' +
-			'		<select style="float: right; width: 80px;" id="pingNotifyTimeoutSelect">' +
-			'			<option value="3000">Short</option>' +
-			'			<option value="6000" selected>Normal</option>' +
-			'			<option value="10000">Long</option>' +
-			"		</select>" +
-			'		<label class="rpht-label descript-label">How long the notification will stay up</label>' +
-			"	</div>" +
-			'	<div class="rpht-option-section">' +
-			"		<p>Names to be pinged (comma separated)</p>" +
-			'		<textarea id="pingNames" rows="8" class="rpht_textarea"> </textarea>' +
-			"	</div>" +
-			'	<div class="rpht-option-section">' +
-			"		<label><strong>Ping sound URL</strong></label><br>" +
-			'		<input type="text" class="rpht-long-input" id="pingURL"><br><br>' +
-			'		<label class="rpht-label descript-label">URL to an audio file, or leave blank for no sound</label>' +
-			"	</div>" +
-			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="pingExactMatch">Exact match</label>' +
-			'		<label class="switch"><input type="checkbox" id="pingExactMatch"><span class="rpht-slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">e.g., If pinging on "Mel", matches on "Mel" and not "Melody"</label>' +
-			"	</div>" +
-			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="pingCaseSense">Case sensitive</label>' +
-			'		<label class="switch"><input type="checkbox" id="pingCaseSense"><span class="rpht-slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">e.g., If pinging on "Mel", matches on "Mel" and not "mel"</label>' +
-			"	</div>" +
-			'	<div class="rpht-option-section">' +
-			"		<h4>Ping styling</h4>" +
-			'		<label class="rpht-label text-input-label">Text Color</label><input type="text" class="rpht-short-input" id="pingTextColor" value="#000"><br /><br />' +
-			'		<label class="rpht-label text-input-label">Highlight</label><input type="text" class="rpht-short-input" id="pingHighlightColor" value="#FFA"><br><br>' +
-			'		<label class="rpht-label checkbox-label" style="font-weight:initial;" for="pingBoldEnable">Add <strong>bold</strong></label>' +
-			'		<label class="switch"><input type="checkbox" id="pingBoldEnable"><span class="rpht-slider round"></span></label><br><br>' +
-			'		<label class="rpht-label checkbox-label" style="font-weight:initial;" for="pingItalicsEnable">Add <em>Italics</em></label>' +
-			'		<label class="switch"><input type="checkbox" id="pingItalicsEnable"><span class="rpht-slider round"></span></label>' +
-			"	</div>" +
-			'	<div class="rpht-option-section option-section-bottom">' +
-			'			<label class="rpht-label checkbox-label">Ping Tester: </label>' +
-			'			<input type="text" class="rpht-long-input" id="pingPreviewInput" placeholder="Enter ping word to test"><br /><br />' +
-			'			<label>Ping preview:</label><span id="pingPreviewText"></span>' +
-			"	</div>" +
-			"</div>" +
-			"<h4>Auto Joining</h4>" +
-			'<div class="rpht-option-block">' +
-			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="trackSession">Sessioning</label>' +
-			'		<label class="switch"><input type="checkbox" id="trackSession"><span class="rpht-slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">Keeps track of which rooms you were in, then rejoins them when you log in again.</label>' +
-			"	</div>" +
-			'	<div class="rpht-option-section">' +
-			'		<label class="rpht-label checkbox-label" for="joinFavEnable">Join favorites</label>' +
-			'		<label class="switch"><input type="checkbox" id="joinFavEnable"><span class="rpht-slider round"></span></label>' +
-			'		<label class="rpht-label descript-label">Join rooms that are in the favorite rooms list</label>' +
-			"	</div>" +
-			'	<div class="rpht-option-section option-section-bottom">' +
-			"		<h4>Favorite Rooms</h4>" +
-			'		<label class="rpht-label split-input-label">Username </label><select class="split-input-label" id="favUserDropList"></select><br /><br />' +
-			'		<label class="rpht-label split-input-label">Room </label><input class="split-input-label" type="text" id="favRoom" name="favRoom"><br /><br />' +
-			'		<label class="rpht-label split-input-label">Password</label><input class="split-input-label" type="text" id="favRoomPw" name="favRoomPw"><br /><br />' +
-			'		<button style="width: 60px; float:right;" type="button" id="favAdd">Add</button><br /><br />' +
-			'		<select style="width: 100%;" id="favRoomsList" size="10"></select><br><br>' +
-			'		<button style="float:right;" type="button" id="favRemove">Remove</button><br />' +
-			"	</div>" +
-			"</div>",
+		tabContents: `
+			<h3>Chat Options</h3><br/>
+			<h4>Appearance & Behavior</h4>
+			<div class="rpht-option-block">
+				<div class="rpht-option-section">
+					<label class="rpht-label checkbox-label" for="snapRoomListEnable">Snap to room list to room</label>
+					<label class="switch"><input type="checkbox" id="snapRoomListEnable"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">When you select a chat tab, snap the room list to the room and expand it if it's collapsed</label>
+				</div>
+				<div class="rpht-option-section">
+					<label class="rpht-label checkbox-label" for="chatColorSelection">Stylize user's messages</label>
+					<select style="float: right; width: 110px;" id="chatColorSelection">
+						<option value="0">None</option>
+						<option value="1" selected>Highlight speech</option>
+						<option value="2">Everything</option>
+					</select>
+					<label class="rpht-label descript-label">Changes the color of user's messages</label>
+				</div>
+				<div class="rpht-option-section">
+					<label style="font-weight: bold; width:522px; padding: 0px;" for="unreadMarkerSelection">Mark rooms with unread messages</label>
+					<select style="float: right; width: 110px;" id="unreadMarkerSelection">
+						<option value="0">No marker</option>
+						<option value="1" selected>Simple</option>
+						<option value="2"># unread</option>
+					</select>
+					<label class="rpht-label descript-label">Marks room tabs with unread messages</label>
+				</div>
+				<div class="rpht-option-section">
+					<label class="rpht-label checkbox-label" for="chatmsgPaddingEnable">Add padding between messages</label>
+					<label class="switch"><input type="checkbox" id="chatmsgPaddingEnable"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">Adds padding between messages to increase readibility</label>
+				</div>
+				<div class="rpht-option-section">
+					<label class="rpht-label checkbox-label" for="showCommandWindowEnable">Show command window</label>
+					<label class="switch"><input type="checkbox" id="showCommandWindowEnable"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">Shows the command window when typing a command</label>
+				</div>
+				<div class="rpht-option-section">
+					<label class="rpht-label checkbox-label" for="removeHighlightingEnable">Remove message highlighting</label>
+					<label class="switch"><input type="checkbox" id="removeHighlightingEnable"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">Removes the subtle highlighting from certain chat messages</label>
+				</div>
+				<div class="rpht-option-section">
+					<label class="rpht-label checkbox-label" for="enableTabSwitch">Enable tab switch hotkey</label>
+					<label class="switch"><input type="checkbox" id="enableTabSwitch"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">Press Alt + Shift + Left/Right to switch between tabs
+					This will not work if you have auto-sorting on in the UI options</label>
+				</div>
+				<div class="rpht-option-section option-section-bottom">
+					<label class="rpht-label checkbox-label" for="enableImagePreview">Enable image previews</label>
+					<label class="switch"><input type="checkbox" id="enableImagePreview"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">Links to images show up in chat. This may not work for some links.</label>
+				</div>
+			</div>
+			<h4>Chat Pinging</h4>
+			<div class="rpht-option-block">
+				<div class="rpht-option-section">
+					<label class="rpht-label checkbox-label" for="notifyPingEnable">Enable pings</label>
+					<label class="switch"><input type="checkbox" id="notifyPingEnable"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">	Turns on ping notifications in chat</label>
+				</div>
+				<div class="rpht-option-section">
+					<label class="rpht-label checkbox-label" for="selfPingEnable">Can ping yourself</label>
+					<label class="switch"><input type="checkbox" id="selfPingEnable"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">Pings will trigger on your own messages</label>
+				</div>
+				<div class="rpht-option-section">
+					<label class="rpht-label checkbox-label" for="notifyNotificationEnable">Enable desktop notifications</label>
+					<label class="switch"><input type="checkbox" id="notifyNotificationEnable"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">Pops up a notification when you get pinged</label>
+				</div>
+				<div class="rpht-option-section">
+					<p>Names to be pinged (comma separated)</p>
+					<textarea id="pingNames" rows="8" class="rpht_textarea"> </textarea>
+				</div>
+				<div class="rpht-option-section">
+					<label><strong>Ping sound URL</strong></label><br>
+					<input type="text" class="rpht-long-input" id="pingURL"><br><br>
+					<label class="rpht-label descript-label">URL to an audio file, or leave blank for no sound</label>
+				</div>
+				<div class="rpht-option-section">
+					<label class="rpht-label checkbox-label" for="pingExactMatch">Exact match</label>
+					<label class="switch"><input type="checkbox" id="pingExactMatch"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">e.g., If pinging on "Mel", matches on "Mel" and not "Melody"</label>
+				</div>
+				<div class="rpht-option-section">
+					<label class="rpht-label checkbox-label" for="pingCaseSense">Case sensitive</label>
+					<label class="switch"><input type="checkbox" id="pingCaseSense"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">e.g., If pinging on "Mel", matches on "Mel" and not "mel"</label>
+				</div>
+				<div class="rpht-option-section">
+					<h4>Ping styling</h4>
+					<label class="rpht-label text-input-label">Text Color</label><input type="text" class="rpht-short-input" id="pingTextColor" value="#000"><br /><br />
+					<label class="rpht-label text-input-label">Highlight</label><input type="text" class="rpht-short-input" id="pingHighlightColor" value="#FFA"><br><br>
+					<label class="rpht-label checkbox-label" style="font-weight:initial;" for="pingBoldEnable">Add <strong>bold</strong></label>
+					<label class="switch"><input type="checkbox" id="pingBoldEnable"><span class="rpht-slider round"></span></label><br><br>
+					<label class="rpht-label checkbox-label" style="font-weight:initial;" for="pingItalicsEnable">Add <em>Italics</em></label>
+					<label class="switch"><input type="checkbox" id="pingItalicsEnable"><span class="rpht-slider round"></span></label>
+				</div>
+				<div class="rpht-option-section option-section-bottom">
+						<label class="rpht-label checkbox-label">Ping Tester: </label>
+						<input type="text" class="rpht-long-input" id="pingPreviewInput" placeholder="Enter ping word to test"><br /><br />
+						<label>Ping preview:</label><span id="pingPreviewText"></span>
+				</div>
+			</div>
+			<h4>Auto Joining</h4>
+			<div class="rpht-option-block">
+				<div class="rpht-option-section">
+					<label class="rpht-label checkbox-label" for="trackSession">Sessioning</label>
+					<label class="switch"><input type="checkbox" id="trackSession"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">Keeps track of which rooms you were in, then rejoins them when you log in again.</label>
+				</div>
+				<div class="rpht-option-section">
+					<label class="rpht-label checkbox-label" for="joinFavEnable">Join favorites</label>
+					<label class="switch"><input type="checkbox" id="joinFavEnable"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">Join rooms that are in the favorite rooms list</label>
+				</div>
+				<div class="rpht-option-section option-section-bottom">
+					<h4>Favorite Rooms</h4>
+					<label class="rpht-label split-input-label">Username </label><select class="split-input-label" id="favUserDropList"></select><br /><br />
+					<label class="rpht-label split-input-label">Room </label><input class="split-input-label" type="text" id="favRoom" name="favRoom"><br /><br />
+					<label class="rpht-label split-input-label">Password</label><input class="split-input-label" type="text" id="favRoomPw" name="favRoomPw"><br /><br />
+					<button style="width: 60px; float:right;" type="button" id="favAdd">Add</button><br /><br />
+					<select style="width: 100%;" id="favRoomsList" size="10"></select><br><br>
+					<button style="float:right;" type="button" id="favRemove">Remove</button><br />
+				</div>
+			</div>`,
 	};
 
 	const CHAT_COMMANDS = new (function () {
@@ -274,6 +270,10 @@ let chatModule = (function () {
 			saveSettings();
 		});
 
+		$(`#enableImagePreview`).change(() => {
+			updateSetting("enableImagePreview", "#enableImagePreview");
+		});
+
 		/* Pinging Options */
 		$("#notifyPingEnable").change(() => {
 			chatSettings.enablePings = $("#notifyPingEnable").is(":checked");
@@ -287,12 +287,6 @@ let chatModule = (function () {
 
 		$("#selfPingEnable").change(() => {
 			chatSettings.selfPing = $("#selfPingEnable").is(":checked");
-			saveSettings();
-		});
-
-		$("#pingNotifyTimeoutSelect").change(() => {
-			let timeoutHtml = $("#pingNotifyTimeoutSelect option:selected");
-			chatSettings.notifyTime = parseInt(timeoutHtml.val());
 			saveSettings();
 		});
 
@@ -389,7 +383,9 @@ let chatModule = (function () {
 		$("#dieRollButton").click(() => {
 			const DIE_COUNT = $("#rpht_dieRollerCount").val();
 			const DIE_SIDES = $("#rpht_dieRollerSides").val();
-			$(`textarea.${$("li.tab.active")[0].className.split(" ")[2]}.active`).val(`/roll ${DIE_COUNT}d${DIE_SIDES}`);
+			$(`textarea.${$("li.tab.active")[0].className.split(" ")[2]}.active`).val(
+				`/roll ${DIE_COUNT}d${DIE_SIDES}`
+			);
 			$(`textarea.${$("li.tab.active")[0].className.split(" ")[2]}.active`).trigger({
 				type: "keydown",
 				which: 13,
@@ -515,7 +511,10 @@ let chatModule = (function () {
 
 		const NUM_USERS = account.userids.length;
 		for (let idx = 0; idx < NUM_USERS && !isRoomMod[room.room]; idx++) {
-			if (thisRoom.props.mods.indexOf(account.userids[idx]) > -1 || thisRoom.props.owners.indexOf(account.userids[idx]) > -1) {
+			if (
+				thisRoom.props.mods.indexOf(account.userids[idx]) > -1 ||
+				thisRoom.props.owners.indexOf(account.userids[idx]) > -1
+			) {
 				isRoomMod[room.room] = true;
 				break;
 			}
@@ -555,7 +554,9 @@ let chatModule = (function () {
 		const color = User.props.color[0];
 		const buttonCommonStyle = "cursor:pointer; float: right; width: 21px; height: 21px;";
 
-		$(`li.${userId}_${roomCss}`).prepend(`<p style="font-size: x-small; height:16px; margin-top: -10px;">${username}</p>`);
+		$(`li.${userId}_${roomCss}`).prepend(
+			`<p style="font-size: x-small; height:16px; margin-top: -10px;">${username}</p>`
+		);
 		$(`li.${userId}_${roomCss} > a.close`).on("click", () => {
 			if (chatSettings.trackSession) {
 				chatSettings.session = rph.roomsJoined;
@@ -571,8 +572,12 @@ let chatModule = (function () {
 			.append(
 				`<button class="${userId}_${roomCss} roller-button" style="cursor:pointer; float: right; width: auto; height: 21px;" title="Dice roller">🎲</button>`
 			)
-			.append(`<button class="${userId}_${roomCss} bold-button" style="${buttonCommonStyle} font-weight: bold;" title="Bold selection">B</button>`)
-			.append(`<button class="${userId}_${roomCss} italics-button" style="${buttonCommonStyle} font-style: italic;" title="Italics selection">I</button>`)
+			.append(
+				`<button class="${userId}_${roomCss} bold-button" style="${buttonCommonStyle} font-weight: bold;" title="Bold selection">B</button>`
+			)
+			.append(
+				`<button class="${userId}_${roomCss} italics-button" style="${buttonCommonStyle} font-style: italic;" title="Italics selection">I</button>`
+			)
 			.append(
 				`<button class="${userId}_${roomCss} underline-button" style="${buttonCommonStyle} text-decoration: underline;" title="Underline selection">U</button>`
 			)
@@ -750,11 +755,17 @@ let chatModule = (function () {
 				}
 
 				if (validResult === false) {
-					newMsgLines[msgIdx] += ` <span style="background:#F44; color: #FFF;" title="Do not use this result">&#9746;</span>`;
+					newMsgLines[
+						msgIdx
+					] += ` <span style="background:#F44; color: #FFF;" title="Do not use this result">&#9746;</span>`;
 				} else if (msgData.time - SEED > RNG_TIMEOUT) {
-					newMsgLines[msgIdx] += ` <span style="background:#FFD800; color: #000;" title="This result is outdated">&#9072;</span>`;
+					newMsgLines[
+						msgIdx
+					] += ` <span style="background:#FFD800; color: #000;" title="This result is outdated">&#9072;</span>`;
 				} else {
-					newMsgLines[msgIdx] += ` <span style="background:#4A4; color: #FFF;" title="This result is good">&#9745;</span>`;
+					newMsgLines[
+						msgIdx
+					] += ` <span style="background:#4A4; color: #FFF;" title="This result is good">&#9745;</span>`;
 				}
 			}
 
@@ -770,12 +781,18 @@ let chatModule = (function () {
 				if (chatSettings.enablePings && ((chatSettings.selfPing && selfMsg === true) || selfMsg === false)) {
 					let testRegex = matchPing(newMsg);
 					if (testRegex) {
-						newMsg = newMsg.replace(testRegex, `<span style="${pingHighlightText}">${newMsg.match(testRegex)}</span>`);
+						newMsg = newMsg.replace(
+							testRegex,
+							`<span style="${pingHighlightText}">${newMsg.match(testRegex)}</span>`
+						);
 						rph.sounds.notify.play();
 						notificationTrigger = 1;
 
 						if (chatSettings.pingNotify && thisRoom.active === false) {
-							displayNotification(`${user.props.name} pinged you in ${thisRoom.props.name}`, chatSettings.notifyTime);
+							displayNotification(
+								`${user.props.name} pinged you in ${thisRoom.props.name}`,
+								chatSettings.notifyTime
+							);
 						}
 					}
 				}
@@ -787,7 +804,10 @@ let chatModule = (function () {
 					alertRegex = matchPing(newMsg, alertWords, false, true);
 					// Process alert
 					if (alertRegex) {
-						newMsg = newMsg.replace(alertRegex, `<span style="${ALERT_HIGHLIGHT}">${newMsg.match(alertRegex)}</span>`);
+						newMsg = newMsg.replace(
+							alertRegex,
+							`<span style="${ALERT_HIGHLIGHT}">${newMsg.match(alertRegex)}</span>`
+						);
 						moddingModule.playAlert();
 						notificationTrigger = 2;
 					}
@@ -821,6 +841,27 @@ let chatModule = (function () {
 				classString += ` ${colorClasses[user.props.color.length - 1]}`;
 				contentQuery[0].className = classString.trim();
 				contentQuery.attr("style", styleString);
+			}
+
+			if (chatSettings.enableImagePreview) {
+				let contentsChildren = contentQuery[0].children;
+				let images = [];
+				for (let i = 0; i < contentsChildren.length; i++) {
+					const child = contentsChildren[i];
+					if (child.tagName == "A") {
+						const url = child.attributes["href"].nodeValue;
+						if (url.search(`\.png|\.jpe?g|\.gif|\.webm`) > -1) {
+							images.push(url);
+						}
+					}
+				}
+				contentQuery.find("div.rpht-images").remove();
+				let imageArea = `<div class="rpht-images">`;
+				images.forEach((url) => {
+					imageArea += `<img src="${url}" width="240px" alt="${url}">&nbsp;`;
+				});
+				imageArea += `</div>`;
+				contentQuery.append(imageArea);
 			}
 
 			if (chatSettings.removeHighlighting) {
@@ -906,7 +947,9 @@ let chatModule = (function () {
 				{
 					const outcomes = ["heads", "tails"];
 					const seed = new Date().getTime();
-					let resultMsg = `/me flips a coin. It lands on... **${outcomes[LcgRng(seed) % 2]}**! @&#8203;${seed}`;
+					let resultMsg = `/me flips a coin. It lands on... **${
+						outcomes[LcgRng(seed) % 2]
+					}**! @&#8203;${seed}`;
 					Room.sendMessage(resultMsg, User.props.id);
 				}
 				break;
@@ -928,14 +971,18 @@ let chatModule = (function () {
 						results.push((result % diceArgs[1]) + 1);
 					}
 					total = results.reduce((a, b) => a + b, 0);
-					resultMsg += `rolled ${diceArgs[0]}d${diceArgs[1]}: ${results.join(" ")} (total: ${total}) @&#8203;${seed}`;
+					resultMsg += `rolled ${diceArgs[0]}d${diceArgs[1]}: ${results.join(
+						" "
+					)} (total: ${total}) @&#8203;${seed}`;
 					Room.sendMessage(resultMsg, User.props.id);
 				}
 				break;
 			case "/rps":
 				{
 					const results = ["Rock!", "Paper!", "Scissors!"];
-					newMessage = `/me plays Rock, Paper, Scissors and chooses... ${results[Math.ceil(Math.random() * 3) % 3].toString()}`;
+					newMessage = `/me plays Rock, Paper, Scissors and chooses... ${results[
+						Math.ceil(Math.random() * 3) % 3
+					].toString()}`;
 					Room.sendMessage(newMessage, User.props.id);
 				}
 				break;
@@ -974,7 +1021,9 @@ let chatModule = (function () {
 		}
 
 		if (error) {
-			Room.appendMessage('<span class="first">&nbsp;</span><span title=>Error in command input</span>').addClass("sys");
+			Room.appendMessage('<span class="first">&nbsp;</span><span title=>Error in command input</span>').addClass(
+				"sys"
+			);
 		}
 	}
 
@@ -989,7 +1038,9 @@ let chatModule = (function () {
 		let message = inputTextarea.val().trim();
 
 		if (message.length > 4000) {
-			Room.appendMessage(`<span class="first">&nbsp;</span><span title="">Message too long</span>`).addClass("sys");
+			Room.appendMessage(`<span class="first">&nbsp;</span><span title="">Message too long</span>`).addClass(
+				"sys"
+			);
 			return;
 		} else if (message.length === 0) {
 			return;
@@ -1013,7 +1064,12 @@ let chatModule = (function () {
 	 * @param {string} msg - The message for the chat
 	 * @returns Returns the match or null
 	 */
-	function matchPing(msg, triggers = chatSettings.triggers, caseSensitive = chatSettings.case, exactMatch = chatSettings.exact) {
+	function matchPing(
+		msg,
+		triggers = chatSettings.triggers,
+		caseSensitive = chatSettings.case,
+		exactMatch = chatSettings.exact
+	) {
 		if (triggers.length === 0) {
 			return;
 		}
@@ -1042,7 +1098,10 @@ let chatModule = (function () {
 	 */
 	function resizeChatTabs() {
 		/* Window is smaller than the tabs width */
-		if ($("#chat-tabs")[0].clientWidth < $("#chat-tabs")[0].scrollWidth || $("#chat-tabs")[0].clientWidth > $("#chat-bottom")[0].clientWidth) {
+		if (
+			$("#chat-tabs")[0].clientWidth < $("#chat-tabs")[0].scrollWidth ||
+			$("#chat-tabs")[0].clientWidth > $("#chat-bottom")[0].clientWidth
+		) {
 			$("#chat-top").css("padding-bottom", "136px");
 			$("#chat-bottom").css("margin-top", "-138px");
 		} else {
@@ -1250,7 +1309,9 @@ let chatModule = (function () {
 	 */
 	function addFavoriteRoom(favRoomObj) {
 		if (arrayObjectIndexOf(chatSettings.favRooms, "_id", favRoomObj._id) === -1) {
-			$("#favRoomsList").append('<option value="' + favRoomObj._id + '">' + favRoomObj.user + ": " + favRoomObj.room + "</option>");
+			$("#favRoomsList").append(
+				'<option value="' + favRoomObj._id + '">' + favRoomObj.user + ": " + favRoomObj.room + "</option>"
+			);
 			chatSettings.favRooms.push(favRoomObj);
 		}
 		if (chatSettings.favRooms.length >= MAX_ROOMS) {
@@ -1302,11 +1363,11 @@ let chatModule = (function () {
 			showCommandWindow: false,
 			enableTabSwitch: false,
 			removeHighlighting: false,
+			enableImagePreview: false,
 
 			enablePings: true,
 			pingNotify: false,
 			selfPing: false,
-			notifyTime: 6000,
 			triggers: [],
 			audioUrl: "https://www.rphaven.com/sounds/boop.mp3",
 			color: "#000",
@@ -1332,11 +1393,11 @@ let chatModule = (function () {
 		$("#showCommandWindowEnable").prop("checked", chatSettings.showCommandWindow);
 		$("#removeHighlightingEnable").prop("checked", chatSettings.removeHighlighting);
 		$("#enableTabSwitch").prop("checked", chatSettings.enableTabSwitch);
+		$("#enableImagePreview").prop("checked", chatSettings.enableImagePreview);
 
 		$("#notifyPingEnable").prop("checked", chatSettings.enablePings);
 		$("#selfPingEnable").prop("checked", chatSettings.selfPing);
 		$("#notifyNotificationEnable").prop("checked", chatSettings.pingNotify);
-		$(`#pingNotifyTimeoutSelect option[value='${chatSettings.notifyTime}']`).prop("selected", true);
 		$("#pingNames").val(chatSettings.triggers);
 		$("#pingURL").val(chatSettings.audioUrl);
 		$("#pingTextColor").val(chatSettings.color);
@@ -1350,7 +1411,9 @@ let chatModule = (function () {
 		$("#joinFavEnable").prop("checked", chatSettings.joinFavorites);
 		for (let i = 0; i < chatSettings.favRooms.length; i++) {
 			let favRoomObj = chatSettings.favRooms[i];
-			$("#favRoomsList").append('<option value="' + favRoomObj._id + '">' + favRoomObj.user + ": " + favRoomObj.room + "</option>");
+			$("#favRoomsList").append(
+				'<option value="' + favRoomObj._id + '">' + favRoomObj.user + ": " + favRoomObj.room + "</option>"
+			);
 		}
 
 		if (chatSettings.enableTabSwitch === true) {
