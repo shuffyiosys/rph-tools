@@ -345,7 +345,10 @@ let chatModule = (function () {
 			let msg = $("#pingPreviewInput").val();
 			let testRegex = matchPing(msg);
 			if (testRegex !== null) {
-				msg = msg.replace(testRegex, `<span style="${pingHighlightText}">${msg.match(testRegex)}</span>`);
+				msg = msg.replace(
+					testRegex,
+					`<span style="${pingHighlightText}">${msg.match(testRegex)}</span>`
+				);
 				rph.sounds.notify.play();
 				$("#pingPreviewText").html(` &nbsp;${msg}`);
 			} else {
@@ -707,6 +710,28 @@ let chatModule = (function () {
 		const contentLines = contentQuery[0].innerHTML.split("<br>");
 		const prevMsgs = contentLines.slice(0, contentLines.length - msgLineCount);
 
+		// Fix issues with the URL parser inserting formatting tags
+		let latestLine = contentLines[contentLines.length - 1];
+		let sections = latestLine.split(`"`);
+		for (let i = 0; i < sections.length; i++) {
+			let section = sections[i];
+			if (sections[i].indexOf("http") !== 0) {
+				continue;
+			}
+			section = section.replaceAll(`<u>`, `__`);
+			section = section.replaceAll(`</u>`, `__`);
+			section = section.replaceAll(`<sub>`, `vv`);
+			section = section.replaceAll(`</sub>`, `vv`);
+			section = section.replaceAll(`<strike>`, `--`);
+			section = section.replaceAll(`</strike>`, `--`);
+			section = section.replaceAll(`<em>`, `//`);
+			section = section.replaceAll(`</em>`, `//`);
+			section = section.replaceAll(`<strong>`, `**`);
+			section = section.replaceAll(`</strong>`, `**`);
+			sections[i] = section;
+		}
+		contentLines[contentLines.length - 1] = sections.join(`"`);
+
 		/* Add padding and remove stlying of the content */
 		if (chatSettings.msgPadding && !$(msgHtml.children[1])[0].className.includes("msg-padding")) {
 			$(msgHtml.children[1])[0].className += " msg-padding";
@@ -718,7 +743,10 @@ let chatModule = (function () {
 				case 2:
 					break;
 				case 1:
-					$(`li.tab.tab-${getCssRoomName(thisRoom.props.name)}`).css("border-bottom", "4px solid #EEE");
+					$(`li.tab.tab-${getCssRoomName(thisRoom.props.name)}`).css(
+						"border-bottom",
+						"4px solid #EEE"
+					);
 				/* Falling through intentionally */
 				default:
 					for (let roomTab of thisRoom.$tabs) {
@@ -739,7 +767,10 @@ let chatModule = (function () {
 				const SEED = newMsgLines[msgIdx].split("\u200b")[1];
 				const MSG_CHUNKS = newMsgLines[msgIdx].split(/ /g);
 				let validResult = true;
-				newMsgLines[msgIdx] = newMsgLines[msgIdx].substring(0, newMsgLines[msgIdx].indexOf(" @\u200b"));
+				newMsgLines[msgIdx] = newMsgLines[msgIdx].substring(
+					0,
+					newMsgLines[msgIdx].indexOf(" @\u200b")
+				);
 
 				/* If the RNG was a dice roll, verify the roll by running the RNG with the same seed */
 				if (newMsgLines[msgIdx].search("rolled") > -1) {
@@ -778,7 +809,10 @@ let chatModule = (function () {
 			if (!msgData.buffer) {
 				const selfMsg = account.userids.includes(msgData.userid);
 				let notificationTrigger = 0;
-				if (chatSettings.enablePings && ((chatSettings.selfPing && selfMsg === true) || selfMsg === false)) {
+				if (
+					chatSettings.enablePings &&
+					((chatSettings.selfPing && selfMsg === true) || selfMsg === false)
+				) {
 					let testRegex = matchPing(newMsg);
 					if (testRegex) {
 						newMsg = newMsg.replace(
@@ -1021,9 +1055,9 @@ let chatModule = (function () {
 		}
 
 		if (error) {
-			Room.appendMessage('<span class="first">&nbsp;</span><span title=>Error in command input</span>').addClass(
-				"sys"
-			);
+			Room.appendMessage(
+				'<span class="first">&nbsp;</span><span title=>Error in command input</span>'
+			).addClass("sys");
 		}
 	}
 
@@ -1038,9 +1072,9 @@ let chatModule = (function () {
 		let message = inputTextarea.val().trim();
 
 		if (message.length > 4000) {
-			Room.appendMessage(`<span class="first">&nbsp;</span><span title="">Message too long</span>`).addClass(
-				"sys"
-			);
+			Room.appendMessage(
+				`<span class="first">&nbsp;</span><span title="">Message too long</span>`
+			).addClass("sys");
 			return;
 		} else if (message.length === 0) {
 			return;
@@ -1310,7 +1344,13 @@ let chatModule = (function () {
 	function addFavoriteRoom(favRoomObj) {
 		if (arrayObjectIndexOf(chatSettings.favRooms, "_id", favRoomObj._id) === -1) {
 			$("#favRoomsList").append(
-				'<option value="' + favRoomObj._id + '">' + favRoomObj.user + ": " + favRoomObj.room + "</option>"
+				'<option value="' +
+					favRoomObj._id +
+					'">' +
+					favRoomObj.user +
+					": " +
+					favRoomObj.room +
+					"</option>"
 			);
 			chatSettings.favRooms.push(favRoomObj);
 		}
@@ -1388,7 +1428,10 @@ let chatModule = (function () {
 
 		$("#snapRoomListEnable").prop("checked", chatSettings.snapRoomList);
 		$(`#chatColorSelection option[value='${chatSettings.colorStylizing}']`).prop("selected", true);
-		$(`#unreadMarkerSelection option[value='${chatSettings.unreadMarkerSelection}']`).prop("selected", true);
+		$(`#unreadMarkerSelection option[value='${chatSettings.unreadMarkerSelection}']`).prop(
+			"selected",
+			true
+		);
 		$("#chatmsgPaddingEnable").prop("checked", chatSettings.msgPadding);
 		$("#showCommandWindowEnable").prop("checked", chatSettings.showCommandWindow);
 		$("#removeHighlightingEnable").prop("checked", chatSettings.removeHighlighting);
@@ -1412,7 +1455,13 @@ let chatModule = (function () {
 		for (let i = 0; i < chatSettings.favRooms.length; i++) {
 			let favRoomObj = chatSettings.favRooms[i];
 			$("#favRoomsList").append(
-				'<option value="' + favRoomObj._id + '">' + favRoomObj.user + ": " + favRoomObj.room + "</option>"
+				'<option value="' +
+					favRoomObj._id +
+					'">' +
+					favRoomObj.user +
+					": " +
+					favRoomObj.room +
+					"</option>"
 			);
 		}
 
