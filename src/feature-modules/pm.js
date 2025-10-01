@@ -13,9 +13,15 @@ let pmModule = (function () {
 			<h4>Appearance</h4>
 			<div class="rpht-option-block">
 				<div class="rpht-option-section"> 
+					<label class="rpht-label checkbox-label" for="receivePmsEnable">Receive PMs</label>
+					<label class="switch"><input type="checkbox" id="receivePmsEnable"><span class="rpht-slider round"></span></label>
+					<label class="rpht-label descript-label">Enables receiving of PMs (this does not persist between sessions)</label>
+				</div>
+				<div class="rpht-option-section"> 
 					<label class="rpht-label checkbox-label" for="pmColorEnable">Use user text colors</label>
 					<label class="switch"><input type="checkbox" id="pmColorEnable"><span class="rpht-slider round"></span></label>
-					<label class="rpht-label descript-label">Use the user\'s color to stylize their text</label> </div>
+					<label class="rpht-label descript-label">Use the user\'s color to stylize their text</label>
+				</div>
 				<div class="rpht-option-section">
 					<label class="rpht-label checkbox-label" for="pmSideTabsEnable">Tabs on side</label> 
 					<label class="switch"><input type="checkbox" id="pmSideTabsEnable"><span class="rpht-slider round"></span></label>
@@ -24,7 +30,7 @@ let pmModule = (function () {
 				<div class="rpht-option-section">
 					<label class="rpht-label checkbox-label" for="keepInBgEnable">Keep window in the background</label> 
 					<label class="switch"><input type="checkbox" id="keepInBgEnable"><span class="rpht-slider round"></span></label>
-					<label class="rpht-label descript-label">Upon receiving a PM, keeps the window from showing if it's already closed.</label>
+					<label class="rpht-label descript-label">Upon receiving a PM, prevents the window from showing if it's already closed.</label>
 				</div>
 				<div class="rpht-option-section option-section-bottom">
 					<label class="rpht-label checkbox-label" for="pmEnableImagePreview">Enable image previews</label> 
@@ -38,11 +44,29 @@ let pmModule = (function () {
 					<label class="rpht-label checkbox-label" for="pmNotify">Desktop notifications</label>
 					<label class="switch"><input type="checkbox" id="pmNotify"><span class="rpht-slider round"></span></label>
 					<label class="rpht-label descript-label">Pushes a desktop notification when you get a PM</label>
-					<p>Pops a desktop notification when you get a PM</p>
 				</div>
 				<div class="rpht-option-section option-section-bottom">
 					<label class="rpht-label split-input-label">PM sound URL</label>
 					<input class="split-input-label" type="text" id="pmPingURL" name="pmPingURL" style="margin-bottom: 12px;">
+				</div>
+			</div>
+			<h4>Force removal</h4>
+			<div class="rpht-option-block">
+				<div class="rpht-option-section">
+					<p><strong>Force unfriend</strong></p>
+					<p>This forces unfriending of someone if they "deleted" their name to help clean up your friend list</p>
+					<input type="text" class="rpht-long-input" id="unfriendYourNameInput"
+						maxlength="300" placeholder="Your name"> <br><br>
+					<input type="text" class="rpht-long-input" id="unfriendOtherNameInput"
+						maxlength="300" placeholder="Friend's name"> <br><br>
+					<button type="button" style="float:right; width:60px" id="forceUnfriendButton">Unfriend</button>
+				</div>
+				<div class="rpht-option-section option-section-bottom">
+					<p><strong>Force unblock</strong></p>
+					<p>This forces unblocking of someone if they "deleted" their name to help clean up your block list</p>
+					<input type="text" class="rpht-long-input" id="forceUnblockInput"
+						maxlength="300" placeholder="User to unblock..."> <br><br> 
+					<button type="button" style="float:right; width:60px" id="forceUnblockButton">Unblock</button>
 				</div>
 			</div>
 			<h4>Away message</h4>
@@ -59,8 +83,23 @@ let pmModule = (function () {
 
 	let awayMessages = {};
 
+	let pmHandlers = [];
+
 	function init() {
 		loadSettings();
+
+		$("#receivePmsEnable").change(() => {
+			const receivePms = $("#receivePmsEnable").is(":checked");
+			console.log("Receive PMs?", receivePms);
+			if (receivePms) {
+				pmHandlers.forEach((handler) => {
+					socket.on("pm", handler);
+				});
+			} else {
+				pmHandlers = socket.listeners("pm");
+				socket.removeAllListeners("pm");
+			}
+		});
 
 		$("#pmSideTabsEnable").change(() => {
 			pmSettings.sideTabs = $("#pmSideTabsEnable").is(":checked");
@@ -95,6 +134,14 @@ let pmModule = (function () {
 				message = awayMessages[userId].message;
 			}
 			$("input#awayMessageTextbox").val(message);
+		});
+
+		$("#forceUnfriendButton").click(() => {
+			forceUnfriend($("#unfriendYourNameInput").val(), $("#unfriendOtherNameInput").val());
+		});
+
+		$("#forceUnblockButton").click(() => {
+			forceUnblock($("#forceUnblockInput").val());
 		});
 
 		$("#setAwayButton").click(() => {
@@ -287,6 +334,18 @@ let pmModule = (function () {
 		}
 	}
 
+	/** Forces removal of a friend */
+	async function forceUnfriend(yourName, friendName) {
+		const yourUser = await getUserByName(yourName);
+		const friendUser = await getUserByName(friendName);
+		socket.emit("deny-friend-request", { from: yourUser.props.id, to: friendUser.props.id });
+	}
+
+	/** Forces removal of a blocked name */
+	function forceUnblock(otherName) {
+		getUserByName(otherName, (User) => socket.emit("unblock", { id: User.props.id }));
+	}
+
 	function loadSettings() {
 		let storedSettings = settingsModule.getSettings(localStorageName);
 		pmSettings = {
@@ -296,12 +355,14 @@ let pmModule = (function () {
 			audioUrl: "https://www.rphaven.com/sounds/imsound.mp3",
 			sideTabs: false,
 			pmEnableImagePreview: false,
+			blockedUsers: [],
 		};
 
 		if (storedSettings) {
 			pmSettings = Object.assign(pmSettings, storedSettings);
 		}
 
+		$("#receivePmsEnable").prop("checked", true);
 		$("#pmColorEnable").prop("checked", pmSettings.colorText);
 		$("#pmSideTabsEnable").prop("checked", pmSettings.sideTabs);
 		$("#keepInBgEnable").prop("checked", pmSettings.keepInBgEnable);

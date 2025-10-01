@@ -1,3 +1,16 @@
+## RPH Tools (4.4.5)
+
+##### Feature Updates
+
+-   Added a PM receiving switch. On every session, this is always enabled by default.
+-   Added a way to force remove names in the friend or block list if the other person deleted their name.
+
+## RPH Tools (4.4.4)
+
+##### Bug Fixes
+
+-   Fixed the default URL parsing if it includes formatting sequences so the URL won't get mangaled
+
 ## RPH Tools (4.4.3)
 
 ##### Feature Updates

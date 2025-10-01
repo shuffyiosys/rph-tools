@@ -17,6 +17,7 @@ let logManagerModule = (function () {
 		tabId: "log-manager-module",
 		tabName: "Log Manager",
 		tabContents: `
+				<h3>Log Manager</h3><br>
 				<div id="log-import-container">
 					<h4>Log Importer</h4><br />
 					<input id="logFileInput" type="file" /> <button style="display: none;"
